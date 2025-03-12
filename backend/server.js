@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 5000;
 // 🔹 Habilitar CORS para permitir peticiones desde el frontend
 app.use(cors({
   origin: "*", // Permite todas las peticiones (puedes cambiarlo a tu dominio)
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type"],
 }));
 
