@@ -46,4 +46,16 @@ router.delete("/borrar-venta/:id", async (req, res) => {
   }
 });
 
+// Ruta para actualizar la hora límite
+router.post("/actualizar-hora-limite", (req, res) => {
+  try {
+      const horaLimite = req.body.horaLimite;
+      // Aquí puedes agregar la lógica para guardar la hora límite en tu base de datos o en otro lugar
+      console.log("Hora límite recibida:", horaLimite);
+      res.json({ message: "Hora límite actualizada con éxito" });
+  } catch (error) {
+      res.status(500).json({ error: "Error al actualizar la hora límite" });
+  }
+});
+
 module.exports = router;
