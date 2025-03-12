@@ -108,3 +108,24 @@ li {
 li:last-child {
   border-bottom: none;
 }
+
+/* App.css */
+
+/* ... (tus estilos existentes) ... */
+
+.home-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh; /* Ocupa toda la altura de la pantalla */
+  text-align: center;
+}
+
+.home-container h1 {
+  margin-top: 20px; /* Ajusta el margen superior del título */
+}
+
+.home-container nav {
+  margin-top: 10px; /* Ajusta el margen superior de los enlaces */
+}

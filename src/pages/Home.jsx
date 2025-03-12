@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 
 const Home = () => {
   return (
-    <div>
+    <div className="home-container">
       <h1>Bienvenido al Sistema CT</h1>
       <nav>
         <ul>

@@ -1,5 +1,5 @@
 // pages/Apiventas.js
-import Apiventas from "../components/apiventas";
+import Apiventas from "../components/Apiventas";
 
 const ApiventasPage = () => {
   return (
