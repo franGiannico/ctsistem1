@@ -11,14 +11,20 @@ function Apiventas() {
         cliente: "",
         puntoDespacho: ""
     });
+    const [horaLimite, setHoraLimite] = useState(localStorage.getItem('horaLimite') || '');
 
     useEffect(() => {
         cargarVentasDesdeServidor();
     }, []);
 
+    useEffect(() => {
+        localStorage.setItem('horaLimite', horaLimite);
+        actualizarHoraLimiteEnBackend(horaLimite);
+    }, [horaLimite]);
+
     const cargarVentasDesdeServidor = async () => {
         try {
-            const response = await fetch("https://sistema-ct-09ee8bc4c3b9.herokuapp.com/apiventas/cargar-ventas");
+            const response = await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/cargar-ventas");
             const data = await response.json();
             setVentas(data);
         } catch (error) {
@@ -26,6 +32,17 @@ function Apiventas() {
         }
     };
 
+    const actualizarHoraLimiteEnBackend = async (hora) => {
+        try {
+            await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/actualizar-hora-limite", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ horaLimite: hora })
+            });
+        } catch (error) {
+            console.error("Error al actualizar la hora límite en el backend:", error);
+        }
+    };
 
     const handleInputChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -35,7 +52,7 @@ function Apiventas() {
         e.preventDefault();
         const nuevaVenta = { ...formData, completada: false };
         try {
-            await fetch("https://sistema-ct-09ee8bc4c3b9.herokuapp.com/apiventas/guardar-ventas", {
+            await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/guardar-ventas", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(nuevaVenta)
@@ -51,7 +68,7 @@ function Apiventas() {
         const nuevasVentas = [...ventas];
         nuevasVentas[index].completada = !nuevasVentas[index].completada;
         setVentas(nuevasVentas);
-        await fetch("https://sistema-ct-09ee8bc4c3b9.herokuapp.com/apiventas/guardar-ventas", {
+        await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/guardar-ventas", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(nuevasVentas)
@@ -61,11 +78,15 @@ function Apiventas() {
     const borrarVenta = async (index) => {
         const nuevasVentas = ventas.filter((_, i) => i !== index);
         setVentas(nuevasVentas);
-        await fetch("https://sistema-ct-09ee8bc4c3b9.herokuapp.com/apiventas/guardar-ventas", {
+        await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/guardar-ventas", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(nuevasVentas)
         });
+    };
+
+    const handleHoraLimiteChange = (event) => {
+        setHoraLimite(event.target.value);
     };
 
     return (
@@ -80,7 +101,18 @@ function Apiventas() {
                 <input type="text" name="puntoDespacho" value={formData.puntoDespacho} onChange={handleInputChange} placeholder="Punto de Despacho" required />
                 <button type="submit">Agregar Venta</button>
             </form>
+
+            <div>
+                <h2>Ingresar Hora Límite de Entrega</h2>
+                <input
+                    type="time"
+                    value={horaLimite}
+                    onChange={handleHoraLimiteChange}
+                />
+            </div>
+
             <h2>Ventas Cargadas</h2>
+            <p>Hora Límite: {horaLimite}</p>
             <ul className={styles.lista}>
                 {ventas.map((venta, index) => (
                     <li key={index} className={styles.ventaItem}>
