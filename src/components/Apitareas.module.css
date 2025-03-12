@@ -1,0 +1,81 @@
+.container {
+    padding: 1rem;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.inputGroup {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.input,
+.select {
+    border: 1px solid #ccc;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    flex: 1;
+}
+
+.addButton,
+.clearButton {
+    background-color: #007bff;
+    color: white;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    border: none;
+    cursor: pointer;
+}
+
+.clearButton {
+    background-color: #dc3545;
+    margin-top: 1rem;
+}
+
+.taskTitle {
+    font-weight: bold;
+    margin-top: 1rem;
+}
+
+.taskList {
+    list-style: none;
+    padding: 0;
+}
+
+.taskItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    border-bottom: 1px solid #eee;
+}
+
+.completed {
+    text-decoration: line-through;
+    color: gray;
+}
+
+.checkButton {
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+}
+
+.checkButtonCompleted {
+    background-color: #28a745;
+}
+
+.checkButtonNormal {
+    background-color: #eee;
+}
+
+@media (max-width: 600px) {
+    .input,
+    .select,
+    .addButton,
+    .clearButton {
+        padding: 0.3rem;
+        font-size: 0.9rem;
+    }
+}
