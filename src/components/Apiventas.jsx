@@ -57,7 +57,8 @@ function Apiventas() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(nuevaVenta)
             });
-            setVentas([...ventas, nuevaVenta]);
+            // Recargar las ventas desde el servidor después de agregar una nueva venta
+            cargarVentasDesdeServidor();
             setFormData({ sku: "", nombre: "", cantidad: "", numeroVenta: "", cliente: "", puntoDespacho: "" });
         } catch (error) {
             console.error("Error al guardar la venta:", error);
@@ -73,6 +74,7 @@ function Apiventas() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(nuevasVentas)
         });
+        cargarVentasDesdeServidor();
     };
 
     const borrarVenta = async (index) => {
@@ -83,6 +85,7 @@ function Apiventas() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(nuevasVentas)
         });
+        cargarVentasDesdeServidor();
     };
 
     const handleHoraLimiteChange = (event) => {

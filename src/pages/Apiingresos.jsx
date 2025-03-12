@@ -1,6 +1,6 @@
 // pages/Apiingresos.js
 import React from "react";
-import Apiingresos from "../components/apiingresos";
+import Apiingresos from "../components/Apiingresos.jsx";
 
 const ApiingresosPage = () => {
   return (

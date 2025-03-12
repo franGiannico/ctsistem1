@@ -1,6 +1,6 @@
 // pages/Apitareas.js
 import React from "react";
-import Apitareas from "../components/apitareas";
+import Apitareas from "../components/Apitareas.jsx";
 
 const ApitareasPage = () => {
   return (
