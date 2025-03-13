@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 5000;
 
 // 🔹 Habilitar CORS para permitir peticiones desde el frontend
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5173/ventas', 'https://ctsistem1-e68664e8ae46.herokuapp.com'],
+  origin: ['http://localhost:5173', 'https://ctsistem1.herokuapp.com'],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type"],
 }));
