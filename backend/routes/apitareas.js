@@ -24,10 +24,26 @@ router.get("/cargar-tareas", async (req, res) => {
 // Agregar una nueva tarea
 router.post("/guardar-tareas", async (req, res) => {
   try {
-    const nuevaTarea = new Tarea(req.body);
+    console.log("Datos recibidos en el backend:", req.body); // <-- DEBUG para ver qué llega
+
+    const { descripcion, prioridad } = req.body;
+
+    // Verificar que los campos requeridos existen
+    if (!descripcion || !prioridad) {
+      return res.status(400).json({ error: "Faltan datos obligatorios" });
+    }
+
+    // Crear la nueva tarea asegurando que 'completada' siempre tenga un valor
+    const nuevaTarea = new Tarea({
+      descripcion,
+      prioridad,
+      completada: req.body.completada ?? false, // Si no envían 'completada', se pone en false
+    });
+
     await nuevaTarea.save();
-    res.json({ message: "Tarea guardada con éxito" });
+    res.json({ message: "Tarea guardada con éxito", tarea: nuevaTarea });
   } catch (error) {
+    console.error("Error al guardar tarea:", error);
     res.status(500).json({ error: "Error al guardar la tarea" });
   }
 });
