@@ -11,7 +11,15 @@ export default function Apitareas() {
     // Cargar tareas desde la API al montar el componente
     useEffect(() => {
         cargarTareasDesdeAPI();
+    
+        // Sincronizar cada 5 segundos
+        const interval = setInterval(() => {
+            cargarTareasDesdeAPI();
+        }, 5000);
+    
+        return () => clearInterval(interval); // Limpiar el intervalo cuando se desmonte
     }, []);
+    
 
     // Obtener todas las tareas de la API
     const cargarTareasDesdeAPI = async () => {
