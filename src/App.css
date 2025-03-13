@@ -109,10 +109,6 @@ li:last-child {
   border-bottom: none;
 }
 
-/* App.css */
-
-/* ... (tus estilos existentes) ... */
-
 .home-container {
   display: flex;
   flex-direction: column;
@@ -128,4 +124,11 @@ li:last-child {
 
 .home-container nav {
   margin-top: 10px; /* Ajusta el margen superior de los enlaces */
+}
+
+.nav-link {
+  font-size: 1.5rem; /* Ajusta el tamaño del texto */
+  padding: 12px 24px; /* Aumenta el espacio dentro del botón */
+  display: inline-block; /* Para respetar el tamaño */
+  text-align: center;
 }
