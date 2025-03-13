@@ -4,12 +4,14 @@
     margin: 0 auto;
 }
 
+/* Grupo de entrada (input y select) */
 .inputGroup {
     display: flex;
     gap: 0.5rem;
     margin-bottom: 1rem;
 }
 
+/* Estilos de input y select */
 .input,
 .select {
     border: 1px solid #ccc;
@@ -18,6 +20,7 @@
     flex: 1;
 }
 
+/* Botones */
 .addButton,
 .clearButton {
     background-color: #007bff;
@@ -33,11 +36,13 @@
     margin-top: 1rem;
 }
 
+/* Títulos de tareas */
 .taskTitle {
     font-weight: bold;
     margin-top: 1rem;
 }
 
+/* Lista de tareas */
 .taskList {
     list-style: none;
     padding: 0;
@@ -51,11 +56,13 @@
     border-bottom: 1px solid #eee;
 }
 
+/* Estilo para tareas completadas */
 .completed {
     text-decoration: line-through;
     color: gray;
 }
 
+/* Botones de check */
 .checkButton {
     padding: 0.25rem;
     border-radius: 0.25rem;
@@ -70,12 +77,62 @@
     background-color: #eee;
 }
 
-@media (max-width: 600px) {
+/* ========================= */
+/* 🎯 MEDIA QUERIES */
+/* ========================= */
+
+/* 🌟 Estilos para PC (Pantallas grandes) */
+@media (min-width: 1025px) {
+    .container {
+        max-width: 800px;
+    }
     .input,
-    .select,
+    .select {
+        font-size: 1rem;
+        padding: 0.7rem;
+    }
     .addButton,
     .clearButton {
-        padding: 0.3rem;
+        padding: 0.7rem;
+        font-size: 1rem;
+    }
+}
+
+/* 📱 Estilos para Teléfonos (hasta 768px) */
+@media (max-width: 768px) {
+    .container {
+        max-width: 90%;
+    }
+    .inputGroup {
+        flex-direction: column;
+    }
+    .input,
+    .select {
+        width: 100%;
+        padding: 0.5rem;
         font-size: 0.9rem;
+    }
+    .addButton,
+    .clearButton {
+        width: 100%;
+        padding: 0.5rem;
+        font-size: 0.9rem;
+    }
+}
+
+/* 📟 Estilos para Tablets de 11" (768px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .container {
+        max-width: 700px;
+    }
+    .input,
+    .select {
+        font-size: 1rem;
+        padding: 0.6rem;
+    }
+    .addButton,
+    .clearButton {
+        padding: 0.6rem;
+        font-size: 1rem;
     }
 }
