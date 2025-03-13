@@ -109,26 +109,97 @@ li:last-child {
   border-bottom: none;
 }
 
+/* Contenedor principal de HOME */
 .home-container {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: center; /* Centrar verticalmente */
   align-items: center;
-  height: 100vh; /* Ocupa toda la altura de la pantalla */
+  height: 90vh; /* Reducimos la altura para que suba más */
   text-align: center;
+  padding-top: 20px; /* Ajusta la posición hacia arriba */
 }
 
+/* Título */
 .home-container h1 {
-  margin-top: 20px; /* Ajusta el margen superior del título */
+  font-size: 2rem;
+  margin-bottom: 20px;
 }
 
-.home-container nav {
-  margin-top: 10px; /* Ajusta el margen superior de los enlaces */
+/* Menú de navegación */
+nav ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column; /* Alineamos verticalmente por defecto */
+  gap: 15px; /* Espaciado entre los enlaces */
 }
 
+/* Links */
 .nav-link {
-  font-size: 1.5rem; /* Ajusta el tamaño del texto */
-  padding: 12px 24px; /* Aumenta el espacio dentro del botón */
-  display: inline-block; /* Para respetar el tamaño */
+  font-size: 1.5rem;
+  padding: 12px 24px;
+  background-color: #007bff;
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: background 0.3s ease-in-out;
+  display: inline-block;
   text-align: center;
+  width: 200px; /* Tamaño fijo para los botones */
+}
+
+.nav-link:hover {
+  background-color: #0056b3;
+}
+
+/* 🔹 Media queries para diferentes tamaños de pantalla */
+
+/* 📱 Celulares (~6") */
+@media (max-width: 600px) {
+  .home-container {
+    height: 80vh; /* Subimos más el contenido */
+    padding-top: 10px;
+  }
+  
+  .home-container h1 {
+    font-size: 1.8rem;
+  }
+
+  .nav-link {
+    font-size: 1.2rem;
+    width: 180px;
+  }
+}
+
+/* 📲 Tablets (~11") */
+@media (min-width: 601px) and (max-width: 1024px) {
+  .home-container {
+    height: 85vh;
+  }
+
+  .home-container h1 {
+    font-size: 2rem;
+  }
+
+  .nav-link {
+    font-size: 1.4rem;
+    width: 190px;
+  }
+}
+
+/* 💻 Pantallas grandes (PC) */
+@media (min-width: 1025px) {
+  .home-container {
+    height: 90vh;
+  }
+
+  .home-container h1 {
+    font-size: 2.5rem;
+  }
+
+  .nav-link {
+    font-size: 1.6rem;
+    width: 220px;
+  }
 }
