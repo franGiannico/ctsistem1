@@ -17,7 +17,7 @@ const ApiIngresos = () => {
 
     const loadItems = async () => {
         try {
-            const response = await fetch("https://sistema-ct-09ee8bc4c3b9.herokuapp.com/apiingresos/get-items");
+            const response = await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiingresos/get-items");
             if (!response.ok) throw new Error("No se pudieron cargar los artículos");
             const data = await response.json();
             setItems(data);
@@ -65,7 +65,7 @@ const ApiIngresos = () => {
         const nuevoArticulo = { codigoBarras, sku, articulo, cantidad: parseInt(cantidad), checked: false };
         
         try {
-            await fetch("https://sistema-ct-09ee8bc4c3b9.herokuapp.com/apiingresos/add-item", {
+            await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiingresos/add-item", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(nuevoArticulo)
@@ -81,7 +81,7 @@ const ApiIngresos = () => {
         if (!window.confirm("¿Estás seguro de que quieres eliminar los artículos publicados?")) return;
 
         try {
-            await fetch("https://sistema-ct-09ee8bc4c3b9.herokuapp.com/apiingresos/clear-checked-items", {
+            await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiingresos/clear-checked-items", {
                 method: "POST"
             });
             loadItems();

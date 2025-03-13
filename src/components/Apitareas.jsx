@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import styles from './Apitareas.module.css';
 
-const API_URL = "https://sistema-ct-09ee8bc4c3b9.herokuapp.com/apitareas";;
+const API_URL = "https://ctsistem1-e68664e8ae46.herokuapp.com/apitareas";;
 
 export default function Apitareas() {
     const [tareas, setTareas] = useState([]);
