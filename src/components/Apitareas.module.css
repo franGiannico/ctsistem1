@@ -1,5 +1,5 @@
 .container {
-    padding: 1rem;
+    padding: 0.5rem 1rem; /* Se redujo el padding superior e inferior */
     max-width: 600px;
     margin: 0 auto;
 }
@@ -11,7 +11,6 @@
     margin-bottom: 1rem;
 }
 
-/* Estilos de input y select */
 .input,
 .select {
     border: 1px solid #ccc;
@@ -33,13 +32,13 @@
 
 .clearButton {
     background-color: #dc3545;
-    margin-top: 1rem;
+    margin-top: 0.5rem; /* Se redujo el margen superior */
 }
 
 /* Títulos de tareas */
 .taskTitle {
     font-weight: bold;
-    margin-top: 1rem;
+    margin-top: 0.8rem; /* Se redujo el margen superior */
 }
 
 /* Lista de tareas */
@@ -100,23 +99,38 @@
 
 /* 📱 Estilos para Teléfonos (hasta 768px) */
 @media (max-width: 768px) {
-    .container {
-        max-width: 90%;
+    html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden; /* Evita el scroll horizontal */
     }
+
+    .container {
+        max-width: 95%;
+        padding: 0.3rem 0.8rem; /* Se redujo aún más el padding en teléfonos */
+    }
+
     .inputGroup {
         flex-direction: column;
     }
+
     .input,
     .select {
         width: 100%;
-        padding: 0.5rem;
+        padding: 0.4rem;
         font-size: 0.9rem;
     }
+
     .addButton,
     .clearButton {
         width: 100%;
-        padding: 0.5rem;
+        padding: 0.4rem;
         font-size: 0.9rem;
+    }
+
+    .taskTitle {
+        margin-top: 0.5rem; /* Se redujo margen para evitar espacio extra */
     }
 }
 
