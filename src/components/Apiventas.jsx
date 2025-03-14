@@ -67,17 +67,27 @@ function Apiventas() {
 
     const marcarCompletada = async (id) => {
         try {
-            const venta = ventas.find(v => v._id === id);
-            await fetch(`https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/marcar-completada/${id}`, {
-                method: "PUT",
+            const response = await fetch(`https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/actualizar-venta/${id}`, {
+                method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ completada: !venta.completada })
+                body: JSON.stringify({ completada: true }) // Aquí actualiza el estado a true o false
             });
-            cargarVentasDesdeServidor();
+    
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status}`);
+            }
+    
+            const data = await response.json();
+            setVentas((prevVentas) =>
+                prevVentas.map((venta) =>
+                    venta._id === id ? { ...venta, completada: data.venta.completada } : venta
+                )
+            );
         } catch (error) {
             console.error("Error al actualizar la venta:", error);
         }
     };
+    
 
     const borrarVenta = async (id) => {
         try {
