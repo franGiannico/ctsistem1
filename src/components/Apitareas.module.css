@@ -1,6 +1,5 @@
 .container {
     width: 90%; /* Ahora ocupa el 90% del ancho */
-    max-width: 1200px; /* Ajuste para pantallas grandes */
     margin: 0 auto;
     display: flex;
     flex-direction: column;
