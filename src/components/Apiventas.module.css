@@ -4,8 +4,9 @@
     flex-direction: column;
     align-items: center;
     margin: 20px auto;
-    max-width: 90%;  /* Hace que el contenedor ocupe más ancho */
+    max-width: 100%;
     padding: 20px;
+    width: 90vw; /* Hace que ocupe casi toda la pantalla */
 }
 
 /* Estilos del formulario */
@@ -15,14 +16,16 @@
     align-items: center;
     margin-bottom: 20px;
     width: 100%;
-    max-width: 600px;  /* Evita que se expanda demasiado */
+    max-width: 700px; /* Ajustamos para pantallas grandes */
 }
 
-.form input, .form select, .form button {
+.form input,
+.form select,
+.form button {
     width: 100%;
-    max-width: 500px;  /* Se adapta sin ser demasiado grande */
+    max-width: 600px; /* Se adapta sin ser demasiado grande */
     margin: 5px;
-    padding: 8px;
+    padding: 10px;
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 1rem;
@@ -34,7 +37,8 @@
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    padding: 10px 15px;
+    padding: 12px;
+    font-size: 1rem;
 }
 
 .form button:hover {
@@ -45,8 +49,8 @@
 .lista {
     list-style: none;
     padding: 0;
-    width: 100%;
-    max-width: 800px;  /* Controla el tamaño */
+    width: 90%;
+    max-width: 1000px; /* Para que se expanda más */
 }
 
 .ventaItem {
@@ -60,6 +64,7 @@
     border-radius: 5px;
     background: #333;
     color: white;
+    font-size: 1.1rem;
 }
 
 /* Detalles dentro de cada venta */
@@ -67,7 +72,7 @@
     display: flex;
     flex-direction: row;
     flex-grow: 1;
-    gap: 15px;
+    gap: 20px;
 }
 
 .ventaDetalle p {
@@ -76,12 +81,13 @@
 
 /* Botón de check */
 .checkBtn {
-    padding: 5px 10px;
+    padding: 8px 12px;
     background-color: #f0f0f0;
     color: black;
     border: 1px solid #ccc;
     border-radius: 5px;
     cursor: pointer;
+    font-size: 1rem;
 }
 
 .checkBtnChecked {
@@ -104,21 +110,21 @@
     font-weight: bold;
     margin-left: 10px;
     background-color: #ffcccc;
-    padding: 2px 5px;
+    padding: 3px 7px;
     border-radius: 4px;
 }
 
 /* 📌 Media Queries para responsive */
-@media (max-width: 1024px) { /* Para pantallas grandes */
+@media (max-width: 1200px) { /* Para pantallas grandes */
     .container {
-        max-width: 95%;
+        width: 95vw;
     }
 }
 
 @media (max-width: 768px) { /* Tablets */
     .container {
-        max-width: 100%;
-        padding: 10px;
+        width: 100%;
+        padding: 15px;
     }
     
     .ventaItem {
@@ -134,7 +140,12 @@
 }
 
 @media (max-width: 480px) { /* Celulares */
-    input, select, button {
+    .container {
+        width: 100%;
+        padding: 10px;
+    }
+
+    .form input, .form select, .form button {
         max-width: 100%;
     }
 
