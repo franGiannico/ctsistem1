@@ -147,6 +147,7 @@ function Apiventas() {
                             <p>{venta.nombre}</p>
                             <p>{venta.cantidad} unidades</p>
                             {venta.cantidad > 1 && <span className={styles.alerta}>Ojo!</span>} {/* Agregamos el cartel */}
+                            <p>Punto de Despacho: {venta.puntoDespacho || "No asignado"}</p> {/* ✅ Mostrar punto de despacho */}
                         </div>
                         <button 
                             onClick={() => marcarCompletada(venta._id, venta.completada)} 
