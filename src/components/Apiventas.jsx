@@ -65,12 +65,14 @@ function Apiventas() {
         }
     };
 
-    const marcarCompletada = async (id) => {
+    const marcarCompletada = async (id, estadoActual) => {
         try {
+            const nuevoEstado = !estadoActual; // Alternar entre true y false
+    
             const response = await fetch(`https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/actualizar-venta/${id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ completada: true }) // Aquí actualiza el estado a true o false
+                body: JSON.stringify({ completada: nuevoEstado })
             });
     
             if (!response.ok) {
@@ -78,6 +80,8 @@ function Apiventas() {
             }
     
             const data = await response.json();
+    
+            // Actualizar estado en la UI
             setVentas((prevVentas) =>
                 prevVentas.map((venta) =>
                     venta._id === id ? { ...venta, completada: data.venta.completada } : venta
@@ -87,6 +91,7 @@ function Apiventas() {
             console.error("Error al actualizar la venta:", error);
         }
     };
+    
     
 
     const borrarVenta = async (id) => {
@@ -135,19 +140,20 @@ function Apiventas() {
             <h2>Ventas Cargadas</h2>
             <p>Hora Límite: {horaLimite}</p>
             <ul className={styles.lista}>
-                {ventas.map((venta) => (
-                    <li key={venta._id} className={styles.ventaItem}>
+                {ventas.map((venta, index) => (
+                    <li key={index} className={styles.ventaItem}>
                         <div className={styles.ventaDetalle}>
                             <p>{venta.sku}</p>
                             <p>{venta.nombre}</p>
                             <p>{venta.cantidad} unidades</p>
-                            <p>Cliente: {venta.cliente}</p>
-                            <p>Punto de Despacho: {venta.puntoDespacho}</p>
+                            {venta.cantidad > 1 && <span className={styles.alerta}>Ojo!</span>} {/* Agregamos el cartel */}
                         </div>
-                        <button onClick={() => marcarCompletada(venta._id)} className={`${styles.checkBtn} ${venta.completada ? styles.checkBtnChecked : ''}`}>
+                        <button 
+                            onClick={() => marcarCompletada(venta._id, venta.completada)} 
+                            className={`${styles.checkBtn} ${venta.completada ? styles.checkBtnChecked : ''}`}>
                             {venta.completada ? "✔" : "X"}
                         </button>
-                        <button onClick={() => borrarVenta(venta._id)} className={styles.deleteBtn}>Borrar</button>
+                        <button onClick={() => borrarVenta(index)} className={styles.checkBtn}>Borrar</button>
                     </li>
                 ))}
             </ul>
