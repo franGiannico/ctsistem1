@@ -133,12 +133,12 @@ function Apiventas() {
             </form>
 
             <div>
-                <h2>Ingresar Hora Límite de Entrega</h2>
+                <p>Ingresar Hora Límite de Entrega</p>
                 <input type="time" value={horaLimite} onChange={handleHoraLimiteChange} />
             </div>
 
             <h2>Ventas Cargadas</h2>
-            <p>Hora Límite: {horaLimite}</p>
+            <h3>Hora Límite: {horaLimite}</h3>
             <ul className={styles.lista}>
                 {ventas.map((venta, index) => (
                     <li key={index} className={styles.ventaItem}>
