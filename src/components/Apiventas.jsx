@@ -154,6 +154,13 @@ function Apiventas() {
             {/* 🔹 Pestaña de "Ver Ventas" */}
             {pestaniaActiva === "listado" && (
                 <>
+                    <div className={styles.contadorContainer}>
+                        <p className={styles.ventasTotales}>Ventas Totales: {ventas.length}</p>
+                        <p className={styles.ventasPreparadas}>
+                            Ventas Preparadas: {ventas.filter((venta) => venta.completada).length}
+                        </p>
+                    </div>
+
                     <h2>Ventas Cargadas</h2>
                     <h3>Hora Límite: {horaLimite}</h3>
                     <ul className={styles.lista}>
@@ -166,9 +173,7 @@ function Apiventas() {
                                     {venta.cantidad > 1 && <span className={styles.alerta}>Ojo!</span>}
                                     <p><strong>Punto de Despacho:</strong> {venta.puntoDespacho}</p>
                                 </div>
-                                <button 
-                                    onClick={() => marcarCompletada(venta._id, venta.completada)} 
-                                    className={`${styles.checkBtn} ${venta.completada ? styles.checkBtnChecked : ''}`}>
+                                <button onClick={() => marcarCompletada(venta._id, venta.completada)} className={`${styles.checkBtn} ${venta.completada ? styles.checkBtnChecked : ''}`}>
                                     {venta.completada ? "✔" : "X"}
                                 </button>
                                 <button onClick={() => borrarVenta(venta._id)} className={styles.checkBtn}>Borrar</button>
