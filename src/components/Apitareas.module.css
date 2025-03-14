@@ -1,12 +1,18 @@
 .container {
-    padding: 0.5rem 1rem; /* Se redujo el padding superior e inferior */
-    max-width: 600px;
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 90%;
+    max-width: 1200px;
     margin: 0 auto;
+    padding: 1rem;
 }
 
-/* Grupo de entrada (input y select) */
+/* Grupo de entrada */
 .inputGroup {
     display: flex;
+    width: 100%;
     gap: 0.5rem;
     margin-bottom: 1rem;
 }
@@ -32,30 +38,32 @@
 
 .clearButton {
     background-color: #dc3545;
-    margin-top: 0.5rem; /* Se redujo el margen superior */
+    margin-top: 0.5rem;
 }
 
-/* Títulos de tareas */
+/* Títulos */
 .taskTitle {
     font-weight: bold;
-    margin-top: 0.8rem; /* Se redujo el margen superior */
+    margin-top: 1rem;
 }
 
 /* Lista de tareas */
 .taskList {
     list-style: none;
     padding: 0;
+    width: 100%;
 }
 
 .taskItem {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.5rem;
+    width: 100%;
+    padding: 0.7rem;
     border-bottom: 1px solid #eee;
 }
 
-/* Estilo para tareas completadas */
+/* Tareas completadas */
 .completed {
     text-decoration: line-through;
     color: gray;
@@ -63,9 +71,10 @@
 
 /* Botones de check */
 .checkButton {
-    padding: 0.25rem;
+    padding: 0.5rem;
     border-radius: 0.25rem;
     cursor: pointer;
+    font-size: 1rem;
 }
 
 .checkButtonCompleted {
@@ -77,38 +86,40 @@
 }
 
 /* ========================= */
-/* 🎯 MEDIA QUERIES */
+/* 🌟 MEDIA QUERIES */
 /* ========================= */
 
-/* 🌟 Estilos para PC (Pantallas grandes) */
+/* 🖥 **Pantallas grandes (PC y laptops)** */
 @media (min-width: 1025px) {
     .container {
-        max-width: 800px;
+        width: 80%;
     }
+
     .input,
     .select {
-        font-size: 1rem;
+        font-size: 1.1rem;
         padding: 0.7rem;
     }
+
     .addButton,
     .clearButton {
         padding: 0.7rem;
-        font-size: 1rem;
+        font-size: 1.1rem;
     }
 }
 
-/* 📱 Estilos para Teléfonos (hasta 768px) */
+/* 📱 **Teléfonos (hasta 768px)** */
 @media (max-width: 768px) {
     html, body {
         height: 100%;
         margin: 0;
         padding: 0;
-        overflow-x: hidden; /* Evita el scroll horizontal */
+        overflow-x: hidden;
     }
 
     .container {
-        max-width: 95%;
-        padding: 0.3rem 0.8rem; /* Se redujo aún más el padding en teléfonos */
+        width: 95%;
+        padding: 0.5rem;
     }
 
     .inputGroup {
@@ -118,32 +129,34 @@
     .input,
     .select {
         width: 100%;
-        padding: 0.4rem;
-        font-size: 0.9rem;
+        font-size: 1rem;
+        padding: 0.6rem;
     }
 
     .addButton,
     .clearButton {
         width: 100%;
-        padding: 0.4rem;
-        font-size: 0.9rem;
+        padding: 0.6rem;
+        font-size: 1rem;
     }
 
     .taskTitle {
-        margin-top: 0.5rem; /* Se redujo margen para evitar espacio extra */
+        margin-top: 0.5rem;
     }
 }
 
-/* 📟 Estilos para Tablets de 11" (768px - 1024px) */
+/* 📟 **Tablets de 11" (768px - 1024px)** */
 @media (min-width: 769px) and (max-width: 1024px) {
     .container {
-        max-width: 700px;
+        width: 85%;
     }
+
     .input,
     .select {
         font-size: 1rem;
         padding: 0.6rem;
     }
+
     .addButton,
     .clearButton {
         padding: 0.6rem;
