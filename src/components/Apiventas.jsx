@@ -153,7 +153,7 @@ function Apiventas() {
                             className={`${styles.checkBtn} ${venta.completada ? styles.checkBtnChecked : ''}`}>
                             {venta.completada ? "✔" : "X"}
                         </button>
-                        <button onClick={() => borrarVenta(index)} className={styles.checkBtn}>Borrar</button>
+                        <button onClick={() => borrarVenta(venta._id)} className={styles.checkBtn}>Borrar</button>
                     </li>
                 ))}
             </ul>
