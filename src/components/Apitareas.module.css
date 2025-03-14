@@ -1,7 +1,6 @@
 .container {
-    padding: 1rem;
-    width: 100%; /* Ocupa todo el ancho */
-    max-width: 1200px; /* Máximo tamaño en pantallas grandes */
+    width: 90%; /* Ahora ocupa el 90% del ancho */
+    max-width: 1200px; /* Ajuste para pantallas grandes */
     margin: 0 auto;
     display: flex;
     flex-direction: column;
@@ -23,7 +22,7 @@
     padding: 0.5rem;
     border-radius: 0.25rem;
     flex: 1;
-    min-width: 250px; /* Evita que sean demasiado pequeños */
+    min-width: 250px;
 }
 
 /* Botones */
@@ -35,7 +34,7 @@
     border-radius: 0.25rem;
     border: none;
     cursor: pointer;
-    width: 160px; /* Tamaño fijo para botones */
+    width: 160px;
 }
 
 .clearButton {
@@ -54,7 +53,7 @@
     list-style: none;
     padding: 0;
     width: 100%;
-    max-width: 1000px; /* Ajustar para pantallas grandes */
+    max-width: 1000px;
 }
 
 .taskItem {
@@ -64,7 +63,7 @@
     padding: 0.8rem;
     border-bottom: 1px solid #eee;
     width: 100%;
-    background-color: #222; /* Color de fondo más visible */
+    background-color: #222;
     border-radius: 5px;
     margin-bottom: 8px;
 }
@@ -80,7 +79,7 @@
     padding: 0.5rem;
     border-radius: 0.25rem;
     cursor: pointer;
-    min-width: 40px; /* Evita que se achiquen demasiado */
+    min-width: 40px;
     text-align: center;
 }
 
@@ -100,17 +99,18 @@
 /* 🌟 Pantallas grandes (PC) */
 @media (min-width: 1025px) {
     .container {
-        max-width: 90%;
+        width: 80%; /* Ajusta el ancho al 80% en pantallas grandes */
+        max-width: 1200px;
     }
     .taskList {
-        max-width: 90%;
+        max-width: 100%;
     }
 }
 
-/* 📱 Teléfonos (menos de 768px) */
+/* 📱 Teléfonos (hasta 768px) */
 @media (max-width: 768px) {
     .container {
-        max-width: 100%;
+        width: 95%;
         padding: 0.5rem;
     }
 
@@ -133,10 +133,6 @@
 /* 📟 Tablets (768px - 1024px) */
 @media (min-width: 769px) and (max-width: 1024px) {
     .container {
-        max-width: 90%;
-    }
-
-    .taskList {
-        max-width: 95%;
+        width: 85%;
     }
 }
