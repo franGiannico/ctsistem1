@@ -70,7 +70,7 @@ function Apiventas() {
         nuevasVentas[index].completada = !nuevasVentas[index].completada;
         setVentas(nuevasVentas);
         await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/guardar-ventas", {
-            method: "POST",
+            method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(nuevasVentas)
         });
@@ -81,7 +81,7 @@ function Apiventas() {
         const nuevasVentas = ventas.filter((_, i) => i !== index);
         setVentas(nuevasVentas);
         await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/guardar-ventas", {
-            method: "POST",
+            method: "DELETE",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(nuevasVentas)
         });
