@@ -99,7 +99,6 @@
 @media (min-width: 1025px) {
     .container {
         width: 80%; /* Ajusta el ancho al 80% en pantallas grandes */
-        max-width: 1200px;
     }
     .taskList {
         max-width: 100%;
@@ -109,7 +108,7 @@
 /* 📱 Teléfonos (hasta 768px) */
 @media (max-width: 768px) {
     .container {
-        width: 95%;
+        width: 90%;
         padding: 0.5rem;
     }
 
@@ -120,7 +119,7 @@
 
     .input,
     .select {
-        width: 100%;
+        width: 90%;
     }
 
     .addButton,
