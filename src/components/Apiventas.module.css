@@ -155,3 +155,30 @@
         gap: 5px;
     }
 }
+
+/* Estilos para las pestañas */
+.tabs {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.tabs button {
+    padding: 0.7rem 1.5rem;
+    border: none;
+    background: #ccc;
+    cursor: pointer;
+    font-weight: bold;
+    border-radius: 5px;
+    margin: 0 5px;
+    transition: background 0.3s;
+}
+
+.tabs button:hover {
+    background: #bbb;
+}
+
+.activeTab {
+    background: #007bff !important;
+    color: white !important;
+}

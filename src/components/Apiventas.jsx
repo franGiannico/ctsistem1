@@ -6,12 +6,13 @@ function Apiventas() {
     const [formData, setFormData] = useState({
         sku: "",
         nombre: "",
-        cantidad: 1,  // Inicializamos cantidad en 1
+        cantidad: 1,
         numeroVenta: "",
         cliente: "",
         puntoDespacho: "Punto de Despacho"
     });
     const [horaLimite, setHoraLimite] = useState(localStorage.getItem('horaLimite') || '');
+    const [pestaniaActiva, setPestaniaActiva] = useState("cargar");
 
     useEffect(() => {
         cargarVentasDesdeServidor();
@@ -52,12 +53,14 @@ function Apiventas() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         const nuevaVenta = { ...formData, completada: false };
+
         try {
             await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/guardar-ventas", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(nuevaVenta)
             });
+
             cargarVentasDesdeServidor();
             setFormData({ sku: "", nombre: "", cantidad: 1, numeroVenta: "", cliente: "", puntoDespacho: "Punto de Despacho" });
         } catch (error) {
@@ -67,21 +70,20 @@ function Apiventas() {
 
     const marcarCompletada = async (id, estadoActual) => {
         try {
-            const nuevoEstado = !estadoActual; // Alternar entre true y false
-    
+            const nuevoEstado = !estadoActual;
+
             const response = await fetch(`https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/actualizar-venta/${id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ completada: nuevoEstado })
             });
-    
+
             if (!response.ok) {
                 throw new Error(`Error HTTP: ${response.status}`);
             }
-    
+
             const data = await response.json();
-    
-            // Actualizar estado en la UI
+
             setVentas((prevVentas) =>
                 prevVentas.map((venta) =>
                     venta._id === id ? { ...venta, completada: data.venta.completada } : venta
@@ -91,8 +93,6 @@ function Apiventas() {
             console.error("Error al actualizar la venta:", error);
         }
     };
-    
-    
 
     const borrarVenta = async (id) => {
         try {
@@ -112,52 +112,71 @@ function Apiventas() {
     return (
         <div className={styles.container}>
             <h1>Gestión de Ventas</h1>
-            
-            <form onSubmit={handleSubmit} className={styles.form}>
-                <input type="text" name="sku" value={formData.sku} onChange={handleInputChange} placeholder="SKU" required />
-                <input type="text" name="nombre" value={formData.nombre} onChange={handleInputChange} placeholder="Nombre" required />
-                <input type="number" name="cantidad" value={formData.cantidad} onChange={handleInputChange} min="1" required />
-                <input type="number" name="numeroVenta" value={formData.numeroVenta} onChange={handleInputChange} placeholder="N° Venta" required />
-                <input type="text" name="cliente" value={formData.cliente} onChange={handleInputChange} placeholder="Cliente" required />
-                
-                <select name="puntoDespacho" value={formData.puntoDespacho} onChange={handleInputChange} required>
-                    <option value="Andreani">Andreani</option>
-                    <option value="Punto de Despacho">Punto de Despacho</option>
-                    <option value="Flex">Flex</option>
-                    <option value="Guardia">Guardia</option>
-                    <option value="Domicilio">Domicilio</option>
-                    <option value="Showroom">Showroom</option>
-                </select>
 
-                <button type="submit">Agregar Venta</button>
-            </form>
-
-            <div>
-                <p>Ingresar Hora Límite de Entrega</p>
-                <input type="time" value={horaLimite} onChange={handleHoraLimiteChange} />
+            {/* 🔹 Menú de pestañas */}
+            <div className={styles.tabs}>
+                <button
+                    className={pestaniaActiva === "cargar" ? styles.activeTab : ""}
+                    onClick={() => setPestaniaActiva("cargar")}
+                >
+                    Cargar Ventas
+                </button>
+                <button
+                    className={pestaniaActiva === "listado" ? styles.activeTab : ""}
+                    onClick={() => setPestaniaActiva("listado")}
+                >
+                    Ver Ventas
+                </button>
             </div>
 
-            <h2>Ventas Cargadas</h2>
-            <h3>Hora Límite: {horaLimite}</h3>
-            <ul className={styles.lista}>
-                {ventas.map((venta, index) => (
-                    <li key={index} className={styles.ventaItem}>
-                        <div className={styles.ventaDetalle}>
-                            <p>{venta.sku}</p>
-                            <p>{venta.nombre}</p>
-                            <p>{venta.cantidad} unidades</p>
-                            {venta.cantidad > 1 && <span className={styles.alerta}>Ojo!</span>} {/* Agregamos el cartel */}
-                            <p>Punto de Despacho: {venta.puntoDespacho || "No asignado"}</p> {/* ✅ Mostrar punto de despacho */}
-                        </div>
-                        <button 
-                            onClick={() => marcarCompletada(venta._id, venta.completada)} 
-                            className={`${styles.checkBtn} ${venta.completada ? styles.checkBtnChecked : ''}`}>
-                            {venta.completada ? "✔" : "X"}
-                        </button>
-                        <button onClick={() => borrarVenta(venta._id)} className={styles.checkBtn}>Borrar</button>
-                    </li>
-                ))}
-            </ul>
+            {/* 🔹 Pestaña de "Cargar Ventas" */}
+            {pestaniaActiva === "cargar" && (
+                <form onSubmit={handleSubmit} className={styles.form}>
+                    <input type="text" name="sku" value={formData.sku} onChange={handleInputChange} placeholder="SKU" required />
+                    <input type="text" name="nombre" value={formData.nombre} onChange={handleInputChange} placeholder="Nombre" required />
+                    <input type="number" name="cantidad" value={formData.cantidad} onChange={handleInputChange} min="1" required />
+                    <input type="number" name="numeroVenta" value={formData.numeroVenta} onChange={handleInputChange} placeholder="N° Venta" required />
+                    <input type="text" name="cliente" value={formData.cliente} onChange={handleInputChange} placeholder="Cliente" required />
+                    
+                    <select name="puntoDespacho" value={formData.puntoDespacho} onChange={handleInputChange} required>
+                        <option value="Andreani">Andreani</option>
+                        <option value="Punto de Despacho">Punto de Despacho</option>
+                        <option value="Flex">Flex</option>
+                        <option value="Guardia">Guardia</option>
+                        <option value="Domicilio">Domicilio</option>
+                        <option value="Showroom">Showroom</option>
+                    </select>
+
+                    <button type="submit">Agregar Venta</button>
+                </form>
+            )}
+
+            {/* 🔹 Pestaña de "Ver Ventas" */}
+            {pestaniaActiva === "listado" && (
+                <>
+                    <h2>Ventas Cargadas</h2>
+                    <h3>Hora Límite: {horaLimite}</h3>
+                    <ul className={styles.lista}>
+                        {ventas.map((venta) => (
+                            <li key={venta._id} className={styles.ventaItem}>
+                                <div className={styles.ventaDetalle}>
+                                    <p><strong>SKU:</strong> {venta.sku}</p>
+                                    <p><strong>Nombre:</strong> {venta.nombre}</p>
+                                    <p><strong>Cantidad:</strong> {venta.cantidad} unidades</p>
+                                    {venta.cantidad > 1 && <span className={styles.alerta}>Ojo!</span>}
+                                    <p><strong>Punto de Despacho:</strong> {venta.puntoDespacho}</p>
+                                </div>
+                                <button 
+                                    onClick={() => marcarCompletada(venta._id, venta.completada)} 
+                                    className={`${styles.checkBtn} ${venta.completada ? styles.checkBtnChecked : ''}`}>
+                                    {venta.completada ? "✔" : "X"}
+                                </button>
+                                <button onClick={() => borrarVenta(venta._id)} className={styles.checkBtn}>Borrar</button>
+                            </li>
+                        ))}
+                    </ul>
+                </>
+            )}
         </div>
     );
 }
