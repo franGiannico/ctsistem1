@@ -1,6 +1,7 @@
 .container {
     padding: 1rem;
-    max-width: 90%; /* Ahora ocupa casi todo el ancho */
+    width: 100%; /* Ocupa todo el ancho */
+    max-width: 1200px; /* Máximo tamaño en pantallas grandes */
     margin: 0 auto;
     display: flex;
     flex-direction: column;
@@ -22,7 +23,7 @@
     padding: 0.5rem;
     border-radius: 0.25rem;
     flex: 1;
-    min-width: 200px; /* Evita que sean demasiado pequeños */
+    min-width: 250px; /* Evita que sean demasiado pequeños */
 }
 
 /* Botones */
@@ -30,11 +31,11 @@
 .clearButton {
     background-color: #007bff;
     color: white;
-    padding: 0.5rem 1rem;
+    padding: 0.7rem 1rem;
     border-radius: 0.25rem;
     border: none;
     cursor: pointer;
-    width: 150px; /* Tamaño fijo para botones */
+    width: 160px; /* Tamaño fijo para botones */
 }
 
 .clearButton {
@@ -53,16 +54,19 @@
     list-style: none;
     padding: 0;
     width: 100%;
-    max-width: 800px; /* Ajustar para pantallas grandes */
+    max-width: 1000px; /* Ajustar para pantallas grandes */
 }
 
 .taskItem {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.5rem;
+    padding: 0.8rem;
     border-bottom: 1px solid #eee;
     width: 100%;
+    background-color: #222; /* Color de fondo más visible */
+    border-radius: 5px;
+    margin-bottom: 8px;
 }
 
 /* Estilo para tareas completadas */
@@ -96,7 +100,10 @@
 /* 🌟 Pantallas grandes (PC) */
 @media (min-width: 1025px) {
     .container {
-        max-width: 1000px;
+        max-width: 90%;
+    }
+    .taskList {
+        max-width: 90%;
     }
 }
 
