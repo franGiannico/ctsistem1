@@ -182,3 +182,28 @@
     background: #007bff !important;
     color: white !important;
 }
+
+/* Contenedor del contador */
+.contadorContainer {
+    position: absolute; /* Lo posiciona en la parte superior */
+    top: 10px; /* Lo acerca a la parte superior */
+    right: 20px; /* Lo coloca en la esquina derecha */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end; /* Alinea los textos a la derecha */
+    gap: 5px;
+}
+
+/* Estilos del contador de Ventas Totales */
+.ventasTotales {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: red; /* 🔴 Color rojo */
+}
+
+/* Estilos del contador de Ventas Preparadas */
+.ventasPreparadas {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: green; /* 🟢 Color verde */
+}

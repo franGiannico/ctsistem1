@@ -111,7 +111,7 @@ function Apiventas() {
 
     return (
         <div className={styles.container}>
-            <h1>Gestión de Ventas</h1>
+            <h2>Gestión de Ventas</h2>
 
             {/* 🔹 Menú de pestañas */}
             <div className={styles.tabs}>
@@ -160,8 +160,7 @@ function Apiventas() {
                             Ventas Preparadas: {ventas.filter((venta) => venta.completada).length}
                         </p>
                     </div>
-
-                    <h2>Ventas Cargadas</h2>
+                    <h3>Ventas Cargadas</h3>
                     <h3>Hora Límite: {horaLimite}</h3>
                     <ul className={styles.lista}>
                         {ventas.map((venta) => (
