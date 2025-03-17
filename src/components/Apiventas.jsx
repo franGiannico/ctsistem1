@@ -182,8 +182,6 @@ function Apiventas() {
                         Ventas Preparadas: {ventas.filter((venta) => venta.completada).length}
                     </p>
                 </div>
-
-                <h3>Ventas Cargadas</h3>
                 <h3>Hora Límite: {horaLimite}</h3>
 
                 {/* 🔹 Recorremos cada grupo de ventas por Punto de Despacho */}
