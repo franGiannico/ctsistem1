@@ -109,6 +109,18 @@ function Apiventas() {
         setHoraLimite(event.target.value);
     };
 
+    // Función para agrupar ventas por Punto de Despacho
+    const agruparVentasPorPunto = () => {
+        const grupos = {};
+        ventas.forEach((venta) => {
+            if (!grupos[venta.puntoDespacho]) {
+                grupos[venta.puntoDespacho] = [];
+            }
+            grupos[venta.puntoDespacho].push(venta);
+        });
+        return grupos;
+    };
+
     return (
         <div className={styles.container}>
             <h2>Gestión de Ventas</h2>
@@ -161,40 +173,47 @@ function Apiventas() {
                 </form>
             )}
 
-            {/* 🔹 Pestaña de "Ver Ventas" */}
-            {pestaniaActiva === "listado" && (
-                <>
-                    <div className={styles.contadorContainer}>
-                        <p className={styles.ventasTotales}>Ventas Totales: {ventas.length}</p>
-                        <p className={styles.ventasPreparadas}>
-                            Ventas Preparadas: {ventas.filter((venta) => venta.completada).length}
-                        </p>
-                    </div>
-                    <h3>Ventas Cargadas</h3>
-                    <h3>Hora Límite: {horaLimite}</h3>
-                    <ul className={styles.lista}>
-                        {ventas.map((venta) => (
-                            <li key={venta._id} className={styles.ventaItem}>
-                                <div className={styles.ventaDetalle}>
-                                    <p><strong>SKU:</strong> {venta.sku}</p>
-                                    <p><strong>Nombre:</strong> {venta.nombre}</p>
-                                    <p><strong>Cantidad:</strong> {venta.cantidad} unidades</p>
-                                    {venta.cantidad > 1 && <span className={styles.alerta}>Ojo!</span>}                                    
-                                    <p><strong>Cliente:</strong> {venta.cliente}</p>
-                                    <p><strong>Destino:</strong> {venta.puntoDespacho}</p>
-                                    <p><strong>N° Venta:</strong> {venta.numeroVenta}</p>
-                                </div>
-                                <button onClick={() => marcarCompletada(venta._id, venta.completada)} className={`${styles.checkBtn} ${venta.completada ? styles.checkBtnChecked : ''}`}>
-                                    {venta.completada ? "✔" : "X"}
-                                </button>
-                                <button onClick={() => borrarVenta(venta._id)} className={styles.checkBtn}>Borrar</button>
-                            </li>
-                        ))}
-                    </ul>
-                </>
-            )}
-        </div>
-    );
-}
+        {/* 🔹 Pestaña de "Ver Ventas" */}
+        {pestaniaActiva === "listado" && (
+            <>
+                <div className={styles.contadorContainer}>
+                    <p className={styles.ventasTotales}>Ventas Totales: {ventas.length}</p>
+                    <p className={styles.ventasPreparadas}>
+                        Ventas Preparadas: {ventas.filter((venta) => venta.completada).length}
+                    </p>
+                </div>
 
+                <h3>Ventas Cargadas</h3>
+                <h3>Hora Límite: {horaLimite}</h3>
+
+                {/* 🔹 Recorremos cada grupo de ventas por Punto de Despacho */}
+                {Object.entries(agruparVentasPorPunto()).map(([puntoDespacho, ventasGrupo]) => (
+                    <div key={puntoDespacho}>
+                        <h3 className={styles.puntoTitulo}>{puntoDespacho}</h3> {/* ✅ Título del grupo */}
+                        <ul className={styles.lista}>
+                            {ventasGrupo.map((venta) => (
+                                <li key={venta._id} className={styles.ventaItem}>
+                                    <div className={styles.ventaDetalle}>
+                                        <p><strong>SKU:</strong> {venta.sku}</p>
+                                        <p><strong>Nombre:</strong> {venta.nombre}</p>
+                                        <p><strong>Cantidad:</strong> {venta.cantidad} unidades</p>
+                                        {venta.cantidad > 1 && <span className={styles.alerta}>Ojo!</span>}
+                                        <p><strong>Cliente:</strong> {venta.cliente}</p>
+                                        <p><strong>N° Venta:</strong> {venta.numeroVenta}</p>
+                                    </div>
+                                    <button onClick={() => marcarCompletada(venta._id, venta.completada)} className={`${styles.checkBtn} ${venta.completada ? styles.checkBtnChecked : ''}`}>
+                                        {venta.completada ? "✔" : "X"}
+                                    </button>
+                                    <button onClick={() => borrarVenta(venta._id)} className={styles.checkBtn}>Borrar</button>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                ))}
+            </>
+        )}
+    </div>
+);
+}
 export default Apiventas;
+

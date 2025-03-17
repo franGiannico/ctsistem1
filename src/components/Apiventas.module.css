@@ -232,3 +232,15 @@
 .ventaDetalle p {
     margin: 4px 0; /* Ajusta el espaciado entre líneas */
 }
+
+/* 🔹 Estilos para el título de cada grupo */
+.puntoTitulo {
+    font-size: 1.3rem;
+    font-weight: bold;
+    margin-top: 20px;
+    padding: 8px;
+    background: #007bff;
+    color: white;
+    border-radius: 5px;
+    text-align: center;
+}
