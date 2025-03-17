@@ -159,7 +159,6 @@ function Apiventas() {
                     className={styles.horaLimiteInput}
                 />
                 </form>
-
             )}
 
             {/* 🔹 Pestaña de "Ver Ventas" */}
@@ -180,8 +179,10 @@ function Apiventas() {
                                     <p><strong>SKU:</strong> {venta.sku}</p>
                                     <p><strong>Nombre:</strong> {venta.nombre}</p>
                                     <p><strong>Cantidad:</strong> {venta.cantidad} unidades</p>
-                                    {venta.cantidad > 1 && <span className={styles.alerta}>Ojo!</span>}
-                                    <p><strong>Punto de Despacho:</strong> {venta.puntoDespacho}</p>
+                                    {venta.cantidad > 1 && <span className={styles.alerta}>Ojo!</span>}                                    
+                                    <p><strong>Cliente:</strong> {venta.cliente}</p>
+                                    <p><strong>Destino:</strong> {venta.puntoDespacho}</p>
+                                    <p><strong>N° Venta:</strong> {venta.numeroVenta}</p>
                                 </div>
                                 <button onClick={() => marcarCompletada(venta._id, venta.completada)} className={`${styles.checkBtn} ${venta.completada ? styles.checkBtnChecked : ''}`}>
                                     {venta.completada ? "✔" : "X"}
