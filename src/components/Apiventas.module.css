@@ -188,7 +188,6 @@
     position: absolute; /* Mantiene el contador fijo */
     top: 10px; /* Ajusta el espacio en la parte superior */
     right: 15px; /* Lo alinea a la derecha */
-    left: 15px; /* Lo alinea a la izquierda */
     background: white; /* Fondo blanco para que resalte */
     padding: 8px 12px; /* Espaciado interno */
     border-radius: 6px;
@@ -220,6 +219,7 @@
         width: 100%; /* Que ocupe todo el ancho */
         text-align: center; /* Centra los textos */
         margin-top: 10px; /* Agrega un pequeño margen */
+        margin-left: 10px;
         padding: 5px 0; /* Ajusta el espaciado */
     }
 
