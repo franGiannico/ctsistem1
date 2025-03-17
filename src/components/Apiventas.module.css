@@ -183,27 +183,51 @@
     color: white !important;
 }
 
-/* Contenedor del contador */
+/* 🔹 Contenedor del contador */
 .contadorContainer {
-    position: absolute; /* Lo posiciona en la parte superior */
-    top: 10px; /* Lo acerca a la parte superior */
-    right: 20px; /* Lo coloca en la esquina derecha */
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end; /* Alinea los textos a la derecha */
-    gap: 5px;
+    position: absolute; /* Mantiene el contador fijo */
+    top: 10px; /* Ajusta el espacio en la parte superior */
+    right: 15px; /* Lo alinea a la derecha */
+    background: white; /* Fondo blanco para que resalte */
+    padding: 8px 12px; /* Espaciado interno */
+    border-radius: 6px;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+    text-align: right;
+    min-width: 120px; /* Evita que los textos se amontonen */
 }
 
-/* Estilos del contador de Ventas Totales */
+/* 🔹 Texto de "Ventas Totales" (Rojo) */
 .ventasTotales {
-    font-size: 1.2rem;
+    color: red;
     font-weight: bold;
-    color: red; /* 🔴 Color rojo */
+    font-size: 1rem;
+    margin: 2px 0;
 }
 
-/* Estilos del contador de Ventas Preparadas */
+/* 🔹 Texto de "Ventas Preparadas" (Verde) */
 .ventasPreparadas {
-    font-size: 1.2rem;
+    color: green;
     font-weight: bold;
-    color: green; /* 🟢 Color verde */
+    font-size: 1rem;
+    margin: 2px 0;
+}
+
+/* 📱 **RESPONSIVE**: Ajustes para pantallas pequeñas */
+@media (max-width: 768px) {
+    .contadorContainer {
+        position: relative; /* Quita la posición absoluta en móviles */
+        width: 100%; /* Que ocupe todo el ancho */
+        text-align: center; /* Centra los textos */
+        margin-top: 10px; /* Agrega un pequeño margen */
+        padding: 5px 0; /* Ajusta el espaciado */
+    }
+
+    .ventasTotales, .ventasPreparadas {
+        font-size: 0.9rem; /* Reduce el tamaño de fuente */
+        display: block; /* Hace que cada línea se vea en su propio espacio */
+    }
+}
+
+.ventaDetalle p {
+    margin: 4px 0; /* Ajusta el espaciado entre líneas */
 }
