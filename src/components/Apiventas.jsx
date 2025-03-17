@@ -131,6 +131,7 @@ function Apiventas() {
 
             {/* 🔹 Pestaña de "Cargar Ventas" */}
             {pestaniaActiva === "cargar" && (
+
                 <form onSubmit={handleSubmit} className={styles.form}>
                     <input type="text" name="sku" value={formData.sku} onChange={handleInputChange} placeholder="SKU" required />
                     <input type="text" name="nombre" value={formData.nombre} onChange={handleInputChange} placeholder="Nombre" required />
@@ -148,7 +149,17 @@ function Apiventas() {
                     </select>
 
                     <button type="submit">Agregar Venta</button>
+
+                    {/* ✅ Agregamos el input de Hora Límite */}
+                <label className={styles.horaLimiteLabel}>Hora Límite de Entrega:</label>
+                <input
+                    type="time"
+                    value={horaLimite}
+                    onChange={handleHoraLimiteChange}
+                    className={styles.horaLimiteInput}
+                />
                 </form>
+
             )}
 
             {/* 🔹 Pestaña de "Ver Ventas" */}

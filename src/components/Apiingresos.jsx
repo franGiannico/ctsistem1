@@ -33,26 +33,23 @@ const ApiIngresos = () => {
     const autocompletarProducto = async () => {
         const { codigoBarras } = formData;
         if (!codigoBarras) return;
-
+    
         try {
-            const response = await fetch("/base_datos.json");
-            if (!response.ok) throw new Error("No se pudo cargar la base de datos");
-            const data = await response.json();
-            const producto = data.find(item => String(item.CODIGO_BARRAS).trim() === String(codigoBarras).trim());
-
-            if (producto) {
-                setFormData(prev => ({
-                    ...prev,
-                    sku: producto.SKU,
-                    articulo: producto.DESCRIPCION
-                }));
-            } else {
-                setFormData(prev => ({ ...prev, sku: "", articulo: "" }));
-            }
+            const response = await fetch(`https://ctsistem1-e68664e8ae46.herokuapp.com/apiingresos/buscar-producto/${codigoBarras}`);
+            if (!response.ok) throw new Error("Producto no encontrado");
+    
+            const producto = await response.json();
+            setFormData(prev => ({
+                ...prev,
+                sku: producto.sku,
+                articulo: producto.descripcion
+            }));
         } catch (error) {
-            console.error("Error al cargar la base de datos:", error);
+            console.error("Error al buscar el producto:", error);
+            setFormData(prev => ({ ...prev, sku: "", articulo: "" }));
         }
     };
+    
 
     const handleSubmit = async (e) => {
         e.preventDefault();
