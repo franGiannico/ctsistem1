@@ -121,6 +121,20 @@ function Apiventas() {
         return grupos;
     };
 
+    const borrarVentasCompletadas = async () => {
+        if (!window.confirm("¿Estás seguro de que quieres eliminar todas las ventas completadas?")) return;
+    
+        try {
+            await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/borrar-ventas-completadas", {
+                method: "DELETE"
+            });
+            cargarVentasDesdeServidor(); // Recargar la lista después de eliminar
+        } catch (error) {
+            console.error("Error al borrar ventas completadas:", error);
+        }
+    };
+    
+
     return (
         <div className={styles.container}>
             <h2>Gestión de Ventas</h2>
@@ -183,8 +197,10 @@ function Apiventas() {
                     </p>
                 </div>
 
-                <h3>Ventas Cargadas</h3>
                 <h3>Hora Límite: {horaLimite}</h3>
+                <button onClick={borrarVentasCompletadas} className={styles.borrarCompletadas}>
+                    Borrar Ventas Completadas
+                </button>
 
                 {/* 🔹 Recorremos cada grupo de ventas por Punto de Despacho */}
                 {Object.entries(agruparVentasPorPunto()).map(([puntoDespacho, ventasGrupo]) => (
@@ -216,7 +232,7 @@ function Apiventas() {
                 ))}
             </>
         )}
-        </div>
+    </div>
 );
 }
 export default Apiventas;
