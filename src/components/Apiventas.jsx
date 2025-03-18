@@ -173,8 +173,8 @@ function Apiventas() {
                 </form>
             )}
 
-        {/* 🔹 Pestaña de "Ver Ventas" */}
-        {pestaniaActiva === "listado" && (
+            {/* 🔹 Pestaña de "Ver Ventas" */}
+            {pestaniaActiva === "listado" && (
             <>
                 <div className={styles.contadorContainer}>
                     <p className={styles.ventasTotales}>Ventas Totales: {ventas.length}</p>
@@ -182,12 +182,18 @@ function Apiventas() {
                         Ventas Preparadas: {ventas.filter((venta) => venta.completada).length}
                     </p>
                 </div>
+
+                <h3>Ventas Cargadas</h3>
                 <h3>Hora Límite: {horaLimite}</h3>
 
                 {/* 🔹 Recorremos cada grupo de ventas por Punto de Despacho */}
                 {Object.entries(agruparVentasPorPunto()).map(([puntoDespacho, ventasGrupo]) => (
                     <div key={puntoDespacho}>
-                        <h3 className={styles.puntoTitulo}>{puntoDespacho}</h3> {/* ✅ Título del grupo */}
+                        {/* ✅ **Agregamos la cantidad de ventas en el título** */}
+                        <h3 className={styles.puntoTitulo}>
+                            {puntoDespacho} <span className={styles.contadorPunto}>({ventasGrupo.length})</span>
+                        </h3>
+
                         <ul className={styles.lista}>
                             {ventasGrupo.map((venta) => (
                                 <li key={venta._id} className={styles.ventaItem}>
@@ -210,7 +216,7 @@ function Apiventas() {
                 ))}
             </>
         )}
-    </div>
+        </div>
 );
 }
 export default Apiventas;

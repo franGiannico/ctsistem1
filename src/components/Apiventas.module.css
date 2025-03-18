@@ -244,3 +244,20 @@
     border-radius: 5px;
     text-align: center;
 }
+
+.puntoTitulo {
+    font-size: 1.3rem;
+    font-weight: bold;
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.contadorPunto {
+    font-size: 1rem;
+    color: #007bff;
+    background: #f0f8ff;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
