@@ -261,3 +261,17 @@
     padding: 2px 8px;
     border-radius: 10px;
 }
+
+.borrarCompletadas {
+    background-color: #dc3545;
+    color: white;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.borrarCompletadas:hover {
+    background-color: #a71d2a;
+}

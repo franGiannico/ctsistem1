@@ -1,90 +1,110 @@
+/* 🏗️ Estilos generales */
 .container {
-    max-width: 800px;
-    margin: 0 auto;
-    background: white;
-    padding: 10px;
+    background-color: #f8f9fa; /* Fondo gris claro */
+    padding: 20px;
     border-radius: 8px;
-    box-shadow: 0px 3px 8px rgba(0, 0, 0, 0.1);
+    max-width: 900px;
+    margin: 20px auto;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* 🎨 Estilos para los títulos */
 .title {
-    color: #333;
-    margin-bottom: 8px;
-    font-size: 18px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    text-align: center;
+    color: #333; /* Color oscuro */
+    margin-bottom: 10px;
 }
 
+/* 📋 Formulario de ingreso */
 .form {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 5px;
+    gap: 10px;
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-.form input,
-.form select {
-    padding: 5px;
-    font-size: 12px;
+.form input {
+    padding: 10px;
     border: 1px solid #ccc;
-    border-radius: 4px;
-    width: 100%;
-}
-
-.form button {
-    padding: 6px;
-    font-size: 12px;
-    border: none;
     border-radius: 5px;
-    cursor: pointer;
-    transition: background 0.3s;
 }
 
 .addButton {
-    background: #28a745;
+    background-color: #007bff;
     color: white;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
 }
 
-.addButton:hover,
-.form button:hover {
-    opacity: 0.8;
+.addButton:hover {
+    background-color: #0056b3;
 }
 
+/* 📦 Lista de artículos */
 .itemsList {
-    margin-top: 10px;
-    text-align: left;
+    margin-top: 20px;
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #fff;
-    padding: 6px;
-    margin: 3px 0;
-    border-radius: 5px;
-    border: 1px solid #ddd;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    color: #333;
 }
 
-.item p {
-    margin: 0;
-    font-size: 12px;
+.item:last-child {
+    border-bottom: none;
 }
 
+/* 🗑️ Botón para eliminar */
 .clearButton {
-    background: #dc3545;
+    background-color: #dc3545;
     color: white;
+    padding: 8px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
 }
 
-/* Estilos responsive */
-@media (max-width: 600px) {
+.clearButton:hover {
+    background-color: #a71d2a;
+}
+
+/* ✅ Estilos para pantallas más pequeñas */
+@media (max-width: 768px) {
     .container {
-        width: 100%;
-        padding: 8px;
+        width: 95%;
+        padding: 15px;
     }
 
-    .form input,
-    .form select,
-    .form button {
-        padding: 4px;
-        font-size: 11px;
+    .form {
+        gap: 8px;
+    }
+
+    .addButton,
+    .clearButton {
+        font-size: 0.9rem;
+    }
+
+    .itemsList {
+        padding: 10px;
+    }
+
+    .item {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }
