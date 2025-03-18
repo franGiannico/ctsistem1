@@ -43,26 +43,46 @@ router.post("/add-item", async (req, res) => {
   }
 });
 
-// Marcar un ingreso como publicado (checked)
-router.post("/update-item", async (req, res) => {
+// ✅ Nueva versión: Actualizar estado checked de un ingreso
+router.patch("/update-item/:id", async (req, res) => {
   try {
-    const { _id, checked } = req.body;
-    await Ingreso.findByIdAndUpdate(_id, { checked });
-    res.json({ message: "Artículo actualizado" });
+    const { checked } = req.body;
+
+    if (typeof checked !== "boolean") {
+      return res.status(400).json({ error: "Formato de datos incorrecto" });
+    }
+
+    const articuloActualizado = await Ingreso.findByIdAndUpdate(
+      req.params.id,
+      { checked },
+      { new: true }
+    );
+
+    if (!articuloActualizado) {
+      return res.status(404).json({ error: "Artículo no encontrado" });
+    }
+
+    res.json({ message: "Artículo actualizado correctamente", articulo: articuloActualizado });
   } catch (error) {
     res.status(500).json({ error: "Error al actualizar el artículo" });
   }
 });
 
-// Eliminar los ingresos marcados como publicados
-router.post("/clear-checked-items", async (req, res) => {
+// ✅ Nueva versión: Eliminar todos los ingresos marcados como publicados
+router.delete("/clear-checked-items", async (req, res) => {
   try {
-    await Ingreso.deleteMany({ checked: true });
-    res.json({ message: "Artículos publicados eliminados correctamente" });
+    const result = await Ingreso.deleteMany({ checked: true });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ message: "No hay artículos publicados para eliminar" });
+    }
+
+    res.json({ message: `Se eliminaron ${result.deletedCount} artículos publicados` });
   } catch (error) {
     res.status(500).json({ error: "Error al eliminar artículos publicados" });
   }
 });
+
 
 // 🚀 NUEVO ENDPOINT: Buscar producto por código de barras
 router.get("/buscar-producto/:codigoBarras", async (req, res) => {

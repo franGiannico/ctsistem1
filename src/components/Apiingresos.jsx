@@ -75,30 +75,33 @@ const ApiIngresos = () => {
 
     const toggleChecked = async (id, checked) => {
         try {
-            await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiingresos/update-item", {
-                method: "POST",
+            await fetch(`https://ctsistem1-e68664e8ae46.herokuapp.com/apiingresos/update-item/${id}`, {
+                method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ _id: id, checked: !checked })
+                body: JSON.stringify({ checked: !checked }) // Alternar estado
             });
-            loadItems();
+            loadItems(); // Recargar lista después de actualizar
         } catch (error) {
             console.error("Error al actualizar estado de artículo:", error);
         }
     };
-
+    
     const clearCheckedItems = async () => {
         if (!window.confirm("¿Estás seguro de que quieres eliminar los artículos publicados?")) return;
-
+    
         try {
-            await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiingresos/clear-checked-items", {
-                method: "POST"
+            const response = await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiingresos/clear-checked-items", {
+                method: "DELETE"
             });
-            loadItems();
+    
+            const data = await response.json();
+            alert(data.message); // Mostrar mensaje con el número de artículos eliminados
+            loadItems(); // Recargar la lista después de eliminar
         } catch (error) {
             console.error("Error al eliminar artículos publicados:", error);
         }
     };
-
+    
     return (
         <div className={styles.container}>
             <h2 className={styles.title}>Ingreso de Mercadería</h2>
