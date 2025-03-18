@@ -108,3 +108,26 @@
         align-items: flex-start;
     }
 }
+
+/* 🎨 Estilos del botón de check */
+.checkedButton {
+    background-color: #f0f0f0;
+    color: black;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+
+.checkedButtonActive {
+    background-color: #28a745;
+    color: white;
+    border: none;
+}
+
+/* 📌 Botón de "Eliminar Publicados" centrado al final */
+.clearContainer {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}

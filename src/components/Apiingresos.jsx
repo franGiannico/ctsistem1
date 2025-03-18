@@ -33,11 +33,11 @@ const ApiIngresos = () => {
     const autocompletarProducto = async () => {
         const { codigoBarras } = formData;
         if (!codigoBarras) return;
-    
+
         try {
             const response = await fetch(`https://ctsistem1-e68664e8ae46.herokuapp.com/apiingresos/buscar-producto/${codigoBarras}`);
             if (!response.ok) throw new Error("Producto no encontrado");
-    
+
             const producto = await response.json();
             setFormData(prev => ({
                 ...prev,
@@ -49,7 +49,6 @@ const ApiIngresos = () => {
             setFormData(prev => ({ ...prev, sku: "", articulo: "" }));
         }
     };
-    
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -60,7 +59,7 @@ const ApiIngresos = () => {
         }
 
         const nuevoArticulo = { codigoBarras, sku, articulo, cantidad: parseInt(cantidad), checked: false };
-        
+
         try {
             await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiingresos/add-item", {
                 method: "POST",
@@ -71,6 +70,19 @@ const ApiIngresos = () => {
             setFormData({ codigoBarras: "", sku: "", articulo: "", cantidad: "" });
         } catch (error) {
             console.error("Error al agregar el artículo:", error);
+        }
+    };
+
+    const toggleChecked = async (id, checked) => {
+        try {
+            await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiingresos/update-item", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ _id: id, checked: !checked })
+            });
+            loadItems();
+        } catch (error) {
+            console.error("Error al actualizar estado de artículo:", error);
         }
     };
 
@@ -109,12 +121,24 @@ const ApiIngresos = () => {
             <h3 className={styles.title}>Lista de Mercadería</h3>
             <div className={styles.itemsList}>
                 {items.map(item => (
-                    <div key={item.sku} className={styles.item}>
+                    <div key={item._id} className={styles.item}>
                         <p>📦 {item.sku} - {item.articulo} ({item.cantidad} unidades)</p>
                         <p>🔢 Código de Barras: {item.codigoBarras}</p>
-                        <button onClick={() => clearCheckedItems()} className={styles.clearButton}>Eliminar Publicados</button>
+                        <button
+                            onClick={() => toggleChecked(item._id, item.checked)}
+                            className={item.checked ? styles.checkedButtonActive : styles.checkedButton}
+                        >
+                            {item.checked ? "✔" : "☐"}
+                        </button>
                     </div>
                 ))}
+            </div>
+
+            {/* ✅ El botón de "Eliminar Publicados" solo aparece una vez al final */}
+            <div className={styles.clearContainer}>
+                <button onClick={clearCheckedItems} className={styles.clearButton}>
+                    Eliminar Publicados
+                </button>
             </div>
         </div>
     );
