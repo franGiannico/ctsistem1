@@ -81,6 +81,17 @@ router.delete("/borrar-venta/:id", async (req, res) => {
   }
 });
 
+// Borrar todas las ventas completadas
+router.delete("/borrar-ventas-completadas", async (req, res) => {
+  try {
+    await Venta.deleteMany({ completada: true });
+    res.json({ message: "Ventas completadas eliminadas correctamente" });
+  } catch (error) {
+    res.status(500).json({ error: "Error al eliminar las ventas completadas" });
+  }
+});
+
+
 // Ruta para actualizar la hora límite
 router.post("/actualizar-hora-limite", (req, res) => {
   try {
