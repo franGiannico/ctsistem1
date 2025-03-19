@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import styles from './Apitareas.module.css';
+import { Container, Row, Col, Button, Form, ListGroup } from "react-bootstrap";
 
 const API_URL = "https://ctsistem1-e68664e8ae46.herokuapp.com/apitareas";
 
@@ -8,20 +8,14 @@ export default function Apitareas() {
     const [descripcion, setDescripcion] = useState("");
     const [prioridad, setPrioridad] = useState("Normal");
 
-    // Cargar tareas desde la API al montar el componente
     useEffect(() => {
         cargarTareasDesdeAPI();
-    
-        // Sincronizar cada 5 segundos
         const interval = setInterval(() => {
             cargarTareasDesdeAPI();
         }, 5000);
-    
-        return () => clearInterval(interval); // Limpiar el intervalo cuando se desmonte
+        return () => clearInterval(interval);
     }, []);
-    
 
-    // Obtener todas las tareas de la API
     const cargarTareasDesdeAPI = async () => {
         try {
             const res = await fetch(`${API_URL}/cargar-tareas`);
@@ -33,7 +27,6 @@ export default function Apitareas() {
         }
     };
 
-    // Agregar una nueva tarea en la API y actualizar el estado
     const agregarTarea = async () => {
         if (!descripcion.trim()) {
             alert("Ingrese una descripción.");
@@ -51,17 +44,13 @@ export default function Apitareas() {
 
             if (!res.ok) throw new Error(`Error HTTP: ${res.status}`);
 
-            const tareaGuardada = await res.json(); // Obtener tarea guardada
-            setTareas([...tareas, tareaGuardada.tarea]); // Agregar al estado
-
-            // Limpiar input
+            cargarTareasDesdeAPI();
             setDescripcion("");
         } catch (error) {
             console.error("❌ Error al guardar tarea:", error);
         }
     };
 
-    // Marcar tarea como completada en la API
     const marcarComoCompletada = async (tarea) => {
         try {
             const res = await fetch(`${API_URL}/update-tarea`, {
@@ -71,15 +60,12 @@ export default function Apitareas() {
             });
 
             if (!res.ok) throw new Error(`Error HTTP: ${res.status}`);
-
-            // Actualizar estado con nueva información desde la API
             cargarTareasDesdeAPI();
         } catch (error) {
             console.error("❌ Error al actualizar tarea:", error);
         }
     };
 
-    // Limpiar tareas completadas en la API
     const limpiarTareasCompletadas = async () => {
         try {
             const res = await fetch(`${API_URL}/limpiar-tareas`, {
@@ -87,8 +73,6 @@ export default function Apitareas() {
             });
 
             if (!res.ok) throw new Error(`Error HTTP: ${res.status}`);
-
-            // Actualizar estado tras limpiar
             cargarTareasDesdeAPI();
         } catch (error) {
             console.error("❌ Error al limpiar tareas:", error);
@@ -96,66 +80,86 @@ export default function Apitareas() {
     };
 
     return (
-        <div className={styles.container}>
-            <h2 className="text-xl font-bold mb-4">Gestión de Tareas</h2>
+        <Container className="mt-4">
+            <h2 className="text-center">Gestión de Tareas</h2>
+            <Row className="mb-3">
+                <Col md={6} className="mx-auto">
+                    <Form>
+                        <Form.Group controlId="formDescripcion">
+                            <Form.Control
+                                type="text"
+                                placeholder="Nueva tarea"
+                                value={descripcion}
+                                onChange={(e) => setDescripcion(e.target.value)}
+                            />
+                        </Form.Group>
+                        <Form.Group controlId="formPrioridad" className="mt-2">
+                            <Form.Select
+                                value={prioridad}
+                                onChange={(e) => setPrioridad(e.target.value)}
+                            >
+                                <option value="Normal">Normal</option>
+                                <option value="Prioritaria">Prioritaria</option>
+                            </Form.Select>
+                        </Form.Group>
+                        <Button variant="primary" className="w-100 mt-3" onClick={agregarTarea}>
+                            Agregar Tarea
+                        </Button>
+                    </Form>
+                </Col>
+            </Row>
 
-            <div className={styles.inputGroup}>
-                <input
-                    type="text"
-                    placeholder="Nueva tarea"
-                    value={descripcion}
-                    onChange={(e) => setDescripcion(e.target.value)}
-                    className={styles.input}
-                />
-                <select
-                    value={prioridad}
-                    onChange={(e) => setPrioridad(e.target.value)}
-                    className={styles.select}
-                >
-                    <option value="Normal">Normal</option>
-                    <option value="Prioritaria">Prioritaria</option>
-                </select>
-                <button onClick={agregarTarea} className={styles.addButton}>
-                    Agregar
-                </button>
-            </div>
+            <Row>
+                <Col md={6} className="mx-auto">
+                    <h4>Tareas Prioritarias</h4>
+                    <ListGroup>
+                        {tareas.filter(t => t.prioridad === "Prioritaria").map((tarea) => (
+                            <ListGroup.Item key={tarea._id} className="d-flex justify-content-between align-items-center">
+                                <span className={tarea.completada ? "text-decoration-line-through text-muted" : ""}>
+                                    {tarea.descripcion}
+                                </span>
+                                <Button
+                                    variant={tarea.completada ? "success" : "secondary"}
+                                    size="sm"
+                                    onClick={() => marcarComoCompletada(tarea)}
+                                >
+                                    ✔
+                                </Button>
+                            </ListGroup.Item>
+                        ))}
+                    </ListGroup>
+                </Col>
+            </Row>
 
-            <h3 className={styles.taskTitle}>Tareas Prioritarias</h3>
-            <ul className={styles.taskList}>
-                {tareas.filter((t) => t.prioridad === "Prioritaria").map((tarea) => (
-                    <li key={tarea._id} className={styles.taskItem}>
-                        <span className={tarea.completada ? styles.completed : ""}>{tarea.descripcion}</span>
-                        <button
-                            onClick={() => marcarComoCompletada(tarea)}
-                            className={`${styles.checkButton} ${tarea.completada ? styles.checkButtonCompleted : styles.checkButtonNormal}`}
-                        >
-                            ✔
-                        </button>
-                    </li>
-                ))}
-            </ul>
+            <Row className="mt-4">
+                <Col md={6} className="mx-auto">
+                    <h4>Tareas Normales</h4>
+                    <ListGroup>
+                        {tareas.filter(t => t.prioridad === "Normal").map((tarea) => (
+                            <ListGroup.Item key={tarea._id} className="d-flex justify-content-between align-items-center">
+                                <span className={tarea.completada ? "text-decoration-line-through text-muted" : ""}>
+                                    {tarea.descripcion}
+                                </span>
+                                <Button
+                                    variant={tarea.completada ? "success" : "secondary"}
+                                    size="sm"
+                                    onClick={() => marcarComoCompletada(tarea)}
+                                >
+                                    ✔
+                                </Button>
+                            </ListGroup.Item>
+                        ))}
+                    </ListGroup>
+                </Col>
+            </Row>
 
-            <h3 className={styles.taskTitle}>Tareas Normales</h3>
-            <ul className={styles.taskList}>
-                {tareas.filter((t) => t.prioridad === "Normal").map((tarea) => (
-                    <li key={tarea._id} className={styles.taskItem}>
-                        <span className={tarea.completada ? styles.completed : ""}>{tarea.descripcion}</span>
-                        <button
-                            onClick={() => marcarComoCompletada(tarea)}
-                            className={`${styles.checkButton} ${tarea.completada ? styles.checkButtonCompleted : styles.checkButtonNormal}`}
-                        >
-                            ✔
-                        </button>
-                    </li>
-                ))}
-            </ul>
-
-            <button
-                onClick={limpiarTareasCompletadas}
-                className={styles.clearButton}
-            >
-                Limpiar Tareas Completadas
-            </button>
-        </div>
+            <Row className="mt-4">
+                <Col md={6} className="mx-auto text-center">
+                    <Button variant="danger" onClick={limpiarTareasCompletadas}>
+                        Limpiar Tareas Completadas
+                    </Button>
+                </Col>
+            </Row>
+        </Container>
     );
 }
