@@ -1,7 +1,7 @@
 // src/App.js
 import React from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import Header from "./components/Header";
+import Header from "./components/Header.jsx"; // ✅ Debe ser una importación default
 import Home from "./pages/Home"; // Asegúrate de crear este componente
 import ApiventasPage from "./pages/Apiventas";
 import ApiingresosPage from "./pages/Apiingresos";
