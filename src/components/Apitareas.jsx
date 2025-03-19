@@ -84,7 +84,7 @@ export default function Apitareas() {
             <h2 className="text-center">Gestión de Tareas</h2>
 
             <Row className="mb-3">
-                <Col xs md className="mx-auto"> 
+                <Col xs={12} md={10} lg={8} xl={6} className="mx-auto"> 
                     <Form>
                         <Form.Group controlId="formDescripcion">
                             <Form.Control type="text" placeholder="Nueva tarea" />
@@ -101,7 +101,7 @@ export default function Apitareas() {
             </Row>
 
             <Row>
-                <Col xs md className="mx-auto"> 
+                <Col xs={12} md={10} lg={8} xl={6} className="mx-auto"> 
                     <h4>Tareas Prioritarias</h4>
                     <ListGroup>
                         <ListGroup.Item className="d-flex justify-content-between align-items-center">
@@ -113,7 +113,7 @@ export default function Apitareas() {
             </Row>
 
             <Row className="mt-4">
-                <Col xs md className="mx-auto"> 
+                <Col xs={12} md={10} lg={8} xl={6} className="mx-auto"> 
                     <h4>Tareas Normales</h4>
                     <ListGroup>
                         <ListGroup.Item className="d-flex justify-content-between align-items-center">
@@ -125,7 +125,7 @@ export default function Apitareas() {
             </Row>
 
             <Row className="mt-4">
-                <Col xs md className="mx-auto text-center"> 
+                <Col xs={12} md={10} lg={8} xl={6} className="mx-auto text-center"> 
                     <Button variant="danger">Limpiar Tareas Completadas</Button>
                 </Col>
             </Row>
