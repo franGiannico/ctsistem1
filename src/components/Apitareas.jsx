@@ -81,54 +81,54 @@ export default function Apitareas() {
 
     return (
         <Container fluid className="mt-4 px-4">
-        <h2 className="text-center">Gestión de Tareas</h2>
+            <h2 className="text-center">Gestión de Tareas</h2>
 
-        <Row className="mb-3">
-            <Col xs={12} md={10} lg={8} xl={6} className="mx-auto">
-                <Form>
-                    <Form.Group controlId="formDescripcion">
-                        <Form.Control type="text" placeholder="Nueva tarea" />
-                    </Form.Group>
-                    <Form.Group controlId="formPrioridad" className="mt-2">
-                        <Form.Select>
-                            <option value="Normal">Normal</option>
-                            <option value="Prioritaria">Prioritaria</option>
-                        </Form.Select>
-                    </Form.Group>
-                    <Button variant="primary" className="w-100 mt-3">Agregar Tarea</Button>
-                </Form>
-            </Col>
-        </Row>
+            <Row className="mb-3">
+                <Col xs={12} md={6} className="mx-auto"> 
+                    <Form>
+                        <Form.Group controlId="formDescripcion">
+                            <Form.Control type="text" placeholder="Nueva tarea" />
+                        </Form.Group>
+                        <Form.Group controlId="formPrioridad" className="mt-2">
+                            <Form.Select>
+                                <option value="Normal">Normal</option>
+                                <option value="Prioritaria">Prioritaria</option>
+                            </Form.Select>
+                        </Form.Group>
+                        <Button variant="primary" className="w-100 mt-3">Agregar Tarea</Button>
+                    </Form>
+                </Col>
+            </Row>
 
-        <Row>
-            <Col xs={12} md={10} lg={8} xl={6} className="mx-auto">
-                <h4>Tareas Prioritarias</h4>
-                <ListGroup>
-                    <ListGroup.Item className="d-flex justify-content-between align-items-center">
-                        <span>Ejemplo de Tarea</span>
-                        <Button variant="secondary" size="sm">✔</Button>
-                    </ListGroup.Item>
-                </ListGroup>
-            </Col>
-        </Row>
+            <Row>
+                <Col xs={12} md={6} className="mx-auto"> 
+                    <h4>Tareas Prioritarias</h4>
+                    <ListGroup>
+                        <ListGroup.Item className="d-flex justify-content-between align-items-center">
+                            <span>Ejemplo de Tarea</span>
+                            <Button variant="secondary" size="sm">✔</Button>
+                        </ListGroup.Item>
+                    </ListGroup>
+                </Col>
+            </Row>
 
-        <Row className="mt-4">
-            <Col xs={12} md={10} lg={8} xl={6} className="mx-auto">
-                <h4>Tareas Normales</h4>
-                <ListGroup>
-                    <ListGroup.Item className="d-flex justify-content-between align-items-center">
-                        <span>Ejemplo de Tarea Normal</span>
-                        <Button variant="secondary" size="sm">✔</Button>
-                    </ListGroup.Item>
-                </ListGroup>
-            </Col>
-        </Row>
+            <Row className="mt-4">
+                <Col xs={12} md={6} className="mx-auto"> 
+                    <h4>Tareas Normales</h4>
+                    <ListGroup>
+                        <ListGroup.Item className="d-flex justify-content-between align-items-center">
+                            <span>Ejemplo de Tarea Normal</span>
+                            <Button variant="secondary" size="sm">✔</Button>
+                        </ListGroup.Item>
+                    </ListGroup>
+                </Col>
+            </Row>
 
-        <Row className="mt-4">
-            <Col xs={12} md={10} lg={8} xl={6} className="mx-auto text-center">
-                <Button variant="danger">Limpiar Tareas Completadas</Button>
-            </Col>
-        </Row>
-    </Container>
+            <Row className="mt-4">
+                <Col xs={12} md={6} className="mx-auto text-center"> 
+                    <Button variant="danger">Limpiar Tareas Completadas</Button>
+                </Col>
+            </Row>
+        </Container>
     );
 }

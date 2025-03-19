@@ -16,9 +16,9 @@ body, html {
 }
 
 .container {
-  width: 100%;
-  max-width: 1200px; /* Define un límite para pantallas grandes */
-  padding: 20px;
+  max-width: 100% !important; /* Ocupa todo el ancho disponible */
+  width: 90%; /* Ajusta el tamaño dinámicamente */
+  margin: 0 auto; /* Centra el contenido */
 }
 
 @media (max-width: 768px) {
