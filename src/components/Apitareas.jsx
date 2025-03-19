@@ -80,7 +80,7 @@ export default function Apitareas() {
     };
 
     return (
-        <Container fluid className="mt-4 px-4">
+        <Container className="mt-4">
             <h2 className="text-center">Gestión de Tareas</h2>
             <Row className="mb-3">
                 <Col md={6} className="mx-auto">
