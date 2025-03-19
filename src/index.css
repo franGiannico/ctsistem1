@@ -3,26 +3,48 @@ body, html {
   height: 100%;
   margin: 0;
   padding: 0;
-  overflow-x: hidden; /* Evita el scroll horizontal */
+  overflow-x: hidden;
+  background-color: #f8f9fa; /* Ajusta el color de fondo */
 }
 
 #root {
-  width: 100vw; /* Ocupa todo el ancho de la pantalla */
+  width: 100vw;
   max-width: 100%;
-  min-height: 100vh; /* Ocupa toda la altura de la ventana */
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
 .container {
-  width: 100%;
-  max-width: 1200px; /* Define un límite para pantallas grandes */
+  width: 95%; /* Ajuste para ocupar casi todo el ancho */
+  max-width: 1400px; /* Máximo para pantallas grandes */
   padding: 20px;
+  margin: 0 auto;
+  background-color: #ffffff; /* Fondo blanco para que contraste */
+  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1); /* Agrega un efecto de sombra */
+  border-radius: 8px;
 }
 
 @media (max-width: 768px) {
   .container {
-    max-width: 95%;
+    width: 98%;
+    padding: 10px;
+  }
+}
+
+.container-fluid {
+  width: 95%;
+  max-width: 1400px; /* Evita que se expanda demasiado en pantallas grandes */
+  margin: 0 auto;
+  background-color: #ffffff; /* Fondo blanco para contraste */
+  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1); /* Agrega un efecto de sombra */
+  border-radius: 8px;
+}
+
+@media (max-width: 768px) {
+  .container-fluid {
+    width: 98%;
+    padding: 10px;
   }
 }
