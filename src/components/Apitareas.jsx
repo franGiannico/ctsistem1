@@ -45,7 +45,7 @@ export default function Apitareas() {
             if (!res.ok) throw new Error(`Error HTTP: ${res.status}`);
 
             cargarTareasDesdeAPI();
-            setDescripcion("");
+            setDescripcion(""); // Limpiar el input después de agregar
         } catch (error) {
             console.error("❌ Error al guardar tarea:", error);
         }
@@ -83,50 +83,86 @@ export default function Apitareas() {
         <Container fluid className="mt-4 px-4">
             <h2 className="text-center">Gestión de Tareas</h2>
 
+            {/* Formulario de nueva tarea */}
             <Row className="mb-3">
-                <Col md={8} lg={6} xl={5} className="mx-auto">
+                <Col xs={12} md={10} lg={8} xl={6} className="mx-auto">
                     <Form>
                         <Form.Group controlId="formDescripcion">
-                            <Form.Control type="text" placeholder="Nueva tarea" />
+                            <Form.Control 
+                                type="text" 
+                                placeholder="Nueva tarea"
+                                value={descripcion}
+                                onChange={(e) => setDescripcion(e.target.value)}
+                            />
                         </Form.Group>
                         <Form.Group controlId="formPrioridad" className="mt-2">
-                            <Form.Select>
+                            <Form.Select 
+                                value={prioridad}
+                                onChange={(e) => setPrioridad(e.target.value)}
+                            >
                                 <option value="Normal">Normal</option>
                                 <option value="Prioritaria">Prioritaria</option>
                             </Form.Select>
                         </Form.Group>
-                        <Button variant="primary" className="w-100 mt-3">Agregar Tarea</Button>
+                        <Button variant="primary" className="w-100 mt-3" onClick={agregarTarea}>
+                            Agregar Tarea
+                        </Button>
                     </Form>
                 </Col>
             </Row>
 
+            {/* Sección de tareas prioritarias */}
             <Row>
-                <Col md={8} lg={6} xl={5} className="mx-auto">
+                <Col xs={12} md={10} lg={8} xl={6} className="mx-auto">
                     <h4>Tareas Prioritarias</h4>
                     <ListGroup>
-                        <ListGroup.Item className="d-flex justify-content-between align-items-center">
-                            <span>Ejemplo de Tarea</span>
-                            <Button variant="secondary" size="sm">✔</Button>
-                        </ListGroup.Item>
+                        {tareas.filter(t => t.prioridad === "Prioritaria").map((tarea) => (
+                            <ListGroup.Item key={tarea._id} className="d-flex justify-content-between align-items-center">
+                                <span className={tarea.completada ? "text-decoration-line-through text-muted" : ""}>
+                                    {tarea.descripcion}
+                                </span>
+                                <Button
+                                    variant={tarea.completada ? "success" : "secondary"}
+                                    size="sm"
+                                    onClick={() => marcarComoCompletada(tarea)}
+                                >
+                                    ✔
+                                </Button>
+                            </ListGroup.Item>
+                        ))}
                     </ListGroup>
                 </Col>
             </Row>
 
+            {/* Sección de tareas normales */}
             <Row className="mt-4">
-                <Col md={8} lg={6} xl={5} className="mx-auto">
+                <Col xs={12} md={10} lg={8} xl={6} className="mx-auto">
                     <h4>Tareas Normales</h4>
                     <ListGroup>
-                        <ListGroup.Item className="d-flex justify-content-between align-items-center">
-                            <span>Ejemplo de Tarea Normal</span>
-                            <Button variant="secondary" size="sm">✔</Button>
-                        </ListGroup.Item>
+                        {tareas.filter(t => t.prioridad === "Normal").map((tarea) => (
+                            <ListGroup.Item key={tarea._id} className="d-flex justify-content-between align-items-center">
+                                <span className={tarea.completada ? "text-decoration-line-through text-muted" : ""}>
+                                    {tarea.descripcion}
+                                </span>
+                                <Button
+                                    variant={tarea.completada ? "success" : "secondary"}
+                                    size="sm"
+                                    onClick={() => marcarComoCompletada(tarea)}
+                                >
+                                    ✔
+                                </Button>
+                            </ListGroup.Item>
+                        ))}
                     </ListGroup>
                 </Col>
             </Row>
 
+            {/* Botón de limpiar tareas completadas */}
             <Row className="mt-4">
-                <Col md={8} lg={6} xl={5} className="mx-auto text-center">
-                    <Button variant="danger">Limpiar Tareas Completadas</Button>
+                <Col xs={12} md={10} lg={8} xl={6} className="mx-auto text-center">
+                    <Button variant="danger" onClick={limpiarTareasCompletadas}>
+                        Limpiar Tareas Completadas
+                    </Button>
                 </Col>
             </Row>
         </Container>
