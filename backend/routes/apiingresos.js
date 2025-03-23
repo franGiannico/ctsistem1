@@ -88,7 +88,9 @@ router.delete("/clear-checked-items", async (req, res) => {
 router.get("/buscar-producto/:codigoBarras", async (req, res) => {
   try {
     console.log("Código de barras recibido:", req.params.codigoBarras); // Para debug
-    const codigoBarras = req.params.codigoBarras.trim(); // ✅ Eliminar espacios en blanco
+
+    // ✅ Convertir siempre a String y eliminar espacios
+    const codigoBarras = String(req.params.codigoBarras).trim();
 
     const producto = await Producto.findOne({ codigoBarras });
 
