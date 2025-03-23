@@ -49,8 +49,6 @@
 .lista {
     list-style: none;
     padding: 0;
-    width: 90%;
-    max-width: 1000px; /* Para que se expanda más */
 }
 
 .ventaItem {
