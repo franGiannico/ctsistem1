@@ -87,17 +87,23 @@ router.delete("/clear-checked-items", async (req, res) => {
 // 🚀 NUEVO ENDPOINT: Buscar producto por código de barras
 router.get("/buscar-producto/:codigoBarras", async (req, res) => {
   try {
-    const { codigoBarras } = req.params;
+    console.log("Código de barras recibido:", req.params.codigoBarras); // Para debug
+    const codigoBarras = req.params.codigoBarras.trim(); // ✅ Eliminar espacios en blanco
+
     const producto = await Producto.findOne({ codigoBarras });
 
     if (!producto) {
+      console.log("Producto no encontrado en la base de datos.");
       return res.status(404).json({ error: "Producto no encontrado" });
     }
 
+    console.log("Producto encontrado:", producto);
     res.json(producto);
   } catch (error) {
+    console.error("Error al buscar el producto:", error);
     res.status(500).json({ error: "Error al buscar el producto" });
   }
 });
+
 
 module.exports = router;
