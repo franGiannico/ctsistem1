@@ -15,9 +15,9 @@ const Ingreso = mongoose.model("Ingreso", IngresoSchema, "ingresos");
 
 // Esquema de productos (Para la búsqueda de SKU y descripción)
 const ProductoSchema = new mongoose.Schema({
-  codigoBarras: String,
-  sku: String,
-  descripcion: String
+  CODIGO_BARRAS: String,
+  SKU: String,
+  DESCRIPCION: String
 });
 
 const Producto = mongoose.model("Producto", ProductoSchema, "productos");
