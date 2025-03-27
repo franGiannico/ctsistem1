@@ -127,13 +127,13 @@ li:last-child {
 }
 
 /* Menú de navegación */
-nav ul {
+/* nav ul {
   list-style: none;
   padding: 0;
   display: flex;
   flex-direction: column; /* Alineamos verticalmente por defecto */
-  gap: 15px; /* Espaciado entre los enlaces */
-}
+  /* gap: 15px; /* Espaciado entre los enlaces */
+/* }  */
 
 /* Links 
 .nav-link {
@@ -149,9 +149,9 @@ nav ul {
   width: 200px; 
 }
 */
-.nav-link:hover {
+/* .nav-link:hover {
   background-color: #0056b3;
-}
+} */
 
 /* 🔹 Media queries para diferentes tamaños de pantalla */
 
