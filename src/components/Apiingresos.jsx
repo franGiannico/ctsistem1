@@ -9,7 +9,11 @@ const ApiIngresos = () => {
         articulo: "",
         cantidad: ""
     });
+
+    // 🔹 Referencias para los inputs
     const codigoBarrasRef = useRef(null);
+    const skuRef = useRef(null);
+    const cantidadRef = useRef(null);
 
     useEffect(() => {
         loadItems();
@@ -45,14 +49,15 @@ const ApiIngresos = () => {
                 articulo: producto.descripcion
             }));
 
-        // Si se encontró el producto, mover el foco a "Cantidad"
-        cantidadRef.current?.focus();
+            // ✅ Espera a que el estado se actualice antes de mover el cursor
+            setTimeout(() => cantidadRef.current?.focus(), 50);
+
         } catch (error) {
             console.error("Error al buscar el producto:", error);
             setFormData(prev => ({ ...prev, sku: "", articulo: "" }));
 
-            // Si no se encontró el producto, mover el foco a "SKU"
-            skuRef.current?.focus();
+            // Si no se encuentra, mover a SKU
+            setTimeout(() => skuRef.current?.focus(), 50);
         }
     };
 
@@ -62,7 +67,6 @@ const ApiIngresos = () => {
             autocompletarProducto();
         }
     };
-
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -83,8 +87,8 @@ const ApiIngresos = () => {
             loadItems();
             setFormData({ codigoBarras: "", sku: "", articulo: "", cantidad: "" });
 
-            // Regresar el foco al input de código de barras
-            codigoBarrasRef.current?.focus();
+            // ✅ Regresar el foco al input de código de barras
+            setTimeout(() => codigoBarrasRef.current?.focus(), 50);
 
         } catch (error) {
             console.error("Error al agregar el artículo:", error);
@@ -131,12 +135,11 @@ const ApiIngresos = () => {
                     value={formData.codigoBarras}
                     onChange={handleChange}
                     onKeyDown={handleKeyDown}
-                    // onBlur={autocompletarProducto}
                     placeholder="Código de Barras"
                 />
-                <input type="text" name="sku" value={formData.sku} onChange={handleChange} placeholder="SKU" />
+                <input ref={skuRef} type="text" name="sku" value={formData.sku} onChange={handleChange} placeholder="SKU" />
                 <input type="text" name="articulo" value={formData.articulo} onChange={handleChange} placeholder="Artículo" />
-                <input type="number" name="cantidad" value={formData.cantidad} onChange={handleChange} placeholder="Cantidad" />
+                <input ref={cantidadRef} type="number" name="cantidad" value={formData.cantidad} onChange={handleChange} placeholder="Cantidad" />
                 <button type="submit" className={styles.addButton}>Agregar</button>
             </form>
 
@@ -156,7 +159,6 @@ const ApiIngresos = () => {
                 ))}
             </div>
 
-            {/* ✅ El botón de "Eliminar Publicados" solo aparece una vez al final */}
             <div className={styles.clearContainer}>
                 <button onClick={clearCheckedItems} className={styles.clearButton}>
                     Eliminar Publicados
