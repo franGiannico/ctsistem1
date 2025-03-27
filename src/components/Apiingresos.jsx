@@ -139,7 +139,7 @@ const ApiIngresos = () => {
                 />
                 <input ref={skuRef} type="text" name="sku" value={formData.sku} onChange={handleChange} placeholder="SKU" />
                 <input type="text" name="articulo" value={formData.articulo} onChange={handleChange} placeholder="Artículo" />
-                <input ref={cantidadRef} type="number" name="cantidad" value={formData.cantidad} onChange={handleChange} placeholder="Cantidad" inputMode="numeric"/>
+                <input ref={cantidadRef} type="tel" name="cantidad" value={formData.cantidad} onChange={handleChange} placeholder="Cantidad" inputMode="numeric"/>
                 <button type="submit" className={styles.addButton}>Agregar</button>
             </form>
 
