@@ -115,7 +115,7 @@ li:last-child {
   flex-direction: column;
   justify-content: center; /* Centrar verticalmente */
   align-items: center;
-  height: 100vh; /* Reducimos la altura para que suba más */
+  height: 80vh; /* Reducimos la altura para que suba más */
   text-align: center;
   padding-top: 20px; /* Ajusta la posición hacia arriba */
 }
@@ -135,7 +135,7 @@ nav ul {
   gap: 15px; /* Espaciado entre los enlaces */
 }
 
-/* Links */
+/* Links 
 .nav-link {
   font-size: 1.5rem;
   padding: 12px 24px;
@@ -146,9 +146,9 @@ nav ul {
   transition: background 0.3s ease-in-out;
   display: inline-block;
   text-align: center;
-  width: 200px; /* Tamaño fijo para los botones */
+  width: 200px; 
 }
-
+*/
 .nav-link:hover {
   background-color: #0056b3;
 }
