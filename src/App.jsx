@@ -6,6 +6,8 @@ import Home from "./pages/Home"; // Asegúrate de crear este componente
 import ApiventasPage from "./pages/Apiventas";
 import ApiingresosPage from "./pages/Apiingresos";
 import ApitareasPage from "./pages/Apitareas";
+import "./App.css"; // Importación de estilos CSS
+
 
 function App() {
   return (
