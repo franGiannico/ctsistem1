@@ -44,11 +44,25 @@ const ApiIngresos = () => {
                 sku: producto.sku,
                 articulo: producto.descripcion
             }));
+
+        // Si se encontró el producto, mover el foco a "Cantidad"
+        cantidadRef.current?.focus();
         } catch (error) {
             console.error("Error al buscar el producto:", error);
             setFormData(prev => ({ ...prev, sku: "", articulo: "" }));
+
+            // Si no se encontró el producto, mover el foco a "SKU"
+            skuRef.current?.focus();
         }
     };
+
+    const handleKeyDown = (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault(); // Evita que el formulario se envíe
+            autocompletarProducto();
+        }
+    };
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -68,6 +82,10 @@ const ApiIngresos = () => {
             });
             loadItems();
             setFormData({ codigoBarras: "", sku: "", articulo: "", cantidad: "" });
+
+            // Regresar el foco al input de código de barras
+            codigoBarrasRef.current?.focus();
+
         } catch (error) {
             console.error("Error al agregar el artículo:", error);
         }
@@ -112,6 +130,7 @@ const ApiIngresos = () => {
                     name="codigoBarras"
                     value={formData.codigoBarras}
                     onChange={handleChange}
+                    onKeyDown={handleKeyDown}
                     onBlur={autocompletarProducto}
                     placeholder="Código de Barras"
                 />
