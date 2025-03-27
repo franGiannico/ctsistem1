@@ -115,7 +115,7 @@ li:last-child {
   flex-direction: column;
   justify-content: center; /* Centrar verticalmente */
   align-items: center;
-  height: 90vh; /* Reducimos la altura para que suba más */
+  height: 100vh; /* Reducimos la altura para que suba más */
   text-align: center;
   padding-top: 20px; /* Ajusta la posición hacia arriba */
 }
