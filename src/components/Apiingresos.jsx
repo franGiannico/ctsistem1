@@ -49,9 +49,11 @@ const ApiIngresos = () => {
                 articulo: producto.descripcion
             }));
 
-            // ✅ Espera a que el estado se actualice antes de mover el cursor
-            setTimeout(() => cantidadRef.current?.focus(), 50);
-
+            // Si se encontró el producto, mover el foco a "Cantidad"
+            setTimeout(() => {
+                cantidadRef.current?.focus();
+                cantidadRef.current?.click(); // Intenta abrir el teclado en la tablet
+            }, 50);
         } catch (error) {
             console.error("Error al buscar el producto:", error);
             setFormData(prev => ({ ...prev, sku: "", articulo: "" }));
