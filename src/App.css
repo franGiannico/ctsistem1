@@ -127,15 +127,12 @@ li:last-child {
 }
 
 /* Menú de navegación */
-/* nav ul {
-  list-style: none;
-  padding: 0;
-  display: flex;
-  flex-direction: column; /* Alineamos verticalmente por defecto */
-  /* gap: 15px; /* Espaciado entre los enlaces */
-/* }  */
+/* Asegurar que solo afecte a la home */
+.home-container nav ul {
+  flex-direction: column; /* Esto solo afecta la home */
+}
 
-/* Links 
+/* Cambiar esto porque afecta Bootstrap */
 .nav-link {
   font-size: 1.5rem;
   padding: 12px 24px;
@@ -146,12 +143,27 @@ li:last-child {
   transition: background 0.3s ease-in-out;
   display: inline-block;
   text-align: center;
-  width: 200px; 
+  width: 200px;
 }
-*/
-/* .nav-link:hover {
+
+/* Agregar una clase más específica para evitar conflictos */
+.home-container .nav-link {
+  font-size: 1.5rem;
+  padding: 12px 24px;
+  background-color: #007bff;
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: background 0.3s ease-in-out;
+  display: inline-block;
+  text-align: center;
+  width: 200px;
+}
+
+.home-container .nav-link:hover {
   background-color: #0056b3;
-} */
+}
+
 
 /* 🔹 Media queries para diferentes tamaños de pantalla */
 
