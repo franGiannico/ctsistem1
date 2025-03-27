@@ -130,7 +130,8 @@ const ApiIngresos = () => {
                     name="codigoBarras"
                     value={formData.codigoBarras}
                     onChange={handleChange}
-                    onBlur={autocompletarProducto}
+                    onKeyDown={handleKeyDown}
+                    // onBlur={autocompletarProducto}
                     placeholder="Código de Barras"
                 />
                 <input type="text" name="sku" value={formData.sku} onChange={handleChange} placeholder="SKU" />
