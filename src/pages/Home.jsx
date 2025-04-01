@@ -10,13 +10,13 @@ const Home = () => {
       <nav className="nav">
         <ul className="nav-list">
           <li className="nav-item">
-            <Link to="/ventas" className="nav-link">Ventas 👜</Link>
+            <Link to="/ventas" className="nav-link">Ventas  🛒</Link>
           </li>
           <li className="nav-item">
             <Link to="/ingresos" className="nav-link">Ingresos 📦</Link>
           </li>
           <li className="nav-item">
-            <Link to="/tareas" className="nav-link">Tareas 📝</Link>
+            <Link to="/tareas" className="nav-link">Tareas  📝</Link>
           </li>
         </ul>
       </nav>
