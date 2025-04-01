@@ -19,10 +19,10 @@ function Apiventas() {
     }, []);
 
     useEffect(() => {
-        localStorage.setItem('horaLimite', horaLimite);
-        actualizarHoraLimiteEnBackend(horaLimite);
+        if (horaLimite) { // Evita enviar datos vacíos al backend
+            actualizarHoraLimiteEnBackend(horaLimite);
+        }
     }, [horaLimite]);
-
     const cargarVentasDesdeServidor = async () => {
         try {
             const response = await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/cargar-ventas");
