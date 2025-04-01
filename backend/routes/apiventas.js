@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
-const Configuracion = require("../models/Configuracion"); // Importa el modelo de configuración
 
 
 // Esquema de la base de datos
@@ -25,16 +24,26 @@ const HoraLimiteGeneralSchema = new mongoose.Schema({
 
 const HoraLimiteGeneralModel = mongoose.model("HoraLimiteGeneral", HoraLimiteGeneralSchema, "configuracion_general");
 
-// Obtener todas las ventas y la hora límite general
+// Obtener todas las ventas
 router.get("/cargar-ventas", async (req, res) => {
   try {
     const ventas = await Venta.find();
-    const config = await HoraLimiteGeneralModel.findById('general');
-    const horaLimiteGeneral = config ? config.horaLimiteGeneral : '';
-    res.json({ ventas, horaLimiteGeneral });
+    res.json(ventas);
   } catch (error) {
-    console.error("Error al obtener ventas y configuración:", error);
-    res.status(500).json({ error: "Error al obtener ventas y configuración" });
+    console.error("Error al obtener ventas:", error);
+    res.status(500).json({ error: "Error al obtener ventas" });
+  }
+});
+
+// Obtener la hora límite general
+router.get("/actualizar-hora-limite", async (req, res) => {
+  try {
+    const config = await HoraLimiteGeneralModel.findById("general");
+    const horaLimiteGeneral = config ? config.horaLimiteGeneral : "";
+    res.json({ horaLimiteGeneral });
+  } catch (error) {
+    console.error("Error al obtener la hora límite:", error);
+    res.status(500).json({ error: "Error al obtener la hora límite" });
   }
 });
 
