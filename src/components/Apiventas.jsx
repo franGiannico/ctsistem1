@@ -13,7 +13,7 @@ function Apiventas() {
     });
     const [horaLimite, setHoraLimite] = useState(localStorage.getItem('horaLimite') || '');
     const [pestaniaActiva, setPestaniaActiva] = useState("cargar");
-
+    const [horaLimiteTemporal, setHoraLimiteTemporal] = useState(localStorage.getItem('horaLimite') || ''); // Estado para el input
     useEffect(() => {
         cargarVentasDesdeServidor();
     }, []);
@@ -105,8 +105,13 @@ function Apiventas() {
         }
     };
 
-    const handleHoraLimiteChange = (event) => {
-        setHoraLimite(event.target.value);
+    const handleHoraLimiteInputChange = (event) => {
+        setHoraLimiteTemporal(event.target.value); // Actualizar el estado temporal del input
+    };
+
+    const enviarHoraLimite = () => {
+        setHoraLimite(horaLimiteTemporal); // Actualizar el estado principal que se muestra
+        actualizarHoraLimiteEnBackend(horaLimiteTemporal);
     };
 
     // Función para agrupar ventas por Punto de Despacho
@@ -177,13 +182,18 @@ function Apiventas() {
                     <button type="submit">Agregar Venta</button>
 
                     {/* ✅ Agregamos el input de Hora Límite */}
-                <label className={styles.horaLimiteLabel}>Hora Límite de Entrega:</label>
-                <input
-                    type="time"
-                    value={horaLimite}
-                    onChange={handleHoraLimiteChange}
-                    className={styles.horaLimiteInput}
-                />
+                    <div className={styles.horaLimiteContainer}>
+                        <label className={styles.horaLimiteLabel}>Hora Límite de Entrega:</label>
+                        <input
+                            type="time"
+                            value={horaLimiteTemporal} // Usamos el estado temporal para el input
+                            onChange={handleHoraLimiteInputChange}
+                            className={styles.horaLimiteInput}
+                        />
+                        <button type="button" onClick={enviarHoraLimite} className={styles.enviarHoraLimiteBtn}>
+                            Set
+                        </button>
+                    </div>
                 </form>
             )}
 
