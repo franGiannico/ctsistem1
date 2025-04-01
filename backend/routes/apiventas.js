@@ -16,14 +16,6 @@ const VentaSchema = new mongoose.Schema({
 
 const Venta = mongoose.model("Venta", VentaSchema, "ventas");
 
-// Esquema de la base de datos para la Hora Límite General
-const HoraLimiteGeneralSchema = new mongoose.Schema({
-  _id: { type: String, default: 'general' }, // Un ID fijo para el documento
-  horaLimiteGeneral: String,
-}, { collection: 'configuracion_general' }); // Puedes usar otro nombre de colección si lo prefieres
-
-const HoraLimiteGeneralModel = mongoose.model("HoraLimiteGeneral", HoraLimiteGeneralSchema, "configuracion_general");
-
 // Obtener todas las ventas
 router.get("/cargar-ventas", async (req, res) => {
   try {
@@ -35,15 +27,23 @@ router.get("/cargar-ventas", async (req, res) => {
   }
 });
 
+// Esquema de la base de datos para la Hora Límite General
+const HoraLimiteGeneralSchema = new mongoose.Schema({
+  _id: { type: String, default: 'general' }, // Un ID fijo para el documento
+  horaLimiteGeneral: String,
+}, { collection: 'configuracion_general' }); // Puedes usar otro nombre de colección si lo prefieres
+
+const HoraLimiteGeneralModel = mongoose.model("HoraLimiteGeneral", HoraLimiteGeneralSchema, "configuracion_general");
+
 // Obtener la hora límite general
 router.get("/actualizar-hora-limite", async (req, res) => {
   try {
-    const config = await HoraLimiteGeneralModel.findById("general");
-    const horaLimiteGeneral = config ? config.horaLimiteGeneral : "";
-    res.json({ horaLimiteGeneral });
+      const config = await HoraLimiteGeneralModel.findById("general");
+      const horaLimiteGeneral = config ? config.horaLimiteGeneral : "";
+      res.json({ horaLimiteGeneral });
   } catch (error) {
-    console.error("Error al obtener la hora límite:", error);
-    res.status(500).json({ error: "Error al obtener la hora límite" });
+      console.error("Error al obtener la hora límite:", error);
+      res.status(500).json({ error: "Error al obtener la hora límite" });
   }
 });
 
