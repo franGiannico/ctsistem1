@@ -18,11 +18,6 @@ function Apiventas() {
         cargarVentasDesdeServidor();
     }, []);
 
-    useEffect(() => {
-        if (horaLimite) { // Evita enviar datos vacíos al backend
-            actualizarHoraLimiteEnBackend(horaLimite);
-        }
-    }, [horaLimite]);
     const cargarVentasDesdeServidor = async () => {
         try {
             const response = await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/cargar-ventas");
@@ -43,6 +38,15 @@ function Apiventas() {
         } catch (error) {
             console.error("Error al actualizar la hora límite en el backend:", error);
         }
+    };
+    
+    const handleHoraLimiteInputChange = (event) => {
+        setHoraLimiteTemporal(event.target.value); // Actualizar el estado temporal del input
+    };
+
+    const enviarHoraLimite = () => {
+        setHoraLimite(horaLimiteTemporal); // Actualizar el estado principal que se muestra
+        actualizarHoraLimiteEnBackend(horaLimiteTemporal);
     };
 
     const handleInputChange = (e) => {
@@ -103,15 +107,6 @@ function Apiventas() {
         } catch (error) {
             console.error("Error al borrar la venta:", error);
         }
-    };
-
-    const handleHoraLimiteInputChange = (event) => {
-        setHoraLimiteTemporal(event.target.value); // Actualizar el estado temporal del input
-    };
-
-    const enviarHoraLimite = () => {
-        setHoraLimite(horaLimiteTemporal); // Actualizar el estado principal que se muestra
-        actualizarHoraLimiteEnBackend(horaLimiteTemporal);
     };
 
     // Función para agrupar ventas por Punto de Despacho
