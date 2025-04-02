@@ -21,7 +21,7 @@ function Apiventas() {
 
     const obtenerHoraLimiteDesdeBackend = async () => {
         try {
-            const response = await fetch("hhttps://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/obtener-hora-limite");
+            const response = await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/obtener-hora-limite");
             const data = await response.json();
             const horaLimiteDelBackend = data.horaLimiteGeneral;
 
