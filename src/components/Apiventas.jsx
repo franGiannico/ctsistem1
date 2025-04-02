@@ -11,12 +11,28 @@ function Apiventas() {
         cliente: "",
         puntoDespacho: "Punto de Despacho"
     });
-    const [horaLimite, setHoraLimite] = useState(localStorage.getItem('horaLimite') || '');
+    const [horaLimite, setHoraLimite] = useState(''); // Inicializar sin valor
     const [pestaniaActiva, setPestaniaActiva] = useState("cargar");
-    const [horaLimiteTemporal, setHoraLimiteTemporal] = useState(localStorage.getItem('horaLimite') || ''); // Estado para el input
+    const [horaLimiteTemporal, setHoraLimiteTemporal] = useState(''); // Inicializar sin valor
     useEffect(() => {
         cargarVentasDesdeServidor();
+        obtenerHoraLimiteDesdeBackend();
     }, []);
+
+    const obtenerHoraLimiteDesdeBackend = async () => {
+        try {
+            const response = await fetch("https://tu-backend.herokuapp.com/apiventas/obtener-hora-limite");
+            const data = await response.json();
+            const horaLimiteDelBackend = data.horaLimiteGeneral;
+
+            if (horaLimiteDelBackend) {
+                setHoraLimite(horaLimiteDelBackend);
+                setHoraLimiteTemporal(horaLimiteDelBackend);
+            }
+        } catch (error) {
+            console.error("Error al obtener la hora límite del backend:", error);
+        }
+    };
 
     const cargarVentasDesdeServidor = async () => {
         try {
