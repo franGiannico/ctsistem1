@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import styles from './Apiventas.module.css';
 
 const clientId = "6219505180952141"; // poné tu App ID 
-const redirectUri = process.env.VITE_MELI_REDIRECT_URI;
+const redirectUri = "http://ctsistem1.netlify.app/ventas";
 
 
 function Apiventas() {
