@@ -266,3 +266,13 @@
 .borrarCompletadas:hover {
     background-color: #a71d2a;
 }
+
+.btn-conectar-meli {
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #ffe600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  

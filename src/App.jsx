@@ -7,17 +7,20 @@ import ApiventasPage from "./pages/Apiventas";
 import ApiingresosPage from "./pages/Apiingresos";
 import ApitareasPage from "./pages/Apitareas";
 import "./App.css"; // Importación de estilos CSS
+import CallbackMeli from "./pages/CallbackMeli";
+
 
 
 function App() {
   return (
     <Router>
-      <Header /> {/* 🔹 Agregamos el Header aquí */}
+      <Header />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/ventas" element={<ApiventasPage />} />
         <Route path="/ingresos" element={<ApiingresosPage />} />
         <Route path="/tareas" element={<ApitareasPage />} />
+        <Route path="/callback" element={<CallbackMeli />} />
       </Routes>
     </Router>
   );

@@ -1,6 +1,61 @@
 import React, { useState, useEffect } from "react";
 import styles from './Apiventas.module.css';
 
+const clientId = "6219505180952141"; // poné tu App ID
+const redirectUri = "https://ctsistem1.netlify.app/ventas"; // usá tu URL real o localhost para testeo
+
+const handleLoginMeli = () => {
+  const authUrl = `https://auth.mercadolibre.com.ar/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}`;
+  window.location.href = authUrl;
+};
+
+const handleCargarVentasML = async () => {
+    try {
+      const response = await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/meli/orders");
+      const ventasML = await response.json();
+  
+      for (const venta of ventasML) {
+        const numeroVenta = venta.id;
+  
+        // Verificar si la venta ya existe
+        const checkRes = await fetch(`https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/${numeroVenta}`);
+        const checkData = await checkRes.json();
+  
+        if (checkData.existe) {
+          console.log(`⛔ Venta ${numeroVenta} ya existe, se omite`);
+          continue;
+        }
+  
+        // Datos a enviar
+        const nuevaVenta = {
+          sku: venta.order_items[0]?.item.id || "",
+          nombre: venta.order_items[0]?.item.title || "",
+          cantidad: venta.order_items[0]?.quantity || 1,
+          numeroVenta: numeroVenta.toString(),
+          cliente: venta.buyer?.nickname || "",
+          puntoDespacho: "Mercado Libre",
+        };
+  
+        // Guardar la venta
+        await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(nuevaVenta),
+        });
+  
+        console.log(`✅ Venta ${numeroVenta} cargada con éxito`);
+      }
+  
+      alert("Ventas de Mercado Libre procesadas correctamente.");
+    } catch (error) {
+      console.error("❌ Error al cargar ventas desde Mercado Libre:", error);
+      alert("Ocurrió un error al cargar las ventas desde Mercado Libre.");
+    }
+  };
+  
+
 function Apiventas() {
     const [ventas, setVentas] = useState([]);
     const [formData, setFormData] = useState({
@@ -170,10 +225,14 @@ function Apiventas() {
                     Ver Ventas
                 </button>
             </div>
-
+                <button onClick={handleLoginMeli} className="btn-conectar-meli">
+                🔗 Conectar con Mercado Libre
+                </button>
+                <p className="info-conectar-meli">Conectá tu cuenta de Mercado Libre para cargar ventas automáticamente.</p>
+                <p className="info-conectar-meli">Una vez conectado, podrás cargar ventas desde Mercado Libre.</p>
+                <button onClick={handleCargarVentasML}>🛒 Cargar ventas desde Mercado Libre</button>
             {/* 🔹 Pestaña de "Cargar Ventas" */}
             {pestaniaActiva === "cargar" && (
-
                 <form onSubmit={handleSubmit} className={styles.form}>
                     <input type="text" name="sku" value={formData.sku} onChange={handleInputChange} placeholder="SKU" required />
                     <input type="text" name="nombre" value={formData.nombre} onChange={handleInputChange} placeholder="Nombre" required />
