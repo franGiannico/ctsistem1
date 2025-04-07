@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import styles from './Apiventas.module.css';
 
 const clientId = "6219505180952141"; // poné tu App ID
-const redirectUri = "https://ctsistem1.netlify.app/ventas"; // usá tu URL real o localhost para testeo
+const redirectUri = "https://ctsistem1.netlify.app"; // usá tu URL real o localhost para testeo
 
 function Apiventas() {
     const [ventas, setVentas] = useState([]);
