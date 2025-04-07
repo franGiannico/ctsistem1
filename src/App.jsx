@@ -20,7 +20,6 @@ function App() {
         <Route path="/ventas" element={<ApiventasPage />} />
         <Route path="/ingresos" element={<ApiingresosPage />} />
         <Route path="/tareas" element={<ApitareasPage />} />
-        <Route path="/callback" element={<CallbackMeli />} />
       </Routes>
     </Router>
   );
