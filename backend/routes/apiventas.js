@@ -136,21 +136,21 @@ router.delete("/borrar-ventas-completadas", async (req, res) => {
   }
 });
 
-router.get('/:numeroVenta', async (req, res) => {
-  const { numeroVenta } = req.params;
+// router.get('/:numeroVenta', async (req, res) => {
+//   const { numeroVenta } = req.params;
 
-  try {
-    const ventaExistente = await Venta.findOne({ numeroVenta });
-    if (ventaExistente) {
-      return res.status(200).json({ existe: true });
-    } else {
-      return res.status(200).json({ existe: false });
-    }
-  } catch (err) {
-    console.error("❌ Error buscando venta:", err);
-    res.status(500).json({ error: "Error verificando la venta" });
-  }
-});
+//   try {
+//     const ventaExistente = await Venta.findOne({ numeroVenta });
+//     if (ventaExistente) {
+//       return res.status(200).json({ existe: true });
+//     } else {
+//       return res.status(200).json({ existe: false });
+//     }
+//   } catch (err) {
+//     console.error("❌ Error buscando venta:", err);
+//     res.status(500).json({ error: "Error verificando la venta" });
+//   }
+// });
 
 
 module.exports = router;

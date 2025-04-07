@@ -30,7 +30,7 @@ mongoose.connect(process.env.MONGODB_URI)
 app.use("/apiventas", require("./routes/apiventas"));
 app.use("/apiingresos", require("./routes/apiingresos"));
 app.use("/apitareas", require("./routes/apitareas"));
-app.use('/meli', require('./routes/meli'));
+// app.use('/meli', require('./routes/meli'));
 
 // Ruta raíz de prueba
 app.get("/", (req, res) => {
