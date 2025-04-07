@@ -54,7 +54,6 @@ router.post('/token', async (req, res) => {
 
 router.get('/orders', async (req, res) => {
     try {
-      // Obtené el último token guardado
       const latestToken = await MeliToken.findOne().sort({ createdAt: -1 });
   
       if (!latestToken) {
@@ -67,16 +66,22 @@ router.get('/orders', async (req, res) => {
         },
       });
   
+      if (!response.ok) {
+        const errorText = await response.text(); // En caso de que no sea JSON
+        console.error('❌ Error al llamar a la API de ML:', errorText);
+        return res.status(response.status).json({ error: 'Error al obtener órdenes de Mercado Libre' });
+      }
+  
       const data = await response.json();
   
       if (data.error) {
         return res.status(400).json({ error: data.message });
       }
   
-      res.json(data.results); // Devuelve solo la lista de ventas
+      res.json(data.results);
     } catch (error) {
-      console.error('Error al obtener ventas de ML:', error);
-      res.status(500).json({ error: 'Error al obtener ventas' });
+      console.error('❌ Error inesperado al obtener ventas de ML:', error);
+      res.status(500).json({ error: 'Error inesperado al obtener ventas de Mercado Libre' });
     }
   });
   
