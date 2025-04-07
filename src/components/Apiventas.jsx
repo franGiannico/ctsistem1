@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import styles from './Apiventas.module.css';
 
-const clientId = "6219505180952141"; // poné tu App ID
-const redirectUri = "https://ctsistem1.netlify.app/ventas"; // usá tu URL real o localhost para testeo
+const clientId = "6219505180952141"; // poné tu App ID 
+const redirectUri = process.env.VITE_MELI_REDIRECT_URI;
+
 
 function Apiventas() {
     const [ventas, setVentas] = useState([]);
@@ -67,7 +68,7 @@ function Apiventas() {
             cantidad: venta.order_items[0]?.quantity || 1,
             numeroVenta: numeroVenta.toString(),
             cliente: venta.buyer?.nickname || "",
-            puntoDespacho: "Mercado Libre",
+            puntoDespacho: "Punto de Despacho",
           };
     
           // Guardar la venta
