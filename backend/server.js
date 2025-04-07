@@ -8,10 +8,16 @@ const PORT = process.env.PORT || 5000;
 
 // 🔹 Habilitar CORS para permitir peticiones desde el frontend
 app.use(cors({
-  origin: ['http://localhost:5173', 'https://ctsistem1.herokuapp.com', "https://ctsistem1.netlify.app"],
+  origin: [
+    'http://localhost:5173',
+    'https://ctsistem1.herokuapp.com',
+    'https://ctsistem1-e68664e8ae46.herokuapp.com',
+    'https://ctsistem1.netlify.app'
+  ],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
   allowedHeaders: ["Content-Type"],
 }));
+
 
 app.use(express.json());
 
