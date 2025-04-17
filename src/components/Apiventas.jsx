@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import styles from './Apiventas.module.css';
+import MeliAuthButton from '../components/MeliAuthButton';
+import VentasMercadoLibre from '../components/VentasMercadoLibre';
 
 // const clientId = "6219505180952141"; // poné tu App ID 
 // const redirectUri = "https://ctsistem1.netlify.app/ventas";
@@ -211,7 +213,7 @@ function Apiventas() {
     return (
         <div className={styles.container}>
             <h2>Gestión de Ventas</h2>
-
+            <MeliAuthButton /> {/* Botón para conectar con Mercado Libre */}
             {/* 🔹 Menú de pestañas */}
             <div className={styles.tabs}>
                 <button
@@ -243,7 +245,7 @@ function Apiventas() {
                     <input type="text" name="cliente" value={formData.cliente} onChange={handleInputChange} placeholder="Cliente" required />
                     
                     <select name="puntoDespacho" value={formData.puntoDespacho} onChange={handleInputChange} required>
-                        <option value="Andreani">Andreani</option>
+                        <option value="Andreani">Expreso</option>
                         <option value="Punto de Despacho">Punto de Despacho</option>
                         <option value="Flex">Flex</option>
                         <option value="Guardia">Guardia</option>
@@ -270,7 +272,8 @@ function Apiventas() {
             )}
 
             {/* 🔹 Pestaña de "Ver Ventas" */}
-            {pestaniaActiva === "listado" && (
+            <VentasMercadoLibre /> {/* Componente para mostrar ventas de Mercado Libre */}
+                {pestaniaActiva === "listado" && (
             <>
                 <div className={styles.contadorContainer}>
                     <p className={styles.ventasTotales}>Ventas Totales: {ventas.length}</p>

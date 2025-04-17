@@ -1,89 +1,106 @@
-// import express from 'express';
-// import fetch from 'node-fetch';
-// import dotenv from 'dotenv';
-// import mongoose from 'mongoose';
+const express = require('express');
+const mongoose = require('mongoose');
+const axios = require('axios');
+const dotenv = require('dotenv');
 
-// dotenv.config();
-// const router = express.Router();
+dotenv.config();
+const router = express.Router();
 
-// const meliTokenSchema = new mongoose.Schema({
-//   access_token: String,
-//   refresh_token: String,
-//   user_id: Number,
-//   expires_in: Number,
-// }, { timestamps: true });
+// Modelo directamente acá
+const MeliTokenSchema = new mongoose.Schema({
+  user_id: String,
+  access_token: String,
+  refresh_token: String,
+  expires_in: Number,
+  scope: String,
+  created_at: { type: Date, default: Date.now },
+});
 
-// const MeliToken = mongoose.model('MeliToken', meliTokenSchema);
+const MeliToken = mongoose.models?.MeliToken || mongoose.model('MeliToken', MeliTokenSchema);
 
+// Variables de entorno
+const {
+  MELI_CLIENT_ID,
+  MELI_CLIENT_SECRET,
+  MELI_REDIRECT_URI,
+} = process.env;
 
-// router.post('/token', async (req, res) => {
-//   const { code } = req.body;
+// Ruta para verificar autenticación o devolver URL de login
+router.get('/auth', async (req, res) => {
+  try {
+    const token = await MeliToken.findOne();
+    if (token && token.access_token) {
+      return res.json({ autenticado: true });
+    }
 
-//   try {
-//     const response = await fetch('https://api.mercadolibre.com/oauth/token', {
-//       method: 'POST',
-//       headers: {
-//         'Content-Type': 'application/x-www-form-urlencoded',
-//       },
-//       body: new URLSearchParams({
-//         grant_type: 'authorization_code',
-//         client_id: process.env.MELI_CLIENT_ID,
-//         client_secret: process.env.MELI_CLIENT_SECRET,
-//         code: code,
-//         redirect_uri: process.env.MELI_REDIRECT_URI,
-//       }),
-//     });
+    const authUrl = `https://auth.mercadolibre.com.ar/authorization?response_type=code&client_id=${MELI_CLIENT_ID}&redirect_uri=${MELI_REDIRECT_URI}`;
+    res.json({ redirect: authUrl });
+  } catch (err) {
+    console.error('Error en /meli/auth', err);
+    res.status(500).json({ error: 'Error al generar URL de autenticación' });
+  }
+});
 
-//     const data = await response.json();
+// Callback de Mercado Libre
+router.get('/callback', async (req, res) => {
+  const code = req.query.code;
+  if (!code) return res.status(400).send('Código no encontrado');
 
-//     // Guardar el token en MongoDB
-//     await MeliToken.create({
-//         access_token: data.access_token,
-//         refresh_token: data.refresh_token,
-//         user_id: data.user_id,
-//         expires_in: data.expires_in,
-//     });
-      
+  try {
+    const response = await axios.post('https://api.mercadolibre.com/oauth/token', null, {
+      params: {
+        grant_type: 'authorization_code',
+        client_id: MELI_CLIENT_ID,
+        client_secret: MELI_CLIENT_SECRET,
+        code,
+        redirect_uri: MELI_REDIRECT_URI,
+      },
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
 
-//     res.json(data);
-//   } catch (err) {
-//     console.error('Error al obtener token:', err);
-//     res.status(500).json({ error: 'Error al obtener token de Mercado Libre' });
-//   }
-// });
+    const { access_token, refresh_token, expires_in, scope, user_id } = response.data;
 
-// router.get('/orders', async (req, res) => {
-//     try {
-//       const latestToken = await MeliToken.findOne().sort({ createdAt: -1 });
-  
-//       if (!latestToken) {
-//         return res.status(404).json({ error: 'No hay token guardado' });
-//       }
-  
-//       const response = await fetch(`https://api.mercadolibre.com/orders/search?seller=${latestToken.user_id}`, {
-//         headers: {
-//           Authorization: `Bearer ${latestToken.access_token}`,
-//         },
-//       });
-  
-//       if (!response.ok) {
-//         const errorText = await response.text(); // En caso de que no sea JSON
-//         console.error('❌ Error al llamar a la API de ML:', errorText);
-//         return res.status(response.status).json({ error: 'Error al obtener órdenes de Mercado Libre' });
-//       }
-  
-//       const data = await response.json();
-  
-//       if (data.error) {
-//         return res.status(400).json({ error: data.message });
-//       }
-  
-//       res.json(data.results);
-//     } catch (error) {
-//       console.error('❌ Error inesperado al obtener ventas de ML:', error);
-//       res.status(500).json({ error: 'Error inesperado al obtener ventas de Mercado Libre' });
-//     }
-//   });
-  
+    await MeliToken.findOneAndUpdate(
+      { user_id },
+      { access_token, refresh_token, expires_in, scope },
+      { upsert: true, new: true }
+    );
 
-// export default router;
+    res.redirect(`${MELI_REDIRECT_URI}?success=true`);
+  } catch (error) {
+    console.error('Error en /meli/callback:', error.response?.data || error.message);
+    res.status(500).send('Error al obtener el token');
+  }
+});
+
+// Ruta para obtener ventas
+router.get('/ventas', async (req, res) => {
+  try {
+    const tokenDoc = await MeliToken.findOne();
+    if (!tokenDoc) return res.status(401).json({ error: 'No autenticado' });
+
+    const { access_token } = tokenDoc;
+
+    const ordersResponse = await axios.get('https://api.mercadolibre.com/orders/search?seller=me&order.status=paid', {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+    });
+
+    const ventas = ordersResponse.data.results.map((orden) => ({
+      id: orden.id,
+      title: orden.order_items[0].item.title,
+      quantity: orden.order_items[0].quantity,
+      unit_price: orden.order_items[0].unit_price,
+    }));
+
+    res.json({ ventas });
+  } catch (error) {
+    console.error('Error al obtener ventas:', error.response?.data || error.message);
+    res.status(500).json({ error: 'Error al obtener ventas' });
+  }
+});
+
+module.exports = router;
