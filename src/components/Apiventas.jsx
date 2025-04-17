@@ -237,13 +237,15 @@ function Apiventas() {
             {pestaniaActiva === "cargar" && (
                 <form onSubmit={handleSubmit} className={styles.form}>
                     <input type="text" name="sku" value={formData.sku} onChange={handleInputChange} placeholder="SKU" required />
-                    <input type="text" name="nombre" value={formData.nombre} onChange={handleInputChange} placeholder="Nombre" required />
+                    <input type="text" name="nombre" value={formData.nombre} onChange={handleInputChange} placeholder="Producto" required />
                     <input type="number" name="cantidad" value={formData.cantidad} onChange={handleInputChange} min="1" required />
                     <input type="number" name="numeroVenta" value={formData.numeroVenta} onChange={handleInputChange} placeholder="N° Venta" required />
                     <input type="text" name="cliente" value={formData.cliente} onChange={handleInputChange} placeholder="Cliente" required />
                     
                     <select name="puntoDespacho" value={formData.puntoDespacho} onChange={handleInputChange} required>
                         <option value="Andreani">Andreani</option>
+                        <option value="Andreani">Lancioni</option>
+                        <option value="Andreani">Retira Lancioni</option>
                         <option value="Punto de Despacho">Punto de Despacho</option>
                         <option value="Flex">Flex</option>
                         <option value="Guardia">Guardia</option>
