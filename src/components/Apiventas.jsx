@@ -246,8 +246,8 @@ function Apiventas() {
                     
                     <select name="puntoDespacho" value={formData.puntoDespacho} onChange={handleInputChange} required>
                         <option value="Andreani">Andreani</option>
-                        <option value="Andreani">Lancioni</option>
-                        <option value="Andreani">Retira Lancioni</option>
+                        <option value="Lancioni">Lancioni</option>
+                        <option value="Retira Lancioni">Retira Lancioni</option>
                         <option value="Punto de Despacho">Punto de Despacho</option>
                         <option value="Flex">Flex</option>
                         <option value="Guardia">Guardia</option>
