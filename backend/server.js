@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors"); // Asegúrate de importar CORS
 const mongoose = require("mongoose");
 require("dotenv").config();
-const meliRoutes = require('./routes/meli');
+// const meliRoutes = require('./routes/meli');
 
 const app = express();
 
