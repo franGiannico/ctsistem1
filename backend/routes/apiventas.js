@@ -7,8 +7,8 @@ const mongoose = require("mongoose");
 const VentaSchema = new mongoose.Schema({
   sku: String,
   nombre: String,
-  cantidad: Number,
-  numeroVenta: Number,
+  cantidad: String,
+  numeroVenta: String,
   cliente: String,
   puntoDespacho: String,
   completada: { type: Boolean, default: false },
