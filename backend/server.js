@@ -27,7 +27,7 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 5000;
 
-// 🔸 Elegir la URI de MongoDB según el entorno
+// Elegir la URI de MongoDB según el entorno
 const mongoURI = process.env.NODE_ENV === "production"
   ? process.env.MONGODB_URI // Atlas
   : process.env.MONGO_URI_DEV; // Local
