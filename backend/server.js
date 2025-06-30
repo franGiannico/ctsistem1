@@ -23,7 +23,7 @@ app.use(cors({
     'https://ctsistem1.netlify.app'
   ],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-  allowedHeaders: ["Content-Type"],
+  allowedHeaders: ["Content-Type", "Authorization", "Accept"],
 }));
 
 app.use(express.json());
@@ -38,6 +38,9 @@ app.use("/apiventas", require("./routes/apiventas"));
 app.use("/apiingresos", require("./routes/apiingresos"));
 app.use("/apitareas", require("./routes/apitareas"));
 app.use('/meli', require('./routes/meli'));
+
+app.options('*', cors());
+// Middleware para manejar errores de CORS
 
 // Ruta raíz de prueba
 app.get("/", (req, res) => {
