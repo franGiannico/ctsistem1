@@ -76,17 +76,31 @@ router.post("/guardar-ventas", async (req, res) => {
   try {
     const { sku, nombre, cantidad, numeroVenta, cliente, puntoDespacho } = req.body;
 
+    // Validar todos los campos necesarios
     if (!sku || !nombre || !cantidad || !numeroVenta || !cliente || !puntoDespacho) {
       return res.status(400).json({ error: "Todos los campos son obligatorios" });
     }
 
-    const nuevaVenta = new Venta({ ...req.body, completada: false });
+    // Crear venta con valores explícitos (sin dejar campos al azar desde req.body)
+    const nuevaVenta = new Venta({
+      sku,
+      nombre,
+      cantidad,
+      numeroVenta,
+      cliente,
+      puntoDespacho,
+      completada: false,
+      entregada: false
+    });
+
     await nuevaVenta.save();
     res.json({ message: "Venta guardada con éxito", venta: nuevaVenta });
   } catch (error) {
+    console.error("❌ Error al guardar la venta:", error);
     res.status(500).json({ error: "Error al guardar la venta" });
   }
 });
+
 
 // Actualizar el estado de completada o entregada en una venta
 router.patch("/actualizar-venta/:id", async (req, res) => {
