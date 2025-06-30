@@ -4,6 +4,17 @@ const mongoose = require("mongoose");
 require("dotenv").config();
 const meliRoutes = require('./routes/meli');
 
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'https://ctsistem1.netlify.app',
+    'https://ctsistem1-e68664e8ae46.herokuapp.com',
+    'https://ctsistem1.herokuapp.com'
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: ["Content-Type"],
+  credentials: true // Opcional si usás cookies o sesiones
+}));
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -14,17 +25,17 @@ const mongoURI = process.env.NODE_ENV === "production"
   : process.env.MONGO_URI_DEV; // Local
 
 // 🔹 Habilitar CORS para permitir peticiones desde el frontend
-app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:5000',
-    'https://ctsistem1.herokuapp.com',
-    'https://ctsistem1-e68664e8ae46.herokuapp.com',
-    'https://ctsistem1.netlify.app'
-  ],
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-  allowedHeaders: ["Content-Type", "Authorization", "Accept"],
-}));
+// app.use(cors({
+//   origin: [
+//     'http://localhost:5173',
+//     'http://localhost:5000',
+//     'https://ctsistem1.herokuapp.com',
+//     'https://ctsistem1-e68664e8ae46.herokuapp.com',
+//     'https://ctsistem1.netlify.app'
+//   ],
+//   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+//   allowedHeaders: ["Content-Type", "Authorization", "Accept"],
+// }));
 
 app.use(express.json());
 
