@@ -276,3 +276,7 @@
     cursor: pointer;
   }
   
+.entregadoBtnChecked {
+    background-color: #4caf50; /* verde distinto */
+    color: white;
+}

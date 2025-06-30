@@ -184,6 +184,33 @@ function Apiventas() {
         }
     };
 
+    const marcarEntregada = async (id, estadoActual) => {
+        try {
+            const nuevoEstado = !estadoActual;
+    
+            const response = await fetch(`https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/actualizar-venta/${id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ entregada: nuevoEstado })
+            });
+    
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status}`);
+            }
+    
+            const data = await response.json();
+    
+            setVentas((prevVentas) =>
+                prevVentas.map((venta) =>
+                    venta._id === id ? { ...venta, entregada: data.venta.entregada } : venta
+                )
+            );
+        } catch (error) {
+            console.error("Error al actualizar la venta (entregada):", error);
+        }
+    };
+    
+
     // Función para agrupar ventas por Punto de Despacho
     const agruparVentasPorPunto = () => {
         const grupos = {};
@@ -197,7 +224,7 @@ function Apiventas() {
     };
 
     const borrarVentasCompletadas = async () => {
-        if (!window.confirm("¿Estás seguro de que quieres eliminar todas las ventas completadas?")) return;
+        if (!window.confirm("¿Estás seguro de que quieres eliminar todas las ventas completadas y entregadas?")) return;
     
         try {
             await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/borrar-ventas-completadas", {
@@ -205,7 +232,7 @@ function Apiventas() {
             });
             cargarVentasDesdeServidor(); // Recargar la lista después de eliminar
         } catch (error) {
-            console.error("Error al borrar ventas completadas:", error);
+            console.error("Error al borrar ventas completadas y entregadas:", error);
         }
     };
     
@@ -310,6 +337,11 @@ function Apiventas() {
                                     </div>
                                     <button onClick={() => marcarCompletada(venta._id, venta.completada)} className={`${styles.checkBtn} ${venta.completada ? styles.checkBtnChecked : ''}`}>
                                         {venta.completada ? "✔" : "X"}
+                                    </button>
+                                    
+                                    <button onClick={() => marcarEntregada(venta._id, venta.entregada)}
+                                    className={`${styles.checkBtn} ${venta.entregada ? styles.entregadoBtnChecked : ''}`}>
+                                    {venta.entregada ? "📦" : "🚚"}
                                     </button>
                                     <button onClick={() => borrarVenta(venta._id)} className={styles.checkBtn}>Borrar</button>
                                 </li>

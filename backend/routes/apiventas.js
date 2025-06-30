@@ -12,6 +12,7 @@ const VentaSchema = new mongoose.Schema({
   cliente: String,
   puntoDespacho: String,
   completada: { type: Boolean, default: false },
+  entregada: { type: Boolean, default: false },
 });
 
 const Venta = mongoose.model("Venta", VentaSchema, "ventas");
@@ -87,17 +88,24 @@ router.post("/guardar-ventas", async (req, res) => {
   }
 });
 
-// Actualizar el estado de completada en una venta
+// Actualizar el estado de completada o entregada en una venta
 router.patch("/actualizar-venta/:id", async (req, res) => {
   try {
-    const { completada } = req.body;
-    if (typeof completada !== "boolean") {
-      return res.status(400).json({ error: "Formato de datos incorrecto" });
+    const { completada, entregada } = req.body;
+
+    // Validar que al menos uno de los dos campos venga en el body
+    if (typeof completada !== "boolean" && typeof entregada !== "boolean") {
+      return res.status(400).json({ error: "Debe enviarse 'completada' o 'entregada' como booleano" });
     }
+
+    // Crear objeto de actualización dinámico
+    const updateFields = {};
+    if (typeof completada === "boolean") updateFields.completada = completada;
+    if (typeof entregada === "boolean") updateFields.entregada = entregada;
 
     const ventaActualizada = await Venta.findByIdAndUpdate(
       req.params.id,
-      { completada },
+      updateFields,
       { new: true }
     );
 
@@ -107,6 +115,7 @@ router.patch("/actualizar-venta/:id", async (req, res) => {
 
     res.json({ message: "Venta actualizada correctamente", venta: ventaActualizada });
   } catch (error) {
+    console.error("Error al actualizar la venta:", error);
     res.status(500).json({ error: "Error al actualizar la venta" });
   }
 });
@@ -126,13 +135,13 @@ router.delete("/borrar-venta/:id", async (req, res) => {
   }
 });
 
-// Borrar todas las ventas completadas
+// Borrar todas las ventas que estén completadas Y entregadas
 router.delete("/borrar-ventas-completadas", async (req, res) => {
   try {
-    await Venta.deleteMany({ completada: true });
-    res.json({ message: "Ventas completadas eliminadas correctamente" });
+    const resultado = await Venta.deleteMany({ completada: true, entregada: true }); // 👈 ambas condiciones
+    res.json({ message: `Ventas completadas y entregadas eliminadas correctamente (${resultado.deletedCount})` });
   } catch (error) {
-    res.status(500).json({ error: "Error al eliminar las ventas completadas" });
+    res.status(500).json({ error: "Error al eliminar las ventas completadas y entregadas" });
   }
 });
 
