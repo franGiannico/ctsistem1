@@ -25,5 +25,5 @@ dist-ssr
 
 # Environment variables
 /backend/.env
-/backend/.env.local
+/backend/.env.production
 .env
