@@ -240,7 +240,7 @@ function Apiventas() {
     return (
         <div className={styles.container}>
             <h2>Gestión de Ventas</h2>
-            <MeliAuthButton /> {/* Botón para conectar con Mercado Libre */}
+            {/* <MeliAuthButton /> Botón para conectar con Mercado Libre */}
             {/* 🔹 Menú de pestañas */}
             <div className={styles.tabs}>
                 <button
