@@ -62,6 +62,16 @@ app.get("/", (req, res) => {
   res.send("Bienvenido al backend del sistema CT");
 });
 
+// 👉 Esta parte va al final del archivo server.js
+if (process.env.NODE_ENV === 'production') {
+  const path = require('path');
+  app.use(express.static(path.join(__dirname, 'dist')));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  });
+}
+
+
 // Iniciar el servidor y escuchar en el puerto definido
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);
