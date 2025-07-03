@@ -10,7 +10,7 @@ const VentasMercadoLibre = () => {
 
   // URL base de tu backend, obtenida de las variables de entorno de Vite
   // Asegúrate de que VITE_BACKEND_URL esté definido en tu .env del frontend
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
   /**
    * useEffect para manejar el callback de Mercado Libre después de la autenticación.
