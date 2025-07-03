@@ -4,6 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "start": "npm run start --prefix backend",
+    "heroku-postbuild": "npm install --prefix backend",
+    
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
