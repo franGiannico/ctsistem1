@@ -8,7 +8,7 @@ import VentasMercadoLibre from '../components/VentasMercadoLibre'; // Asegúrate
 function Apiventas() {
     // URL base de tu backend, obtenida de las variables de entorno de Vite
     // ¡Esta línea es CRUCIAL y debe estar presente!
-    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
     const [ventas, setVentas] = useState([]);
     const [formData, setFormData] = useState({

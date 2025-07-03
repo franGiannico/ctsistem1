@@ -6,7 +6,7 @@ import { Container, Row, Col, Button, Form, ListGroup } from "react-bootstrap";
 export default function Apitareas() {
     // URL base de tu backend, obtenida de las variables de entorno de Vite
     // ¡Esta línea es CRUCIAL y debe estar presente!
-    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
     // Construimos la URL específica para las tareas
     const API_TAREAS_URL = `${BACKEND_URL}/apitareas`;
 
