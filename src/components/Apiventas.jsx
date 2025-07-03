@@ -1,15 +1,15 @@
-// File: src/components/Apiventas.jsx
+// src/components/Apiventas.jsx
 
 import React, { useState, useEffect } from "react";
 import styles from './Apiventas.module.css';
-// import MeliAuthButton from '../components/MeliAuthButton';
-import VentasMercadoLibre from '../components/VentasMercadoLibre';
-
-// const clientId = "6219505180952141"; // poné tu App ID 
-// const redirectUri = "https://ctsistem1.netlify.app/ventas";
-
+// Importa el componente de Mercado Libre
+import VentasMercadoLibre from '../components/VentasMercadoLibre'; // Asegúrate de que la ruta sea correcta
 
 function Apiventas() {
+    // URL base de tu backend, obtenida de las variables de entorno de Vite
+    // ¡Esta línea es CRUCIAL y debe estar presente!
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
     const [ventas, setVentas] = useState([]);
     const [formData, setFormData] = useState({
         sku: "",
@@ -20,16 +20,23 @@ function Apiventas() {
         puntoDespacho: "Punto de Despacho"
     });
     const [horaLimite, setHoraLimite] = useState(''); // Inicializar sin valor
-    const [pestaniaActiva, setPestaniaActiva] = useState("cargar");
+    // Cambiamos el nombre de pestaniaActiva a activeTab para consistencia
+    const [activeTab, setActiveTab] = useState("cargar"); // Usaremos 'cargar', 'listado', 'mercadolibre'
     const [horaLimiteTemporal, setHoraLimiteTemporal] = useState(''); // Inicializar sin valor
+
     useEffect(() => {
-        cargarVentasDesdeServidor();
+        // Solo cargar ventas si la pestaña activa es 'listado'
+        if (activeTab === 'listado') {
+            cargarVentasDesdeServidor();
+        }
+        // Obtener la hora límite siempre, ya que es una configuración global
         obtenerHoraLimiteDesdeBackend();
-    }, []);
+    }, [activeTab]); // Ejecutar cuando activeTab cambie
 
     const obtenerHoraLimiteDesdeBackend = async () => {
         try {
-            const response = await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/obtener-hora-limite");
+            // Usar la variable BACKEND_URL
+            const response = await fetch(`${BACKEND_URL}/apiventas/obtener-hora-limite`);
             const data = await response.json();
             const horaLimiteDelBackend = data.horaLimiteGeneral;
 
@@ -42,62 +49,10 @@ function Apiventas() {
         }
     };
 
-    
-    // const handleLoginMeli = () => {
-    // const authUrl = `https://auth.mercadolibre.com.ar/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}`;
-    // window.location.href = authUrl;
-    // };
-  
-    // const handleCargarVentasML = async () => {
-    //   try {
-    //     const response = await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/meli/orders");
-    //     const ventasML = await response.json();
-    
-    //     for (const venta of ventasML) {
-    //       const numeroVenta = venta.id;
-    
-    //       // Verificar si la venta ya existe
-    //       const checkRes = await fetch(`https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/${numeroVenta}`);
-    //       const checkData = await checkRes.json();
-    
-    //       if (checkData.existe) {
-    //         console.log(`⛔ Venta ${numeroVenta} ya existe, se omite`);
-    //         continue;
-    //       }
-    
-    //       // Datos a enviar
-    //       const nuevaVenta = {
-    //         sku: venta.order_items[0]?.item.id || "",
-    //         nombre: venta.order_items[0]?.item.title || "",
-    //         cantidad: venta.order_items[0]?.quantity || 1,
-    //         numeroVenta: numeroVenta.toString(),
-    //         cliente: venta.buyer?.nickname || "",
-    //         puntoDespacho: "Punto de Despacho",
-    //       };
-    
-    //       // Guardar la venta
-    //       await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas", {
-    //         method: "POST",
-    //         headers: {
-    //           "Content-Type": "application/json",
-    //         },
-    //         body: JSON.stringify(nuevaVenta),
-    //       });
-    
-    //       console.log(`✅ Venta ${numeroVenta} cargada con éxito`);
-    //     }
-    
-    //     alert("Ventas de Mercado Libre procesadas correctamente.");
-    //   } catch (error) {
-    //     console.error("❌ Error al cargar ventas desde Mercado Libre:", error);
-    //     alert("Ocurrió un error al cargar las ventas desde Mercado Libre.");
-    //   }
-    // };
-    
-
     const cargarVentasDesdeServidor = async () => {
         try {
-            const response = await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/cargar-ventas");
+            // Usar la variable BACKEND_URL
+            const response = await fetch(`${BACKEND_URL}/apiventas/cargar-ventas`);
             const data = await response.json();
             setVentas(data);
         } catch (error) {
@@ -107,7 +62,8 @@ function Apiventas() {
 
     const actualizarHoraLimiteEnBackend = async (hora) => {
         try {
-            await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/actualizar-hora-limite", {
+            // Usar la variable BACKEND_URL
+            await fetch(`${BACKEND_URL}/apiventas/actualizar-hora-limite`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ horaLimite: hora })
@@ -116,7 +72,7 @@ function Apiventas() {
             console.error("Error al actualizar la hora límite en el backend:", error);
         }
     };
-    
+
     const handleHoraLimiteInputChange = (event) => {
         setHoraLimiteTemporal(event.target.value); // Actualizar el estado temporal del input
     };
@@ -136,7 +92,8 @@ function Apiventas() {
         const nuevaVenta = { ...formData, completada: false };
 
         try {
-            await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/guardar-ventas", {
+            // Usar la variable BACKEND_URL
+            await fetch(`${BACKEND_URL}/apiventas/guardar-ventas`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(nuevaVenta)
@@ -153,7 +110,8 @@ function Apiventas() {
         try {
             const nuevoEstado = !estadoActual;
 
-            const response = await fetch(`https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/actualizar-venta/${id}`, {
+            // Usar la variable BACKEND_URL
+            const response = await fetch(`${BACKEND_URL}/apiventas/actualizar-venta/${id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ completada: nuevoEstado })
@@ -177,7 +135,8 @@ function Apiventas() {
 
     const borrarVenta = async (id) => {
         try {
-            await fetch(`https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/borrar-venta/${id}`, {
+            // Usar la variable BACKEND_URL
+            await fetch(`${BACKEND_URL}/apiventas/borrar-venta/${id}`, {
                 method: "DELETE"
             });
             cargarVentasDesdeServidor();
@@ -189,19 +148,20 @@ function Apiventas() {
     const marcarEntregada = async (id, estadoActual) => {
         try {
             const nuevoEstado = !estadoActual;
-    
-            const response = await fetch(`https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/actualizar-venta/${id}`, {
+
+            // Usar la variable BACKEND_URL
+            const response = await fetch(`${BACKEND_URL}/apiventas/actualizar-venta/${id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ entregada: nuevoEstado })
             });
-    
+
             if (!response.ok) {
                 throw new Error(`Error HTTP: ${response.status}`);
             }
-    
+
             const data = await response.json();
-    
+
             setVentas((prevVentas) =>
                 prevVentas.map((venta) =>
                     venta._id === id ? { ...venta, entregada: data.venta.entregada } : venta
@@ -211,14 +171,13 @@ function Apiventas() {
             console.error("Error al actualizar la venta (entregada):", error);
         }
     };
-    
 
     // Función para agrupar ventas por Punto de Despacho
     const agruparVentasPorPunto = () => {
         const grupos = {};
         ventas.forEach((venta) => {
             if (!grupos[venta.puntoDespacho]) {
-                grupos[venta.puntoDespacho] = [];
+                grupos[venta.punpDespacho] = [];
             }
             grupos[venta.puntoDespacho].push(venta);
         });
@@ -226,10 +185,13 @@ function Apiventas() {
     };
 
     const borrarVentasCompletadas = async () => {
+        // NOTA: window.confirm() no es compatible con el entorno de Canvas.
+        // Deberías reemplazar esto con un modal de confirmación personalizado en tu UI.
         if (!window.confirm("¿Estás seguro de que quieres eliminar todas las ventas completadas y entregadas?")) return;
-    
+
         try {
-            await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiventas/borrar-ventas-completadas", {
+            // Usar la variable BACKEND_URL
+            await fetch(`${BACKEND_URL}/apiventas/borrar-ventas-completadas`, {
                 method: "DELETE"
             });
             cargarVentasDesdeServidor(); // Recargar la lista después de eliminar
@@ -237,42 +199,42 @@ function Apiventas() {
             console.error("Error al borrar ventas completadas y entregadas:", error);
         }
     };
-    
 
     return (
         <div className={styles.container}>
             <h2>Gestión de Ventas</h2>
-            {/* <MeliAuthButton /> Botón para conectar con Mercado Libre */}
             {/* 🔹 Menú de pestañas */}
             <div className={styles.tabs}>
                 <button
-                    className={pestaniaActiva === "cargar" ? styles.activeTab : ""}
-                    onClick={() => setPestaniaActiva("cargar")}
+                    className={activeTab === "cargar" ? styles.activeTab : ""}
+                    onClick={() => setActiveTab("cargar")}
                 >
                     Cargar Ventas
                 </button>
                 <button
-                    className={pestaniaActiva === "listado" ? styles.activeTab : ""}
-                    onClick={() => setPestaniaActiva("listado")}
+                    className={activeTab === "listado" ? styles.activeTab : ""}
+                    onClick={() => setActiveTab("listado")}
                 >
                     Ver Ventas
                 </button>
-            </div>
-                {/* <button onClick={handleLoginMeli} className="btn-conectar-meli">
-                🔗 Conectar con Mercado Libre
+                {/* Nueva pestaña para Mercado Libre */}
+                <button
+                    className={activeTab === "mercadolibre" ? styles.activeTab : ""}
+                    onClick={() => setActiveTab("mercadolibre")}
+                >
+                    Ventas Mercado Libre
                 </button>
-                <p className="info-conectar-meli">Conectá tu cuenta de Mercado Libre para cargar ventas automáticamente.</p>
-                <p className="info-conectar-meli">Una vez conectado, podrás cargar ventas desde Mercado Libre.</p>
-                <button onClick={handleCargarVentasML}>🛒 Cargar ventas desde Mercado Libre</button> */}
+            </div>
+
             {/* 🔹 Pestaña de "Cargar Ventas" */}
-            {pestaniaActiva === "cargar" && (
+            {activeTab === "cargar" && (
                 <form onSubmit={handleSubmit} className={styles.form}>
                     <input type="text" name="sku" value={formData.sku} onChange={handleInputChange} placeholder="SKU" required />
                     <input type="text" name="nombre" value={formData.nombre} onChange={handleInputChange} placeholder="Producto" required />
                     <input type="number" name="cantidad" value={formData.cantidad} onChange={handleInputChange} min="1" required />
                     <input type="number" name="numeroVenta" value={formData.numeroVenta} onChange={handleInputChange} placeholder="N° Venta" required />
                     <input type="text" name="cliente" value={formData.cliente} onChange={handleInputChange} placeholder="Cliente" required />
-                    
+
                     <select name="puntoDespacho" value={formData.puntoDespacho} onChange={handleInputChange} required>
                         <option value="Llevar al Expreso">Llevar al Expreso</option>
                         <option value="Retira el Expreso">Retira el Expreso</option>
@@ -301,58 +263,65 @@ function Apiventas() {
                 </form>
             )}
 
-            {/* 🔹 Pestaña de "Ver Ventas" */}
-                {pestaniaActiva === "listado" && (
-            <>
-                <div className={styles.contadorContainer}>
-                    <p className={styles.ventasTotales}>Ventas Totales: {ventas.length}</p>
-                    <p className={styles.ventasPreparadas}>
-                        Ventas Preparadas: {ventas.filter((venta) => venta.completada).length}
-                    </p>
-                </div>
-
-                <h3>Hora Límite: {horaLimite}</h3>
-                <button onClick={borrarVentasCompletadas} className={styles.borrarCompletadas}>
-                    Borrar Ventas Completadas
-                </button>
-
-                {/* 🔹 Recorremos cada grupo de ventas por Punto de Despacho */}
-                {Object.entries(agruparVentasPorPunto()).map(([puntoDespacho, ventasGrupo]) => (
-                    <div key={puntoDespacho}>
-                        {/* ✅ **Agregamos la cantidad de ventas en el título** */}
-                        <h3 className={styles.puntoTitulo}>
-                            {puntoDespacho} <span className={styles.contadorPunto}>({ventasGrupo.length})</span>
-                        </h3>
-
-                        <ul className={styles.lista}>
-                            {ventasGrupo.map((venta) => (
-                                <li key={venta._id} className={styles.ventaItem}>
-                                    <div className={styles.ventaDetalle}>
-                                        <p><strong>SKU:</strong> {venta.sku}</p>
-                                        <p><strong>Nombre:</strong> {venta.nombre}</p>
-                                        <p><strong>Cantidad:</strong> {venta.cantidad} unidades</p>
-                                        {venta.cantidad > 1 && <span className={styles.alerta}>Ojo!</span>}
-                                        <p><strong>Cliente:</strong> {venta.cliente}</p>
-                                        <p><strong>N° Venta:</strong> {venta.numeroVenta}</p>
-                                    </div>
-                                    <button onClick={() => marcarCompletada(venta._id, venta.completada)} className={`${styles.checkBtn} ${venta.completada ? styles.checkBtnChecked : ''}`}>
-                                        {venta.completada ? "✔" : "X"}
-                                    </button>
-                                    
-                                    <button onClick={() => marcarEntregada(venta._id, venta.entregada)}
-                                    className={`${styles.checkBtn} ${venta.entregada ? styles.entregadoBtnChecked : ''}`}>
-                                    {venta.entregada ? "📦" : "🚚"}
-                                    </button>
-                                    <button onClick={() => borrarVenta(venta._id)} className={styles.checkBtn}>Borrar</button>
-                                </li>
-                            ))}
-                        </ul>
+            {/* 🔹 Pestaña de "Ver Ventas" (Listado) */}
+            {activeTab === "listado" && (
+                <>
+                    <div className={styles.contadorContainer}>
+                        <p className={styles.ventasTotales}>Ventas Totales: {ventas.length}</p>
+                        <p className={styles.ventasPreparadas}>
+                            Ventas Preparadas: {ventas.filter((venta) => venta.completada).length}
+                        </p>
                     </div>
-                ))}
-            </>
-        )}
-    </div>
-);
-}
-export default Apiventas;
 
+                    <h3>Hora Límite: {horaLimite}</h3>
+                    <button onClick={borrarVentasCompletadas} className={styles.borrarCompletadas}>
+                        Borrar Ventas Completadas
+                    </button>
+
+                    {/* 🔹 Recorremos cada grupo de ventas por Punto de Despacho */}
+                    {Object.entries(agruparVentasPorPunto()).map(([puntoDespacho, ventasGrupo]) => (
+                        <div key={puntoDespacho}>
+                            <h3 className={styles.puntoTitulo}>
+                                {puntoDespacho} <span className={styles.contadorPunto}>({ventasGrupo.length})</span>
+                            </h3>
+
+                            <ul className={styles.lista}>
+                                {ventasGrupo.map((venta) => (
+                                    <li key={venta._id} className={styles.ventaItem}>
+                                        <div className={styles.ventaDetalle}>
+                                            <p><strong>SKU:</strong> {venta.sku}</p>
+                                            <p><strong>Nombre:</strong> {venta.nombre}</p>
+                                            <p><strong>Cantidad:</strong> {venta.cantidad} unidades</p>
+                                            {venta.cantidad > 1 && <span className={styles.alerta}>Ojo!</span>}
+                                            <p><strong>Cliente:</strong> {venta.cliente}</p>
+                                            <p><strong>N° Venta:</strong> {venta.numeroVenta}</p>
+                                        </div>
+                                        <button onClick={() => marcarCompletada(venta._id, venta.completada)} className={`${styles.checkBtn} ${venta.completada ? styles.checkBtnChecked : ''}`}>
+                                            {venta.completada ? "✔" : "X"}
+                                        </button>
+
+                                        <button onClick={() => marcarEntregada(venta._id, venta.entregada)}
+                                            className={`${styles.checkBtn} ${venta.entregada ? styles.entregadoBtnChecked : ''}`}>
+                                            {venta.entregada ? "📦" : "🚚"}
+                                        </button>
+                                        <button onClick={() => borrarVenta(venta._id)} className={styles.checkBtn}>Borrar</button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    ))}
+                </>
+            )}
+
+            {/* 🔹 Pestaña de "Ventas Mercado Libre" */}
+            {activeTab === "mercadolibre" && (
+                <div className="p-4 bg-gray-100 rounded-lg">
+                    {/* Renderiza el componente de Mercado Libre */}
+                    <VentasMercadoLibre />
+                </div>
+            )}
+        </div>
+    );
+}
+
+export default Apiventas;
