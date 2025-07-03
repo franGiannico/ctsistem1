@@ -316,7 +316,7 @@ function Apiventas() {
             {/* 🔹 Pestaña de "Ventas Mercado Libre" */}
             {activeTab === "mercadolibre" && (
                 <div className="p-4 bg-gray-100 rounded-lg">
-                    {/* Renderiza el componente de Mercado Libre */}
+                    {/* Renderiza el componente de Mercado Libre que por ahora solo muestra un mensaje */}
                     <VentasMercadoLibre />
                 </div>
             )}
