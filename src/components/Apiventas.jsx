@@ -215,7 +215,7 @@ function Apiventas() {
                     className={activeTab === "listado" ? styles.activeTab : ""}
                     onClick={() => setActiveTab("listado")}
                 >
-                    Ver Ventas
+                    Ver Ventas internas
                 </button>
                 {/* Nueva pestaña para Mercado Libre */}
                 <button
