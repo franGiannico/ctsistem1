@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import styles from './Apiventas.module.css';
-import MeliAuthButton from '../components/MeliAuthButton';
+// import MeliAuthButton from '../components/MeliAuthButton';
 import VentasMercadoLibre from '../components/VentasMercadoLibre';
 
 // const clientId = "6219505180952141"; // poné tu App ID 
