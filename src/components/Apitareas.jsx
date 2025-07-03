@@ -1,24 +1,33 @@
+// file: src/components/Apitareas.jsx
+
 import { useState, useEffect } from "react";
 import { Container, Row, Col, Button, Form, ListGroup } from "react-bootstrap";
 
-const API_URL = "https://ctsistem1-e68664e8ae46.herokuapp.com/apitareas";
-
 export default function Apitareas() {
+    // URL base de tu backend, obtenida de las variables de entorno de Vite
+    // ¡Esta línea es CRUCIAL y debe estar presente!
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+    // Construimos la URL específica para las tareas
+    const API_TAREAS_URL = `${BACKEND_URL}/apitareas`;
+
     const [tareas, setTareas] = useState([]);
     const [descripcion, setDescripcion] = useState("");
     const [prioridad, setPrioridad] = useState("Normal");
 
     useEffect(() => {
         cargarTareasDesdeAPI();
+        // Configurar el intervalo para recargar tareas cada 5 segundos
         const interval = setInterval(() => {
             cargarTareasDesdeAPI();
         }, 5000);
+        // Limpiar el intervalo cuando el componente se desmonte
         return () => clearInterval(interval);
-    }, []);
+    }, []); // El array vacío asegura que se ejecute solo una vez al montar
 
     const cargarTareasDesdeAPI = async () => {
         try {
-            const res = await fetch(`${API_URL}/cargar-tareas`);
+            // Usar la variable API_TAREAS_URL
+            const res = await fetch(`${API_TAREAS_URL}/cargar-tareas`);
             if (!res.ok) throw new Error(`Error HTTP: ${res.status}`);
             const data = await res.json();
             setTareas(data);
@@ -29,6 +38,8 @@ export default function Apitareas() {
 
     const agregarTarea = async () => {
         if (!descripcion.trim()) {
+            // NOTA: window.alert() no es compatible con el entorno de Canvas.
+            // Deberías reemplazar esto con un modal de alerta personalizado en tu UI.
             alert("Ingrese una descripción.");
             return;
         }
@@ -36,7 +47,8 @@ export default function Apitareas() {
         const nuevaTarea = { descripcion, prioridad, completada: false };
 
         try {
-            const res = await fetch(`${API_URL}/guardar-tareas`, {
+            // Usar la variable API_TAREAS_URL
+            const res = await fetch(`${API_TAREAS_URL}/guardar-tareas`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(nuevaTarea),
@@ -53,7 +65,8 @@ export default function Apitareas() {
 
     const marcarComoCompletada = async (tarea) => {
         try {
-            const res = await fetch(`${API_URL}/update-tarea`, {
+            // Usar la variable API_TAREAS_URL
+            const res = await fetch(`${API_TAREAS_URL}/update-tarea`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ _id: tarea._id, completada: !tarea.completada }),
@@ -67,8 +80,13 @@ export default function Apitareas() {
     };
 
     const limpiarTareasCompletadas = async () => {
+        // NOTA: window.confirm() no es compatible con el entorno de Canvas.
+        // Deberías reemplazar esto con un modal de confirmación personalizado en tu UI.
+        if (!window.confirm("¿Estás seguro de que quieres eliminar las tareas completadas?")) return;
+
         try {
-            const res = await fetch(`${API_URL}/limpiar-tareas`, {
+            // Usar la variable API_TAREAS_URL
+            const res = await fetch(`${API_TAREAS_URL}/limpiar-tareas`, {
                 method: "DELETE",
             });
 
@@ -88,15 +106,15 @@ export default function Apitareas() {
                 <Col xs={12} md={10} lg={8} xl={6} className="mx-auto">
                     <Form>
                         <Form.Group controlId="formDescripcion">
-                            <Form.Control 
-                                type="text" 
+                            <Form.Control
+                                type="text"
                                 placeholder="Nueva tarea"
                                 value={descripcion}
                                 onChange={(e) => setDescripcion(e.target.value)}
                             />
                         </Form.Group>
                         <Form.Group controlId="formPrioridad" className="mt-2">
-                            <Form.Select 
+                            <Form.Select
                                 value={prioridad}
                                 onChange={(e) => setPrioridad(e.target.value)}
                             >

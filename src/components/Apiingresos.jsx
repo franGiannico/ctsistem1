@@ -1,7 +1,13 @@
+// src/components/Apiingresos.jsx
+
 import React, { useState, useEffect, useRef } from "react";
 import styles from './Apiingresos.module.css';
 
 const ApiIngresos = () => {
+    // URL base de tu backend, obtenida de las variables de entorno de Vite
+    // ¡Esta línea es CRUCIAL y debe estar presente!
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
     const [items, setItems] = useState([]);
     const [formData, setFormData] = useState({
         codigoBarras: "",
@@ -10,7 +16,7 @@ const ApiIngresos = () => {
         cantidad: ""
     });
 
-    // 🔹 Referencias para los inputs
+    // Referencias para los inputs
     const codigoBarrasRef = useRef(null);
     const skuRef = useRef(null);
     const cantidadRef = useRef(null);
@@ -21,7 +27,8 @@ const ApiIngresos = () => {
 
     const loadItems = async () => {
         try {
-            const response = await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiingresos/get-items");
+            // Usar la variable BACKEND_URL
+            const response = await fetch(`${BACKEND_URL}/apiingresos/get-items`);
             if (!response.ok) throw new Error("No se pudieron cargar los artículos");
             const data = await response.json();
             setItems(data);
@@ -39,7 +46,8 @@ const ApiIngresos = () => {
         if (!codigoBarras) return;
 
         try {
-            const response = await fetch(`https://ctsistem1-e68664e8ae46.herokuapp.com/apiingresos/buscar-producto/${codigoBarras}`);
+            // Usar la variable BACKEND_URL
+            const response = await fetch(`${BACKEND_URL}/apiingresos/buscar-producto/${codigoBarras}`);
             if (!response.ok) throw new Error("Producto no encontrado");
 
             const producto = await response.json();
@@ -74,6 +82,8 @@ const ApiIngresos = () => {
         e.preventDefault();
         const { codigoBarras, sku, articulo, cantidad } = formData;
         if (!codigoBarras || !sku || !articulo || !cantidad) {
+            // NOTA: window.alert() no es compatible con el entorno de Canvas.
+            // Deberías reemplazar esto con un modal de alerta personalizado en tu UI.
             alert("Por favor, completa todos los campos.");
             return;
         }
@@ -81,7 +91,8 @@ const ApiIngresos = () => {
         const nuevoArticulo = { codigoBarras, sku, articulo, cantidad: parseInt(cantidad), checked: false };
 
         try {
-            await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiingresos/add-item", {
+            // Usar la variable BACKEND_URL
+            await fetch(`${BACKEND_URL}/apiingresos/add-item`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(nuevoArticulo)
@@ -89,7 +100,7 @@ const ApiIngresos = () => {
             loadItems();
             setFormData({ codigoBarras: "", sku: "", articulo: "", cantidad: "" });
 
-            // ✅ Regresar el foco al input de código de barras
+            // Regresar el foco al input de código de barras
             setTimeout(() => codigoBarrasRef.current?.focus(), 50);
 
         } catch (error) {
@@ -99,7 +110,8 @@ const ApiIngresos = () => {
 
     const toggleChecked = async (id, checked) => {
         try {
-            await fetch(`https://ctsistem1-e68664e8ae46.herokuapp.com/apiingresos/update-item/${id}`, {
+            // Usar la variable BACKEND_URL
+            await fetch(`${BACKEND_URL}/apiingresos/update-item/${id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ checked: !checked }) // Alternar estado
@@ -109,23 +121,28 @@ const ApiIngresos = () => {
             console.error("Error al actualizar estado de artículo:", error);
         }
     };
-    
+
     const clearCheckedItems = async () => {
+        // NOTA: window.confirm() no es compatible con el entorno de Canvas.
+        // Deberías reemplazar esto con un modal de confirmación personalizado en tu UI.
         if (!window.confirm("¿Estás seguro de que quieres eliminar los artículos publicados?")) return;
-    
+
         try {
-            const response = await fetch("https://ctsistem1-e68664e8ae46.herokuapp.com/apiingresos/clear-checked-items", {
+            // Usar la variable BACKEND_URL
+            const response = await fetch(`${BACKEND_URL}/apiingresos/clear-checked-items`, {
                 method: "DELETE"
             });
-    
+
             const data = await response.json();
+            // NOTA: window.alert() no es compatible con el entorno de Canvas.
+            // Deberías reemplazar esto con un modal de alerta personalizado en tu UI.
             alert(data.message); // Mostrar mensaje con el número de artículos eliminados
             loadItems(); // Recargar la lista después de eliminar
         } catch (error) {
             console.error("Error al eliminar artículos publicados:", error);
         }
     };
-    
+
     return (
         <div className={styles.container}>
             <h2 className={styles.title}>Ingreso de Mercadería</h2>
