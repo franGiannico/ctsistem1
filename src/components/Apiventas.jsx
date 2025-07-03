@@ -272,9 +272,8 @@ function Apiventas() {
                     <input type="text" name="cliente" value={formData.cliente} onChange={handleInputChange} placeholder="Cliente" required />
                     
                     <select name="puntoDespacho" value={formData.puntoDespacho} onChange={handleInputChange} required>
-                        <option value="Andreani">Andreani</option>
-                        <option value="Lancioni">Lancioni</option>
-                        <option value="Retira Lancioni">Retira Lancioni</option>
+                        <option value="Llevar al Expreso">Llevar al Expreso</option>
+                        <option value="Retira el Expreso">Retira el Expreso</option>
                         <option value="Punto de Despacho">Punto de Despacho</option>
                         <option value="Flex">Flex</option>
                         <option value="Guardia">Guardia</option>
@@ -301,7 +300,6 @@ function Apiventas() {
             )}
 
             {/* 🔹 Pestaña de "Ver Ventas" */}
-            <VentasMercadoLibre /> {/* Componente para mostrar ventas de Mercado Libre */}
                 {pestaniaActiva === "listado" && (
             <>
                 <div className={styles.contadorContainer}>
