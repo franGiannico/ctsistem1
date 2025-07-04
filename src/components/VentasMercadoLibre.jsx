@@ -32,72 +32,83 @@ const VentasMercadoLibre = () => {
     }
   }, []); // Se ejecuta solo una vez al montar el componente
 
-  /**
-   * Verifica si el usuario ya está autenticado con Mercado Libre a través del backend.
-   * Esto es útil para mantener la sesión si el token ya existe.
-   */
+
+  // Función para verificar autenticación
   const verificarAutenticacionBackend = async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(`${BACKEND_URL}/meli/auth`);
+
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        const texto = await res.text();
+        throw new Error("Respuesta no es JSON: " + texto.slice(0, 100));
+      }
+
       const data = await res.json();
 
       if (data.autenticado) {
         setAutenticado(true);
-        setMensaje('Ya estás autenticado con Mercado Libre.');
-        obtenerVentas(); // Si ya está autenticado, intentar obtener ventas
+        setMensaje("Ya estás autenticado con Mercado Libre.");
+        obtenerVentas();
       } else {
         setAutenticado(false);
-        setMensaje('Necesitas conectar con Mercado Libre.');
+        setMensaje("Necesitas conectar con Mercado Libre.");
       }
     } catch (err) {
-      setError('Error al verificar autenticación: ' + err.message);
-      console.error('Error al verificar autenticación:', err);
+      setError("Error al verificar autenticación: " + err.message);
+      console.error("Error al verificar autenticación:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  /**
-   * Inicia el proceso de conexión/autenticación con Mercado Libre.
-   * Redirige al usuario a la URL de autorización de Mercado Libre.
-   */
+  // Función para iniciar conexión con Mercado Libre
   const conectarConMercadoLibre = async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(`${BACKEND_URL}/meli/auth`);
+
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        const texto = await res.text();
+        throw new Error("Respuesta no es JSON: " + texto.slice(0, 100));
+      }
+
       const data = await res.json();
 
       if (data.redirect) {
-        // Redirige al usuario al enlace de autorización de Mercado Libre
         window.location.href = data.redirect;
       } else if (data.autenticado) {
-        // Si el backend dice que ya está autenticado (ej. token válido), actualiza el estado
         setAutenticado(true);
-        setMensaje('Ya estás autenticado con Mercado Libre.');
+        setMensaje("Ya estás autenticado con Mercado Libre.");
         obtenerVentas();
       } else {
-        throw new Error('No se pudo obtener la URL de autenticación de Mercado Libre.');
+        throw new Error("No se pudo obtener la URL de autenticación de Mercado Libre.");
       }
     } catch (err) {
-      setError('Error al conectar con Mercado Libre: ' + err.message);
-      console.error('Error al conectar con Mercado Libre:', err);
+      setError("Error al conectar con Mercado Libre: " + err.message);
+      console.error("Error al conectar con Mercado Libre:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  /**
-   * Obtiene los datos de ventas de Mercado Libre a través de la API de tu backend.
-   * Los datos brutos se imprimen en la consola.
-   */
+  // Función para obtener ventas
   const obtenerVentas = async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(`${BACKEND_URL}/meli/ventas`);
+
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        const texto = await res.text();
+        throw new Error("Respuesta no es JSON: " + texto.slice(0, 100));
+      }
+
       const data = await res.json();
 
       if (data.error) {
@@ -106,21 +117,21 @@ const VentasMercadoLibre = () => {
 
       if (data.ventas && Array.isArray(data.ventas)) {
         setMensaje(`Ventas obtenidas: ${data.ventas.length} registros.`);
-        console.log('--- Datos de Ventas de Mercado Libre (RAW) ---');
-        console.log(data.ventas); // <-- Aquí se imprime el console.log solicitado
-        console.log('-------------------------------------------');
-        // Si quisieras mostrarlas en la UI, aquí actualizarías un estado como setVentas(data.ventas);
+        console.log("--- Datos de Ventas de Mercado Libre (RAW) ---");
+        console.log(data.ventas);
+        console.log("-------------------------------------------");
       } else {
-        setMensaje('No se encontraron ventas o el formato es inesperado.');
-        console.log('Respuesta de ventas inesperada:', data);
+        setMensaje("No se encontraron ventas o el formato es inesperado.");
+        console.log("Respuesta de ventas inesperada:", data);
       }
     } catch (err) {
-      setError('Error al obtener ventas: ' + err.message);
-      console.error('Error al obtener ventas:', err);
+      setError("Error al obtener ventas: " + err.message);
+      console.error("Error al obtener ventas:", err);
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="p-4 bg-gray-50 rounded-lg shadow-md max-w-2xl mx-auto my-8">

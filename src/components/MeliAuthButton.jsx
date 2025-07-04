@@ -1,3 +1,5 @@
+// file: src/components/MeliAuthButton.jsx
+
 // import React, { useState } from 'react';
 
 // const MeliAuthButton = () => {
