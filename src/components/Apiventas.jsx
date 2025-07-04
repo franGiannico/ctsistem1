@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import styles from './Apiventas.module.css';
-// Importa el componente de Mercado Libre
-import VentasMercadoLibre from './VentasMercadoLibre'; // Asegúrate de que la ruta sea correcta
+// import VentasMercadoLibre from './VentasMercadoLibre';
 
 function Apiventas() {
     // URL base de tu backend, obtenida de las variables de entorno de Vite
