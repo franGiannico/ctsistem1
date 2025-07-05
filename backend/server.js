@@ -6,9 +6,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
-// No es necesario importar meliRoutes aquí si solo lo usas con app.use('/meli', require('./routes/meli'));
-// const meliRoutes = require('./routes/meli');
-
+const meliRoutes = require('./routes/meli');
 const app = express();
 
 // Configuración de CORS para permitir solicitudes desde tus dominios de frontend
