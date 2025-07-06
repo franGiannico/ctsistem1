@@ -1,3 +1,5 @@
+// File: src/components/VentasMercadoLibre.jsx
+
 import React, { useState, useEffect } from 'react';
 
 const VentasMercadoLibre = () => {
