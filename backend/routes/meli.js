@@ -67,8 +67,8 @@ router.get('/callback', async (req, res) => {
       { access_token, refresh_token, expires_in, scope },
       { upsert: true, new: true }
     );
-
-    res.send('Token guardado correctamente');
+    console.log('🎉 [CALLBACK] Token guardado en DB. Redirigiendo al frontend...');
+    res.redirect('https://ctsistem1.netlify.app/ventas');
   } catch (error) {
     console.error('Error en /meli/callback:', error.response?.data || error.message);
     res.status(500).send('Error al obtener el token');
