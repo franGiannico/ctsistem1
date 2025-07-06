@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const VentasMercadoLibre = () => {
   const [ventas, setVentas] = useState([]);
@@ -46,6 +46,29 @@ const VentasMercadoLibre = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+
+    if (code) {
+      fetch(`${import.meta.env.VITE_BACKEND_URL}/meli/callback?code=${code}`)
+        .then(res => {
+          if (!res.ok) throw new Error('Error al enviar el código');
+          return res.text(); // o .json() si esperás JSON
+        })
+        .then(data => {
+          console.log('✅ Código procesado:', data);
+          // Limpiamos la URL
+          window.history.replaceState({}, document.title, window.location.pathname);
+          obtenerVentas(); // Llamamos a obtenerVentas después de autenticar para que carguen automáticamente las ventas
+
+        })
+        .catch(err => {
+          console.error('❌ Error al autenticar:', err);
+        });
+    }
+  }, []);
 
   return (
     <div className="p-4">
