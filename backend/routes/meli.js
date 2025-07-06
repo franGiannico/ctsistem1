@@ -128,6 +128,16 @@ router.get('/sincronizar-ventas', async (req, res) => {
     for (const orden of ordenes) {
       const idVenta = orden.id.toString();
 
+      const shippingStatus = orden.shipping?.status;
+
+            // **NUEVO FILTRO AQUÍ: Incluir solo los estados deseados**
+            // Si el estado del envío NO es uno de los deseados, saltar esta orden.
+            const estadosPendientes = ['ready_to_ship', 'pending', 'handling', 'shipped', 'out_for_delivery']; // Agregué 'shipped' y 'out_for_delivery' que también son "pendientes de entregar"
+            if (!estadosPendientes.includes(shippingStatus)) {
+                console.log(`Orden ML ${idVenta} con estado '${shippingStatus}' no es pendiente, omitiendo.`);
+                continue; // Saltar esta orden si su estado no es uno de los "pendientes"
+            }
+
       // Evitar duplicados
       const existe = await Venta.findOne({ numeroVenta: idVenta });
       if (existe) continue;
