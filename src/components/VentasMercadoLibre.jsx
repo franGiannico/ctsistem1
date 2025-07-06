@@ -61,8 +61,6 @@ const VentasMercadoLibre = () => {
           console.log('✅ Código procesado:', data);
           // Limpiamos la URL
           window.history.replaceState({}, document.title, window.location.pathname);
-          obtenerVentas(); // Llamamos a obtenerVentas después de autenticar para que carguen automáticamente las ventas
-
         })
         .catch(err => {
           console.error('❌ Error al autenticar:', err);
