@@ -12,14 +12,11 @@ const VentasMercadoLibre = () => {
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/meli/auth`);
       const data = await res.json();
 
-      if (data.autenticado) {
-        setAutenticado(true);
-        obtenerVentas();
-      } else if (data.redirect) {
-        // Redirige al usuario al enlace de autorización de Mercado Libre
+      if (data.redirect) {
+        // 🔁 Forzamos siempre el redireccionamiento
         window.location.href = data.redirect;
       } else {
-        throw new Error('No se pudo conectar con Mercado Libre.');
+        throw new Error('No se pudo obtener la URL de autorización');
       }
     } catch (err) {
       setError(err.message);
@@ -28,6 +25,7 @@ const VentasMercadoLibre = () => {
       setLoading(false);
     }
   };
+
 
   const obtenerVentas = async () => {
     try {
