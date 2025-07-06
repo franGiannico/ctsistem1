@@ -1,6 +1,8 @@
 // src/components/Apiventas.jsx
 import React, { useState, useEffect } from "react";
 import styles from './Apiventas.module.css';
+import MeliAuthButton from './MeliAuthButton';
+
 
 function Apiventas() {
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
@@ -256,7 +258,10 @@ function Apiventas() {
           <button onClick={borrarVentasCompletadas} className={styles.borrarCompletadas}>
             Borrar Ventas Completadas
           </button>
-
+            
+          <MeliAuthButton />
+          <button onClick={sincronizarVentas}>Sincronizar ventas</button>
+          
           <button onClick={sincronizarVentasML} disabled={cargando} style={{ marginLeft: '10px' }}>
             {cargando ? 'Sincronizando ML...' : 'Sincronizar Ventas Mercado Libre'}
           </button>
