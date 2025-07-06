@@ -77,21 +77,38 @@ router.get('/callback', async (req, res) => {
 
 // Ruta: GET /meli/sincronizar-ventas
 router.get('/sincronizar-ventas', async (req, res) => {
-  try {
-    const tokenDoc = await MeliToken.findOne();
-    if (!tokenDoc || !tokenDoc.access_token) {
-      return res.status(401).json({ error: 'No autenticado con Mercado Libre' });
-    }
+    try {
+        let tokenDoc = await MeliToken.findOne(); // Busca el único token existente
+        if (!tokenDoc || !tokenDoc.access_token) {
+            return res.status(401).json({ error: 'No autenticado con Mercado Libre. Por favor, conecta tu cuenta.' });
+        }
 
-    const { access_token } = tokenDoc;
+        // Verificar si el token ha expirado o está cerca de expirar (ej. en los últimos 5 minutos de su vida útil)
+        const now = Date.now();
+        const tokenCreatedAt = new Date(tokenDoc.created_at).getTime();
+        const expiresInMs = tokenDoc.expires_in * 1000; // Convertir segundos a milisegundos
+        const bufferTimeMs = 5 * 60 * 1000; // 5 minutos antes de la expiración real
 
-    // Obtener las órdenes pagadas
-    const ordersRes = await axios.get(
-      'https://api.mercadolibre.com/orders/search?seller=me&order.status=paid',
-      { headers: { Authorization: `Bearer ${access_token}` } }
-    );
+        if (now > tokenCreatedAt + expiresInMs - bufferTimeMs) {
+            console.log('El token de ML está expirado o a punto de expirar. Intentando refrescar...');
+            try {
+                tokenDoc.access_token = await refreshMeliToken(tokenDoc); // Llama a la función de refresco
+            } catch (refreshError) {
+                console.error('Fallo al refrescar el token:', refreshError.message);
+                return res.status(401).json({ error: 'Token de Mercado Libre expirado y no se pudo refrescar. Por favor, vuelve a autenticarte.' });
+            }
+        }
 
-    const ordenes = ordersRes.data.results;
+        const { access_token, user_id } = tokenDoc; // <-- Aseguramos que user_id también se obtiene
+
+        // Obtener las órdenes pagadas
+        // CAMBIO CLAVE AQUÍ: Usamos tokenDoc.user_id en lugar de 'me' en la URL
+        const ordersRes = await axios.get(
+            `https://api.mercadolibre.com/orders/search?seller=${user_id}&order.status=paid`,
+            { headers: { Authorization: `Bearer ${access_token}` } }
+        );
+
+        const ordenes = ordersRes.data.results;
 
     // Importar modelo de ventas manuales (ya existente)
     const Venta = mongoose.models.Venta || mongoose.model('Venta', new mongoose.Schema({
