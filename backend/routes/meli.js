@@ -68,7 +68,7 @@ router.get('/callback', async (req, res) => {
       { upsert: true, new: true }
     );
 
-    res.redirect(`${MELI_REDIRECT_URI}?success=true`);
+    res.send('Token guardado correctamente');
   } catch (error) {
     console.error('Error en /meli/callback:', error.response?.data || error.message);
     res.status(500).send('Error al obtener el token');
