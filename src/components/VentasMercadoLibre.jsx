@@ -52,19 +52,28 @@ const VentasMercadoLibre = () => {
     const code = params.get('code');
 
     if (code) {
+      console.log('🔁 Código detectado en la URL:', code);
+
       fetch(`${import.meta.env.VITE_BACKEND_URL}/meli/callback?code=${code}`)
         .then(res => {
-          if (!res.ok) throw new Error('Error al enviar el código');
-          return res.text(); // o .json() si esperás JSON
+          if (!res.ok) {
+            console.error(`❌ Error al enviar el código (status ${res.status})`);
+            return res.text().then(text => {
+              console.error('🔍 Detalles del error del servidor:', text);
+              throw new Error(text);
+            });
+          }
+          return res.text();
         })
         .then(data => {
-          console.log('✅ Código procesado:', data);
-          // Limpiamos la URL
+          console.log('✅ Código procesado y token guardado:', data);
           window.history.replaceState({}, document.title, window.location.pathname);
         })
         .catch(err => {
-          console.error('❌ Error al autenticar:', err);
+          console.error('❌ Error al autenticar en callback:', err.message || err);
         });
+    } else {
+      console.log('ℹ️ No hay código en la URL');
     }
   }, []);
 
