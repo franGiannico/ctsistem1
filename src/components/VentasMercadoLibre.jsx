@@ -13,7 +13,6 @@ const VentasMercadoLibre = () => {
       const data = await res.json();
 
       if (data.redirect) {
-        // 🔁 Forzamos siempre el redireccionamiento
         window.location.href = data.redirect;
       } else {
         throw new Error('No se pudo obtener la URL de autorización');
@@ -25,7 +24,6 @@ const VentasMercadoLibre = () => {
       setLoading(false);
     }
   };
-
 
   const obtenerVentas = async () => {
     try {
@@ -45,7 +43,23 @@ const VentasMercadoLibre = () => {
     }
   };
 
+  // Verificar si ya está autenticado cuando carga el componente
   useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/meli/auth`);
+        const data = await res.json();
+        if (data.autenticado) {
+          setAutenticado(true);
+          obtenerVentas();
+        }
+      } catch (err) {
+        console.error('Error verificando autenticación:', err);
+      }
+    };
+
+    checkAuth();
+
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
 
@@ -65,6 +79,8 @@ const VentasMercadoLibre = () => {
         })
         .then(data => {
           console.log('✅ Código procesado y token guardado:', data);
+          setAutenticado(true);  // <-- importante para actualizar la UI
+          obtenerVentas();
           window.history.replaceState({}, document.title, window.location.pathname);
         })
         .catch(err => {
