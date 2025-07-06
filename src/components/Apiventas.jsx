@@ -259,9 +259,8 @@ function Apiventas() {
             Borrar Ventas Completadas
           </button>
             
-          <MeliAuthButton />
-          <button onClick={sincronizarVentas}>Sincronizar ventas</button>
-          
+          <MeliAuthButton /> {/*Botón para autenticación Mercado Libre */}
+
           <button onClick={sincronizarVentasML} disabled={cargando} style={{ marginLeft: '10px' }}>
             {cargando ? 'Sincronizando ML...' : 'Sincronizar Ventas Mercado Libre'}
           </button>
