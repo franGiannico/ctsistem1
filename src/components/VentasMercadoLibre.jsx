@@ -116,22 +116,28 @@ const VentasMercadoLibre = () => {
           {loading && <p>Cargando ventas...</p>}
           {error && <p className="text-red-500">{error}</p>}
 
-          <table className="w-full border border-gray-300">
+          <table>
             <thead>
-              <tr className="bg-gray-200">
-                <th className="p-2 border">ID</th>
-                <th className="p-2 border">Título</th>
-                <th className="p-2 border">Cantidad</th>
-                <th className="p-2 border">Precio</th>
+              <tr>
+                <th>Imagen</th>
+                <th>SKU</th>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Cliente</th>
+                <th>Punto de despacho</th>
+                <th>Número de venta</th>
               </tr>
             </thead>
             <tbody>
               {ventas.map((venta) => (
-                <tr key={venta.id}>
-                  <td className="p-2 border">{venta.id}</td>
-                  <td className="p-2 border">{venta.title}</td>
-                  <td className="p-2 border">{venta.quantity}</td>
-                  <td className="p-2 border">${venta.unit_price}</td>
+                <tr key={venta.numeroVenta}>
+                  <td><img src={venta.imagen} alt="producto" className="w-16 h-16" /></td>
+                  <td>{venta.sku}</td>
+                  <td>{venta.nombre}</td>
+                  <td>{venta.cantidad}</td>
+                  <td>{venta.cliente}</td>
+                  <td>{venta.puntoDespacho}</td>
+                  <td>{venta.numeroVenta}</td>
                 </tr>
               ))}
             </tbody>
@@ -140,6 +146,6 @@ const VentasMercadoLibre = () => {
       )}
     </div>
   );
-};
+}
 
 export default VentasMercadoLibre;
