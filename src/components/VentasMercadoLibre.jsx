@@ -30,7 +30,7 @@ const VentasMercadoLibre = () => {
   const obtenerVentas = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/meli/ventas`);
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/meli/sincronizar-ventas`);
       const data = await res.json();
 
       if (data.ventas) {
