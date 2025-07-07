@@ -148,13 +148,17 @@ router.get('/sincronizar-ventas', async (req, res) => {
         const { access_token, user_id } = tokenDoc; // <-- Aseguramos que user_id también se obtiene
 
         // Obtener las órdenes pagadas
-        // CAMBIO CLAVE AQUÍ: Usamos tokenDoc.user_id en lugar de 'me' en la URL
         const ordersRes = await axios.get(
-            `https://api.mercadolibre.com/orders/search?seller=${user_id}&order.status=paid`,
+            `https://api.mercadolibre.com/orders/search?seller=${user_id}&order.status=paid&sort=date_desc`,
             { headers: { Authorization: `Bearer ${access_token}` } }
         );
 
-        const ordenes = ordersRes.data.results;
+        // ✅ Filtrar solo las órdenes con shipping.status deseados
+        const estadosPermitidos = ['ready_to_ship', 'not_delivered', 'pending'];
+
+        const ordenes = ordersRes.data.results.filter(orden =>
+          estadosPermitidos.includes(orden.shipping?.status)
+        );
 
         // Importar modelo de ventas manuales (ya existente) - asegúrate de que esté definido correctamente
         // Lo ideal es que VentaSchema y Venta model estén definidos al inicio del archivo o en un archivo de modelos separado.
