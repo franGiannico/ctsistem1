@@ -164,6 +164,11 @@ router.get('/sincronizar-ventas', async (req, res) => {
           estadosPermitidos.includes(orden.shipping?.status));
           console.log(`📦 Se recibieron ${ordenes.length} órdenes desde Mercado Libre`);
 
+          if (ordenes.length === 0) {
+            console.log('🔍 No hay órdenes nuevas en ML');
+            return res.json({ mensaje: 'No hay nuevas ventas para sincronizar.', ventas: [] });
+          }
+
         // Importar modelo de ventas manuales (ya existente) - asegúrate de que esté definido correctamente
         // Lo ideal es que VentaSchema y Venta model estén definidos al inicio del archivo o en un archivo de modelos separado.
         const VentaSchema = new mongoose.Schema({
