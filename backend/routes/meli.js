@@ -123,7 +123,10 @@ router.get('/callback', async (req, res) => {
 
 // Ruta: GET /meli/sincronizar-ventas
 router.get('/sincronizar-ventas', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  console.log('🔄 Sincronizando ventas desde Mercado Libre...');
     try {
+        console.log('➡️ Iniciando sincronización de ventas Mercado Libre');
         let tokenDoc = await MeliToken.findOne(); // Busca el único token existente
         if (!tokenDoc || !tokenDoc.access_token) {
             return res.status(401).json({ error: 'No autenticado con Mercado Libre. Por favor, conecta tu cuenta.' });
@@ -146,6 +149,7 @@ router.get('/sincronizar-ventas', async (req, res) => {
         }
 
         const { access_token, user_id } = tokenDoc; // <-- Aseguramos que user_id también se obtiene
+        console.log('✅ Token válido. Obteniendo órdenes del usuario:', user_id);
 
         // Obtener las órdenes pagadas
         const ordersRes = await axios.get(
@@ -157,8 +161,8 @@ router.get('/sincronizar-ventas', async (req, res) => {
         const estadosPermitidos = ['ready_to_ship', 'not_delivered', 'pending'];
 
         const ordenes = ordersRes.data.results.filter(orden =>
-          estadosPermitidos.includes(orden.shipping?.status)
-        );
+          estadosPermitidos.includes(orden.shipping?.status));
+          console.log(`📦 Se recibieron ${ordenes.length} órdenes desde Mercado Libre`);
 
         // Importar modelo de ventas manuales (ya existente) - asegúrate de que esté definido correctamente
         // Lo ideal es que VentaSchema y Venta model estén definidos al inicio del archivo o en un archivo de modelos separado.

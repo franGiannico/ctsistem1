@@ -168,7 +168,9 @@ function Apiventas() {
   const sincronizarVentasML = async () => {
     setCargando(true);
     try {
-      const response = await fetch(`${BACKEND_URL}/meli/sincronizar-ventas`);
+      const response = await fetch(`${BACKEND_URL}/meli/sincronizar-ventas`, {
+      cache: 'no-store'
+    });
       const data = await response.json();
       const nuevasML = data.ventas || [];
 
