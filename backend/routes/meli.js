@@ -157,6 +157,11 @@ router.get('/sincronizar-ventas', async (req, res) => {
             { headers: { Authorization: `Bearer ${access_token}` } }
         );
 
+        ordersRes.data.results.forEach((orden) => {
+          console.log(`🧾 Orden ${orden.id} - envío: ${orden.shipping?.status}`);
+        });
+
+
         // ✅ Filtrar solo las órdenes con shipping.status deseados
         const estadosPermitidos = ['ready_to_ship', 'not_delivered', 'pending'];
 
