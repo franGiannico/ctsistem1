@@ -182,7 +182,7 @@ router.get('/sincronizar-ventas', async (req, res) => {
         // ✅ Filtrar solo las órdenes con shipping.status deseados
         const estadosPermitidos = ['ready_to_ship', 'not_delivered', 'pending'];
 
-        const ordenes = ordersRes.data.results.filter(orden =>
+        const ordenes = ordenesDetalladas.data.results.filter(orden =>
           estadosPermitidos.includes(orden.shipping?.status));
           console.log(`📦 Se recibieron ${ordenes.length} órdenes desde Mercado Libre`);
 
