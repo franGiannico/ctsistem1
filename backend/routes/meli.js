@@ -164,16 +164,6 @@ router.get('/sincronizar-ventas', async (req, res) => {
           estadosPermitidos.includes(orden.shipping?.status));
           console.log(`📦 Se recibieron ${ordenes.length} órdenes desde Mercado Libre`);
 
-        // Si no hay órdenes nuevas, eliminar las ventas anteriores de ML
-        if (ordenes.length === 0) {
-          console.log('🔍 No hay órdenes nuevas en ML. Borrando ventas anteriores de ML...');
-          const resultado = await Venta.deleteMany({ esML: true });
-          console.log(`🗑️ Se borraron ${resultado.deletedCount} ventas de ML anteriores.`);
-          return res.json({
-            mensaje: 'No hay nuevas ventas para sincronizar. Se eliminaron ventas anteriores de ML.',
-            ventas: []
-          });
-        }
 
         // Importar modelo de ventas manuales (ya existente) - asegúrate de que esté definido correctamente
         // Lo ideal es que VentaSchema y Venta model estén definidos al inicio del archivo o en un archivo de modelos separado.
@@ -190,6 +180,17 @@ router.get('/sincronizar-ventas', async (req, res) => {
             esML: { type: Boolean, default: false }
         });
         const Venta = mongoose.models.Venta || mongoose.model('Venta', VentaSchema);
+        
+        // Si no hay órdenes nuevas, eliminar las ventas anteriores de ML
+        if (ordenes.length === 0) {
+          console.log('🔍 No hay órdenes nuevas en ML. Borrando ventas anteriores de ML...');
+          const resultado = await Venta.deleteMany({ esML: true });
+          console.log(`🗑️ Se borraron ${resultado.deletedCount} ventas de ML anteriores.`);
+          return res.json({
+            mensaje: 'No hay nuevas ventas para sincronizar. Se eliminaron ventas anteriores de ML.',
+            ventas: []
+          });
+        }
 
         const ventasAGuardar = [];
 
