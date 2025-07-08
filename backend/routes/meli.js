@@ -161,6 +161,23 @@ router.get('/sincronizar-ventas', async (req, res) => {
           console.log(`🧾 Orden ${orden.id} - envío: ${orden.shipping?.status}`);
         });
 
+        const ordenesBasicas = ordersRes.data.results;
+
+        const ordenesDetalladas = await Promise.all(
+          ordenesBasicas.map(async (ordenBasica) => {
+            const detalle = await axios.get(
+              `https://api.mercadolibre.com/orders/${ordenBasica.id}`,
+              { headers: { Authorization: `Bearer ${access_token}` } }
+            );
+            return detalle.data;
+          })
+        );
+
+        // Log para confirmar que ahora tienen shipping:
+        ordenesDetalladas.forEach((orden) => {
+          console.log(`🧾 Orden ${orden.id} - shipping: ${orden.shipping?.status}`);
+        });
+
 
         // ✅ Filtrar solo las órdenes con shipping.status deseados
         const estadosPermitidos = ['ready_to_ship', 'not_delivered', 'pending'];
