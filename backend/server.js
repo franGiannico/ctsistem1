@@ -14,10 +14,6 @@ const meliRoutes = require('./routes/meli');
 
 app.use(express.static(path.join(__dirname, 'dist')));
 
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-});
-
 // 🔐 Middleware de CORS
 app.use(cors({
   origin: [
@@ -67,6 +63,10 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
   });
 }
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
 
 // 🚀 Iniciar el servidor
 const PORT = process.env.PORT || 5000;
