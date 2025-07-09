@@ -12,6 +12,12 @@ const app = express();
 // ✅ Importa las rutas personalizadas
 const meliRoutes = require('./routes/meli');
 
+app.use(express.static(path.join(__dirname, 'dist')));
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
+
 // 🔐 Middleware de CORS
 app.use(cors({
   origin: [
