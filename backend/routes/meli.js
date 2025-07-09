@@ -152,15 +152,6 @@ router.get('/sincronizar-ventas', async (req, res) => {
         console.log('✅ Token válido. Obteniendo órdenes del usuario:', user_id);
 
         // Obtener las órdenes pagadas
-        const ordersRes = await axios.get(
-            `https://api.mercadolibre.com/orders/search?seller=${user_id}&order.status=paid&sort=date_desc`,
-            { headers: { Authorization: `Bearer ${access_token}` } }
-        );
-
-        ordersRes.data.results.forEach((orden) => {
-          console.log(`🧾 Orden ${orden.id} - envío: ${orden.shipping?.status}`);
-        });
-
         const ordenesBasicas = ordersRes.data.results;
 
         const ordenesDetalladas = await Promise.all(
@@ -178,14 +169,12 @@ router.get('/sincronizar-ventas', async (req, res) => {
           console.log(`🧾 Orden ${orden.id} - shipping: ${orden.shipping?.status}`);
         });
 
-
-        // ✅ Filtrar solo las órdenes con shipping.status deseados
+        // Ahora sí filtrar
         const estadosPermitidos = ['ready_to_ship', 'not_delivered', 'pending'];
-
-        const ordenes = ordenesDetalladas.data.results.filter(orden =>
-          estadosPermitidos.includes(orden.shipping?.status));
-          console.log(`📦 Se recibieron ${ordenes.length} órdenes desde Mercado Libre`);
-
+        const ordenes = ordenesDetalladas.filter(orden =>
+          estadosPermitidos.includes(orden.shipping?.status)
+        );
+        console.log(`📦 Se recibieron ${ordenes.length} órdenes desde Mercado Libre`);
 
         // Importar modelo de ventas manuales (ya existente) - asegúrate de que esté definido correctamente
         // Lo ideal es que VentaSchema y Venta model estén definidos al inicio del archivo o en un archivo de modelos separado.
@@ -204,7 +193,7 @@ router.get('/sincronizar-ventas', async (req, res) => {
         const Venta = mongoose.models.Venta || mongoose.model('Venta', VentaSchema);
         
         // Si no hay órdenes nuevas, eliminar las ventas anteriores de ML
-        if (ordenes.length === 0) {
+        if (ordenesDetalladas.length === 0) {
           console.log('🔍 No hay órdenes nuevas en ML. Borrando ventas anteriores de ML...');
           const resultado = await Venta.deleteMany({ esML: true });
           console.log(`🗑️ Se borraron ${resultado.deletedCount} ventas de ML anteriores.`);
@@ -216,7 +205,7 @@ router.get('/sincronizar-ventas', async (req, res) => {
 
         const ventasAGuardar = [];
 
-        for (const orden of ordenes) {
+        for (const orden of ordenesDetalladas) {
             const idVenta = orden.id.toString();
 
             // Evitar duplicados: Si ya existe una venta con este numeroVenta, no la agregues.
