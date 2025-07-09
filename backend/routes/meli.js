@@ -152,7 +152,15 @@ router.get('/sincronizar-ventas', async (req, res) => {
         console.log('✅ Token válido. Obteniendo órdenes del usuario:', user_id);
 
         // Obtener las órdenes pagadas
-        const ordenesBasicas = ordersRes.data.results;
+        // 1. Obtener las órdenes pagadas (básicas)
+        const ordersSearch = await axios.get(
+          `https://api.mercadolibre.com/orders/search?seller=${user_id}&order.status=paid&sort=date_desc`,
+          { headers: { Authorization: `Bearer ${access_token}` } }
+        );
+
+        // 2. Extraer las órdenes básicas
+        const ordenesBasicas = ordersSearch.data.results;
+        console.log(`📦 Se encontraron ${ordenesBasicas.length} órdenes pagadas.`);
 
         const ordenesDetalladas = await Promise.all(
           ordenesBasicas.map(async (ordenBasica) => {
