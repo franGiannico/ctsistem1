@@ -172,109 +172,116 @@ router.get('/sincronizar-ventas', async (req, res) => {
           })
         );
 
+        // --- INICIO DE LA MODIFICACIÓN ---
+        // Loguea toda la información de las órdenes detalladas para inspección
+        console.log('\n--- INFORMACIÓN COMPLETA DE ÓRDENES DETALLADAS DE MERCADO LIBRE ---');
+        console.log(JSON.stringify(ordenesDetalladas, null, 2)); // Usa null, 2 para un formato legible
+        console.log('--- FIN DE INFORMACIÓN COMPLETA ---');
+        // --- FIN DE LA MODIFICACIÓN ---
+
         // Log para confirmar que ahora tienen shipping:
         ordenesDetalladas.forEach((orden) => {
           console.log(`🧾 Orden ${orden.id} - shipping: ${orden.shipping?.status}`);
         });
 
-        // Ahora sí filtrar
-        const estadosPermitidos = ['ready_to_ship', 'not_delivered', 'pending'];
-        const ordenes = ordenesDetalladas.filter(orden =>
-          estadosPermitidos.includes(orden.shipping?.status)
-        );
-        console.log(`📦 Se recibieron ${ordenes.length} órdenes desde Mercado Libre`);
+        // // Ahora sí filtrar
+        // const estadosPermitidos = ['ready_to_ship', 'not_delivered', 'pending'];
+        // const ordenes = ordenesDetalladas.filter(orden =>
+        //   estadosPermitidos.includes(orden.shipping?.status)
+        // );
+        // console.log(`📦 Se recibieron ${ordenes.length} órdenes desde Mercado Libre`);
 
-        // Importar modelo de ventas manuales (ya existente) - asegúrate de que esté definido correctamente
-        // Lo ideal es que VentaSchema y Venta model estén definidos al inicio del archivo o en un archivo de modelos separado.
-        const VentaSchema = new mongoose.Schema({
-            sku: String,
-            nombre: String,
-            cantidad: Number,
-            numeroVenta: { type: String, unique: true },
-            cliente: String,
-            puntoDespacho: String,
-            completada: Boolean,
-            entregada: Boolean,
-            imagen: String,
-            esML: { type: Boolean, default: false }
-        });
-        const Venta = mongoose.models.Venta || mongoose.model('Venta', VentaSchema);
+        // // Importar modelo de ventas manuales (ya existente) - asegúrate de que esté definido correctamente
+        // // Lo ideal es que VentaSchema y Venta model estén definidos al inicio del archivo o en un archivo de modelos separado.
+        // const VentaSchema = new mongoose.Schema({
+        //     sku: String,
+        //     nombre: String,
+        //     cantidad: Number,
+        //     numeroVenta: { type: String, unique: true },
+        //     cliente: String,
+        //     puntoDespacho: String,
+        //     completada: Boolean,
+        //     entregada: Boolean,
+        //     imagen: String,
+        //     esML: { type: Boolean, default: false }
+        // });
+        // const Venta = mongoose.models.Venta || mongoose.model('Venta', VentaSchema);
         
-        // Si no hay órdenes nuevas, eliminar las ventas anteriores de ML
-        if (ordenes.length === 0) {
-          console.log('🔍 No hay órdenes nuevas en ML. Borrando ventas anteriores de ML...');
-          const resultado = await Venta.deleteMany({ esML: true });
-          console.log(`🗑️ Se borraron ${resultado.deletedCount} ventas de ML anteriores.`);
-          return res.json({
-            mensaje: 'No hay nuevas ventas para sincronizar. Se eliminaron ventas anteriores de ML.',
-            ventas: []
-          });
-        }
+        // // Si no hay órdenes nuevas, eliminar las ventas anteriores de ML
+        // if (ordenes.length === 0) {
+        //   console.log('🔍 No hay órdenes nuevas en ML. Borrando ventas anteriores de ML...');
+        //   const resultado = await Venta.deleteMany({ esML: true });
+        //   console.log(`🗑️ Se borraron ${resultado.deletedCount} ventas de ML anteriores.`);
+        //   return res.json({
+        //     mensaje: 'No hay nuevas ventas para sincronizar. Se eliminaron ventas anteriores de ML.',
+        //     ventas: []
+        //   });
+        // }
 
-        const ventasAGuardar = [];
+        // const ventasAGuardar = [];
 
-        for (const orden of ordenes) {
-            const idVenta = orden.id.toString();
+        // for (const orden of ordenes) {
+        //     const idVenta = orden.id.toString();
 
-            // Evitar duplicados: Si ya existe una venta con este numeroVenta, no la agregues.
-            const existe = await Venta.findOne({ numeroVenta: idVenta });
-            if (existe) {
-                console.log(`Venta ML ${idVenta} ya existe, omitiendo.`);
-                continue;
-            }
+        //     // Evitar duplicados: Si ya existe una venta con este numeroVenta, no la agregues.
+        //     const existe = await Venta.findOne({ numeroVenta: idVenta });
+        //     if (existe) {
+        //         console.log(`Venta ML ${idVenta} ya existe, omitiendo.`);
+        //         continue;
+        //     }
 
-            const item = orden.order_items[0];
-            const title = item.item.title || '';
-            const sku = item.item.seller_sku || '';
-            const quantity = item.quantity || 1;
-            const variation = item.item.variation_attributes?.map(attr => `${attr.name}: ${attr.value_name}`).join(' - ') || '';
-            const nombreFinal = variation ? `${title} (${variation})` : title;
-            const imagen = item.item.picture || '';
+        //     const item = orden.order_items[0];
+        //     const title = item.item.title || '';
+        //     const sku = item.item.seller_sku || '';
+        //     const quantity = item.quantity || 1;
+        //     const variation = item.item.variation_attributes?.map(attr => `${attr.name}: ${attr.value_name}`).join(' - ') || '';
+        //     const nombreFinal = variation ? `${title} (${variation})` : title;
+        //     const imagen = item.item.picture || '';
 
-            const cliente = orden.buyer?.nickname || 'Cliente Desconocido';
-            const numeroVenta = idVenta;
+        //     const cliente = orden.buyer?.nickname || 'Cliente Desconocido';
+        //     const numeroVenta = idVenta;
 
-            // Determinar tipo de entrega
-            const shippingMode = orden.shipping?.mode;
-            const logisticType = orden.shipping?.logistic_type;
-            let puntoDespacho = 'Punto de Despacho';
+        //     // Determinar tipo de entrega
+        //     const shippingMode = orden.shipping?.mode;
+        //     const logisticType = orden.shipping?.logistic_type;
+        //     let puntoDespacho = 'Punto de Despacho';
 
-              if (shippingMode === 'me2') { // Mercado Envíos
-              if (logisticType === 'self_service') {
-                  puntoDespacho = 'Flex'; // Usado para envíos Flex
-              } else if (logisticType === 'drop_off') {
-                  puntoDespacho = 'Punto de Despacho'; // El vendedor lleva el paquete a un punto de despacho
-              } else if (logisticType === 'xd_drop_off') {
-                  puntoDespacho = 'Punto de Despacho'; // El vendedor lleva el paquete a un punto de despacho Express
-              } else if (logisticType === 'pickup') {
-                  puntoDespacho = 'Showroom'; // El comprador retira el producto por el domicilio del vendedor
-              } else if (logisticType === 'cross_docking') {
-                  puntoDespacho = 'Retira el Expreso'; // Retira el Expreso por el domicilio del vendedor
-              }
-          } else if (shippingMode === 'not_specified') {
-              puntoDespacho = 'Llevar al Expreso'; // Acordar con el cliente el envío, generalmente se lleva al expreso
-          }
+        //       if (shippingMode === 'me2') { // Mercado Envíos
+        //       if (logisticType === 'self_service') {
+        //           puntoDespacho = 'Flex'; // Usado para envíos Flex
+        //       } else if (logisticType === 'drop_off') {
+        //           puntoDespacho = 'Punto de Despacho'; // El vendedor lleva el paquete a un punto de despacho
+        //       } else if (logisticType === 'xd_drop_off') {
+        //           puntoDespacho = 'Punto de Despacho'; // El vendedor lleva el paquete a un punto de despacho Express
+        //       } else if (logisticType === 'pickup') {
+        //           puntoDespacho = 'Showroom'; // El comprador retira el producto por el domicilio del vendedor
+        //       } else if (logisticType === 'cross_docking') {
+        //           puntoDespacho = 'Retira el Expreso'; // Retira el Expreso por el domicilio del vendedor
+        //       }
+        //   } else if (shippingMode === 'not_specified') {
+        //       puntoDespacho = 'Llevar al Expreso'; // Acordar con el cliente el envío, generalmente se lleva al expreso
+        //   }
 
 
-            ventasAGuardar.push(new Venta({
-                sku,
-                nombre: nombreFinal,
-                cantidad: quantity,
-                numeroVenta,
-                cliente,
-                puntoDespacho,
-                completada: false,
-                entregada: false,
-                imagen,
-                esML: true // Marca que es una venta de Mercado Libre
-            }));
-        }
+        //     ventasAGuardar.push(new Venta({
+        //         sku,
+        //         nombre: nombreFinal,
+        //         cantidad: quantity,
+        //         numeroVenta,
+        //         cliente,
+        //         puntoDespacho,
+        //         completada: false,
+        //         entregada: false,
+        //         imagen,
+        //         esML: true // Marca que es una venta de Mercado Libre
+        //     }));
+        // }
 
-        if (ventasAGuardar.length === 0) {
-            return res.json({ mensaje: 'No hay nuevas ventas para sincronizar.' });
-        }
+        // if (ventasAGuardar.length === 0) {
+        //     return res.json({ mensaje: 'No hay nuevas ventas para sincronizar.' });
+        // }
 
-        await Venta.insertMany(ventasAGuardar);
+        // await Venta.insertMany(ventasAGuardar);
         res.json({ mensaje: `${ventasAGuardar.length} ventas sincronizadas con éxito.` });
 
     } catch (error) {
