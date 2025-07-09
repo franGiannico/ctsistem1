@@ -193,7 +193,7 @@ router.get('/sincronizar-ventas', async (req, res) => {
         const Venta = mongoose.models.Venta || mongoose.model('Venta', VentaSchema);
         
         // Si no hay órdenes nuevas, eliminar las ventas anteriores de ML
-        if (ordenesDetalladas.length === 0) {
+        if (ordenes.length === 0) {
           console.log('🔍 No hay órdenes nuevas en ML. Borrando ventas anteriores de ML...');
           const resultado = await Venta.deleteMany({ esML: true });
           console.log(`🗑️ Se borraron ${resultado.deletedCount} ventas de ML anteriores.`);
@@ -205,7 +205,7 @@ router.get('/sincronizar-ventas', async (req, res) => {
 
         const ventasAGuardar = [];
 
-        for (const orden of ordenesDetalladas) {
+        for (const orden of ordenes) {
             const idVenta = orden.id.toString();
 
             // Evitar duplicados: Si ya existe una venta con este numeroVenta, no la agregues.
