@@ -288,29 +288,22 @@ router.get('/sincronizar-ventas', async (req, res) => {
     }
 });
 
-router.get('/meli/venta/:id', async (req, res) => {
-  const ventaId = req.params.id;
+// Obtener una venta específica por ID
+router.get("/orden/:id", async (req, res) => {
+  const { id } = req.params;
+  const { access_token } = await getTokenML(); // O como lo estés guardando
 
   try {
-    const tokenDoc = await MeliToken.findOne();
-    const { access_token } = tokenDoc;
+    const response = await axios.get(`https://api.mercadolibre.com/orders/${id}`, {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+    });
 
-    const respuesta = await axios.get(
-      `https://api.mercadolibre.com/orders/${ventaId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${access_token}`
-        }
-      }
-    );
-
-    console.log('🧾 Venta obtenida por ID:', JSON.stringify(respuesta.data, null, 2));
-
-    res.json({ mensaje: 'Venta consultada, revisar consola para ver detalles.' });
-
+    res.json(response.data);
   } catch (error) {
-    console.error('❌ Error al obtener venta por ID:', error.response?.data || error.message);
-    res.status(500).json({ error: 'Error al obtener la venta específica' });
+    console.error("❌ Error consultando orden:", error.response?.data || error.message);
+    res.status(500).json({ error: "No se pudo obtener la orden" });
   }
 });
 
