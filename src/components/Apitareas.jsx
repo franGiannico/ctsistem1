@@ -14,26 +14,32 @@ export default function Apitareas() {
     const [prioridad, setPrioridad] = useState("Normal");
 
     useEffect(() => {
-        cargarTareasDesdeAPI();
-        // Configurar el intervalo para recargar tareas cada 5 segundos
-        const interval = setInterval(() => {
-            cargarTareasDesdeAPI();
-        }, 5000);
-        // Limpiar el intervalo cuando el componente se desmonte
-        return () => clearInterval(interval);
-    }, []); // El array vacío asegura que se ejecute solo una vez al montar
+        let tareasAnteriores = [];
 
-    const cargarTareasDesdeAPI = async () => {
-        try {
-            // Usar la variable API_TAREAS_URL
-            const res = await fetch(`${API_TAREAS_URL}/cargar-tareas`);
-            if (!res.ok) throw new Error(`Error HTTP: ${res.status}`);
-            const data = await res.json();
-            setTareas(data);
-        } catch (error) {
-            console.error("❌ Error al cargar tareas:", error);
-        }
-    };
+        const cargarTareasSiCambian = async () => {
+            try {
+                const res = await fetch(`${API_TAREAS_URL}/cargar-tareas`);
+                if (!res.ok) throw new Error(`Error HTTP: ${res.status}`);
+                const data = await res.json();
+
+                if (JSON.stringify(data) !== JSON.stringify(tareasAnteriores)) {
+                    setTareas(data);
+                    tareasAnteriores = data;
+                }
+            } catch (error) {
+                console.error("❌ Error al cargar tareas:", error);
+            }
+        };
+
+        cargarTareasSiCambian(); // Primera carga inmediata
+
+        const interval = setInterval(() => {
+            cargarTareasSiCambian();
+        }, 1000); // Cada 1 segundo
+
+        return () => clearInterval(interval);
+    }, []);
+
 
     const agregarTarea = async () => {
         if (!descripcion.trim()) {
@@ -55,7 +61,7 @@ export default function Apitareas() {
 
             if (!res.ok) throw new Error(`Error HTTP: ${res.status}`);
 
-            cargarTareasDesdeAPI();
+            cargarTareasSiCambian();
             setDescripcion(""); // Limpiar el input después de agregar
         } catch (error) {
             console.error("❌ Error al guardar tarea:", error);
@@ -72,7 +78,7 @@ export default function Apitareas() {
             });
 
             if (!res.ok) throw new Error(`Error HTTP: ${res.status}`);
-            cargarTareasDesdeAPI();
+           cargarTareasSiCambian();
         } catch (error) {
             console.error("❌ Error al actualizar tarea:", error);
         }
@@ -90,7 +96,7 @@ export default function Apitareas() {
             });
 
             if (!res.ok) throw new Error(`Error HTTP: ${res.status}`);
-            cargarTareasDesdeAPI();
+            cargarTareasSiCambian();
         } catch (error) {
             console.error("❌ Error al limpiar tareas:", error);
         }
