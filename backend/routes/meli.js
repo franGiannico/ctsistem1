@@ -224,6 +224,26 @@ router.get('/sincronizar-ventas', async (req, res) => {
 
         const ventasAGuardar = [];
 
+        async function getShippingInfo(shippingId, accessToken) {
+          if (!shippingId) return null;
+
+          try {
+            const response = await axios.get(
+              `https://api.mercadolibre.com/shipments/${shippingId}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                },
+              }
+            );
+            return response.data;
+          } catch (error) {
+            console.error(`❌ Error al obtener info de shipping ${shippingId}:`, error.response?.data || error.message);
+            return null;
+          }
+        }
+
+
         for (const orden of ordenes) {
             const idVenta = orden.id.toString();
 
@@ -266,14 +286,15 @@ router.get('/sincronizar-ventas', async (req, res) => {
               puntoDespacho = 'Llevar al Expreso'; // Acordar con el cliente el envío, generalmente se lleva al expreso
           }
 
+          const shippingInfo = await getShippingInfo(orden.shipping?.id, access_token);
 
             ventasAGuardar.push(new Venta({
                 sku,
                 nombre: nombreFinal,
                 cantidad: quantity,
                 numeroVenta,
-                cliente,
-                puntoDespacho,
+                cliente: shippingInfo?.receiver?.name || 'Sin nombre',
+                puntoDespacho: interpretShippingType(orden.shipping?.logistic_type, orden.shipping?.mode),
                 completada: false,
                 entregada: false,
                 imagen,
