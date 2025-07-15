@@ -179,10 +179,12 @@ router.get('/sincronizar-ventas', async (req, res) => {
         });
 
         // Ahora sí filtrar
+       // Aceptamos órdenes sin shipping o con estado válido
         const estadosPermitidos = ['ready_to_ship', 'not_delivered', 'pending'];
-        const ordenes = ordenesDetalladas.filter(orden =>
-          estadosPermitidos.includes(orden.shipping?.status)
-        );
+        const ordenes = ordenesDetalladas.filter(orden => {
+          const status = orden.shipping?.status;
+          return !orden.shipping || estadosPermitidos.includes(status);
+        });
         console.log(`📦 Se recibieron ${ordenes.length} órdenes desde Mercado Libre`);
 
         // Importar modelo de ventas manuales (ya existente) - asegúrate de que esté definido correctamente
