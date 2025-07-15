@@ -282,28 +282,28 @@ router.get('/sincronizar-ventas', async (req, res) => {
             const cliente = orden.buyer?.nickname || 'Cliente Desconocido';
             const numeroVenta = idVenta;
 
-            // Determinar tipo de entrega
-            const shippingMode = orden.shipping?.mode;
-            const logisticType = orden.shipping?.logistic_type;
-            let puntoDespacho = 'Punto de Despacho';
+            // // Determinar tipo de entrega
+            // const shippingMode = orden.shipping?.mode;
+            // const logisticType = orden.shipping?.logistic_type;
+            // let puntoDespacho = 'Punto de Despacho';
 
-              if (shippingMode === 'me2') { // Mercado Envíos
-              if (logisticType === 'self_service') {
-                  puntoDespacho = 'Flex'; // Usado para envíos Flex
-              } else if (logisticType === 'drop_off') {
-                  puntoDespacho = 'Punto de Despacho'; // El vendedor lleva el paquete a un punto de despacho
-              } else if (logisticType === 'xd_drop_off') {
-                  puntoDespacho = 'Punto de Despacho'; // El vendedor lleva el paquete a un punto de despacho Express
-              } else if (logisticType === 'pickup') {
-                  puntoDespacho = 'Showroom'; // El comprador retira el producto por el domicilio del vendedor
-              } else if (logisticType === 'cross_docking') {
-                  puntoDespacho = 'Retira el Expreso'; // Retira el Expreso por el domicilio del vendedor
+            const shippingInfo = await getShippingInfo(orden.shipping?.id, access_token);
+
+              let puntoDespacho = 'Punto de Despacho';
+
+              if (shippingInfo?.mode === 'me2') {
+                if (shippingInfo.logistic_type === 'self_service') {
+                  puntoDespacho = 'Flex';
+                } else if (shippingInfo.logistic_type === 'drop_off' || shippingInfo.logistic_type === 'xd_drop_off') {
+                  puntoDespacho = 'Punto de Despacho';
+                } else if (shippingInfo.logistic_type === 'pickup') {
+                  puntoDespacho = 'Showroom';
+                } else if (shippingInfo.logistic_type === 'cross_docking') {
+                  puntoDespacho = 'Retira el Expreso';
+                }
+              } else if (shippingInfo?.mode === 'not_specified') {
+                puntoDespacho = 'Llevar al Expreso';
               }
-          } else if (shippingMode === 'not_specified') {
-              puntoDespacho = 'Llevar al Expreso'; // Acordar con el cliente el envío, generalmente se lleva al expreso
-          }
-
-          const shippingInfo = await getShippingInfo(orden.shipping?.id, access_token);
 
             ventasAGuardar.push(new Venta({
                 sku,
