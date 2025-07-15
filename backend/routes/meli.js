@@ -179,8 +179,11 @@ router.get('/sincronizar-ventas', async (req, res) => {
         });
 
           ordenesDetalladas.forEach((orden, i) => {
-          console.log(`📄 Orden completa [${i + 1}]:`);
-          console.dir(orden, { depth: null });
+          console.log(`📦 Orden ${orden.id} - 
+            shipping ID: ${orden.shipping?.id}, 
+            status: ${orden.shipping?.status}, 
+            mode: ${orden.shipping?.mode}, 
+            logistic_type: ${orden.shipping?.logistic_type}`);
         });
 
         // Ahora sí filtrar
