@@ -178,6 +178,11 @@ router.get('/sincronizar-ventas', async (req, res) => {
           console.log(`🧾 Orden ${orden.id} - shipping: ${orden.shipping?.status}`);
         });
 
+          ordenesDetalladas.forEach((orden, i) => {
+          console.log(`📄 Orden completa [${i + 1}]:`);
+          console.dir(orden, { depth: null });
+        });
+
         // Ahora sí filtrar
        // Aceptamos órdenes sin shipping o con estado válido
         const estadosPermitidos = ['ready_to_ship', 'not_delivered', 'pending'];
