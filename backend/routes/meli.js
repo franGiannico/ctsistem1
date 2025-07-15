@@ -121,6 +121,23 @@ router.get('/callback', async (req, res) => {
       }
 });
 
+function interpretShippingType(logisticType, mode) {
+  if (mode === 'me2') {
+    switch (logisticType) {
+      case 'self_service': return 'Flex';
+      case 'drop_off': return 'Punto de Despacho';
+      case 'xd_drop_off': return 'Punto de Despacho Express';
+      case 'pickup': return 'Showroom';
+      case 'cross_docking': return 'Retira el Expreso';
+      default: return 'Mercado Envíos';
+    }
+  } else if (mode === 'not_specified') {
+    return 'Llevar al Expreso';
+  }
+  return 'Desconocido';
+}
+
+
 // Ruta: GET /meli/sincronizar-ventas
 router.get('/sincronizar-ventas', async (req, res) => {
   res.set('Cache-Control', 'no-store');
