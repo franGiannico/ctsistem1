@@ -242,21 +242,38 @@ router.get('/sincronizar-ventas', async (req, res) => {
         const ventasAGuardar = [];
 
         async function getShippingInfo(shippingId, access_token) {
-          if (!shippingId) return null;
+        if (!shippingId) {
+          console.warn("⚠️ No hay shipping ID");
+          return null;
+        }
 
-          const shippingResponse = await fetch(`https://api.mercadolibre.com/shipments/${shippingId}`, {
+        try {
+          const url = `https://api.mercadolibre.com/shipments/${shippingId}`;
+          const response = await fetch(url, {
             headers: {
               Authorization: `Bearer ${access_token}`
             }
           });
 
-          if (!shippingResponse.ok) {
-            console.error(`Error al obtener información del envío ${shippingId}`);
+          if (!response.ok) {
+            console.error(`❌ Error HTTP ${response.status} al obtener shipping ${shippingId}`);
+            const errorText = await response.text();
+            console.error("📩 Respuesta:", errorText);
             return null;
           }
 
-          return await shippingResponse.json();
+          const data = await response.json();
+          console.log(`📦 Shipping ${shippingId} recibido correctamente:`, {
+            status: data.status,
+            mode: data.mode,
+            logistic_type: data.logistic_type
+          });
+          return data;
+        } catch (error) {
+          console.error(`❌ Error al obtener info de shipping ${shippingId}:`, error.message);
+          return null;
         }
+      }
 
 
         for (const orden of ordenes) {
