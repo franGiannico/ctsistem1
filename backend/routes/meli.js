@@ -241,23 +241,21 @@ router.get('/sincronizar-ventas', async (req, res) => {
 
         const ventasAGuardar = [];
 
-        async function getShippingInfo(shippingId, accessToken) {
+        async function getShippingInfo(shippingId, access_token) {
           if (!shippingId) return null;
 
-          try {
-            const response = await axios.get(
-              `https://api.mercadolibre.com/shipments/${shippingId}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                },
-              }
-            );
-            return response.data;
-          } catch (error) {
-            console.error(`❌ Error al obtener info de shipping ${shippingId}:`, error.response?.data || error.message);
+          const shippingResponse = await fetch(`https://api.mercadolibre.com/shipments/${shippingId}`, {
+            headers: {
+              Authorization: `Bearer ${access_token}`
+            }
+          });
+
+          if (!shippingResponse.ok) {
+            console.error(`Error al obtener información del envío ${shippingId}`);
             return null;
           }
+
+          return await shippingResponse.json();
         }
 
 
@@ -289,21 +287,30 @@ router.get('/sincronizar-ventas', async (req, res) => {
 
             const shippingInfo = await getShippingInfo(orden.shipping?.id, access_token);
 
-              let puntoDespacho = 'Punto de Despacho';
+            let puntoDespacho = 'Punto de Despacho';
 
-              if (shippingInfo?.mode === 'me2') {
-                if (shippingInfo.logistic_type === 'self_service') {
+            if (shippingInfo?.mode === 'me2') {
+              switch (shippingInfo.logistic_type) {
+                case 'self_service':
                   puntoDespacho = 'Flex';
-                } else if (shippingInfo.logistic_type === 'drop_off' || shippingInfo.logistic_type === 'xd_drop_off') {
+                  break;
+                case 'drop_off':
+                case 'xd_drop_off':
                   puntoDespacho = 'Punto de Despacho';
-                } else if (shippingInfo.logistic_type === 'pickup') {
+                  break;
+                case 'pickup':
                   puntoDespacho = 'Showroom';
-                } else if (shippingInfo.logistic_type === 'cross_docking') {
+                  break;
+                case 'cross_docking':
                   puntoDespacho = 'Retira el Expreso';
-                }
-              } else if (shippingInfo?.mode === 'not_specified') {
-                puntoDespacho = 'Llevar al Expreso';
+                  break;
+                default:
+                  puntoDespacho = 'Punto de Despacho';
               }
+            } else if (shippingInfo?.mode === 'not_specified') {
+              puntoDespacho = 'Llevar al Expreso';
+            }
+
 
             ventasAGuardar.push(new Venta({
                 sku,
