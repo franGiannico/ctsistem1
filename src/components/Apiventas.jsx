@@ -283,6 +283,9 @@ function Apiventas() {
                       <p><strong>SKU:</strong> {venta.sku || 'N/A'}</p>
                       <p><strong>Nombre:</strong> {venta.nombre}</p>
                       <p><strong>Cantidad:</strong> {venta.cantidad}</p>
+                      {venta.cantidad > 1 && (
+                        <span className={styles.alerta}>⚠ Ojo!</span>
+                      )}
                       <p><strong>Cliente:</strong> {venta.cliente}</p>
                       <p><strong>N° Venta:</strong> {venta.numeroVenta}</p>
                     </div>
