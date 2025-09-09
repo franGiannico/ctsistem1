@@ -1,6 +1,6 @@
 // file: src/components/Apitareas.jsx
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Container, Row, Col, Button, Form, ListGroup } from "react-bootstrap";
 
 export default function Apitareas() {
@@ -13,34 +13,24 @@ export default function Apitareas() {
     const [descripcion, setDescripcion] = useState("");
     const [prioridad, setPrioridad] = useState("Normal");
 
-    useEffect(() => {
-        let tareasAnteriores = [];
+    const tareasAnteriores = useRef([]); // valor inicial vacío
 
-        const cargarTareasSiCambian = async () => {
-            try {
-                const res = await fetch(`${API_TAREAS_URL}/cargar-tareas`);
-                if (!res.ok) throw new Error(`Error HTTP: ${res.status}`);
-                const data = await res.json();
+    const cargarTareasSiCambian = async () => {
+    try {
+        const res = await fetch(`${API_TAREAS_URL}/cargar-tareas`); // o tu endpoint real
+        const nuevasTareas = await res.json();
 
-                if (JSON.stringify(data) !== JSON.stringify(tareasAnteriores)) {
-                    setTareas(data);
-                    tareasAnteriores = data;
-                }
-            } catch (error) {
-                console.error("❌ Error al cargar tareas:", error);
-            }
-        };
+        // Comparación con las anteriores
+        if (JSON.stringify(nuevasTareas) !== JSON.stringify(tareasAnteriores.current)) {
+        setTareas(nuevasTareas);
+        tareasAnteriores.current = nuevasTareas; // actualizar ref
+        }
+    } catch (error) {
+        console.error("Error cargando tareas:", error);
+    }
+    };
 
-        cargarTareasSiCambian(); // Primera carga inmediata
-
-        const interval = setInterval(() => {
-            cargarTareasSiCambian();
-        }, 1000); // Cada 1 segundo
-
-        return () => clearInterval(interval);
-    }, []);
-
-
+    
     const agregarTarea = async () => {
         if (!descripcion.trim()) {
             // NOTA: window.alert() no es compatible con el entorno de Canvas.
@@ -101,6 +91,16 @@ export default function Apitareas() {
             console.error("❌ Error al limpiar tareas:", error);
         }
     };
+
+    useEffect(() => {
+        cargarTareasSiCambian(); // Primera carga inmediata
+
+        const interval = setInterval(() => {
+            cargarTareasSiCambian();
+        }, 1000); // cada 1 segundo
+
+        return () => clearInterval(interval);
+        }, []);
 
     return (
         <Container fluid className="mt-4 px-4">
