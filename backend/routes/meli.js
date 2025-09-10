@@ -237,12 +237,6 @@ router.get('/sincronizar-ventas', async (req, res) => {
 
         const ventasAGuardar = [];
 
-        // Loggear todos los estados de shipping
-ordenesDetalladas.forEach((orden) => {
-  console.log(
-    `🧐 Orden ${orden.id} - shipping.status: ${orden.shipping?.status || "sin shipping"}`
-  );
-});
 
 // Lista de estados permitidos
 const estadosPermitidos = [
@@ -300,7 +294,11 @@ console.log("🏷️ Conteo por tags:", conteoPorTags);
 
           const item = orden.order_items[0];
           const title = item.item.title || "";
-          const sku = item.item.id || "";
+          const sku = 
+          item.item.seller_custom_field || // si lo cargaste manualmente en la publicación
+          (atributos.find(attr => attr.nombre === "SELLER_SKU")?.valor) || 
+          "Sin SKU";
+
           const variationId = item.item.variation_id || null;
           const quantity = item.quantity || 1;
 
@@ -320,7 +318,8 @@ console.log("🏷️ Conteo por tags:", conteoPorTags);
 
           const nombreFinal = variation ? `${title} (${variation})` : title;
 
-          const imagen = item.item.thumbnail || item.item.picture || "";
+          const imagen = item.item.thumbnail || item.item.secure_thumbnail || "";
+
           const cliente =
             (orden.buyer?.first_name && orden.buyer?.last_name
               ? `${orden.buyer.first_name} ${orden.buyer.last_name}`
