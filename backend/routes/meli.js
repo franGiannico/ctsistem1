@@ -121,21 +121,6 @@ router.get('/callback', async (req, res) => {
       }
 });
 
-function interpretShippingType(logisticType, mode) {
-  if (mode === 'me2') {
-    switch (logisticType) {
-      case 'self_service': return 'Flex';
-      case 'drop_off': return 'Punto de Despacho';
-      case 'xd_drop_off': return 'Punto de Despacho Express';
-      case 'pickup': return 'Showroom';
-      case 'cross_docking': return 'Retira el Expreso';
-      default: return 'Mercado Envíos';
-    }
-  } else if (mode === 'not_specified') {
-    return 'Llevar al Expreso';
-  }
-  return 'Desconocido';
-}
 
 
 // Ruta: GET /meli/sincronizar-ventas
@@ -190,158 +175,132 @@ router.get('/sincronizar-ventas', async (req, res) => {
         );
         console.log(`📦 Se obtuvieron detalles de ${ordenesDetalladas.length} órdenes.`);
 
-        // Log para confirmar que ahora tienen shipping:
-        ordenesDetalladas.forEach((orden) => {
-          console.log(`🧾 Orden ${orden.id} - shipping: ${orden.shipping?.status}`);
-        });
+        // Función auxiliar para obtener atributos de la variación
+        async function obtenerAtributosDeVariacion(itemId, variationId, accessToken, axios) {
+          try {
+            const { data } = await axios.get(`https://api.mercadolibre.com/items/${itemId}`, {
+              headers: { Authorization: `Bearer ${accessToken}` }
+            });
 
-          ordenesDetalladas.forEach((orden, i) => {
-          console.log(`📦 Orden ${orden.id} - 
-            shipping ID: ${orden.shipping?.id}, 
-            status: ${orden.shipping?.status}, 
-            mode: ${orden.shipping?.mode}, 
-            logistic_type: ${orden.shipping?.logistic_type}`);
-        });
+            const variacion = data.variations?.find(v => v.id === variationId);
+            if (variacion) {
+              return variacion.attribute_combinations.map(attr => ({
+                nombre: attr.name,
+                valor: attr.value_name
+              }));
+            }
+            return [];
+          } catch (error) {
+            console.error(`❌ Error obteniendo atributos para ${itemId} - ${variationId}:`, error.response?.data || error.message);
+            return [];
+          }
+        }
 
-        // Ahora sí filtrar
-       // Aceptamos órdenes sin shipping o con estado válido
-        const estadosPermitidos = ['ready_to_ship', 'not_delivered', 'pending'];
-        const ordenes = ordenesDetalladas.filter(orden => {
-          const status = orden.shipping?.status;
-          return !orden.shipping || estadosPermitidos.includes(status);
-        });
-        console.log(`📦 Se recibieron ${ordenes.length} órdenes desde Mercado Libre`);
 
-        // Importar modelo de ventas manuales (ya existente) - asegúrate de que esté definido correctamente
-        // Lo ideal es que VentaSchema y Venta model estén definidos al inicio del archivo o en un archivo de modelos separado.
+        // Importar modelo de ventas manuales (ya existente)
         const VentaSchema = new mongoose.Schema({
-            sku: String,
-            nombre: String,
-            cantidad: Number,
-            numeroVenta: { type: String, unique: true },
-            cliente: String,
-            puntoDespacho: String,
-            completada: Boolean,
-            entregada: Boolean,
-            imagen: String,
-            esML: { type: Boolean, default: false }
-        });
+        sku: String,
+        nombre: String,
+        cantidad: Number,
+        numeroVenta: { type: String, unique: true },
+        cliente: String,
+        puntoDespacho: String,
+        completada: Boolean,
+        entregada: Boolean,
+        imagen: String,
+        esML: { type: Boolean, default: false },
+        variationId: String,
+        atributos: [Object]
+      });
+
         const Venta = mongoose.models.Venta || mongoose.model('Venta', VentaSchema);
         
-        // Si no hay órdenes nuevas, eliminar las ventas anteriores de ML
-        if (ordenes.length === 0) {
-          console.log('🔍 No hay órdenes nuevas en ML. Borrando ventas anteriores de ML...');
-          const resultado = await Venta.deleteMany({ esML: true });
-          console.log(`🗑️ Se borraron ${resultado.deletedCount} ventas de ML anteriores.`);
-          return res.json({
-            mensaje: 'No hay nuevas ventas para sincronizar. Se eliminaron ventas anteriores de ML.',
-            ventas: []
-          });
+        // // Si no hay órdenes nuevas, eliminar las ventas anteriores de ML
+        // if (ordenes.length === 0) {
+        //   console.log('🔍 No hay órdenes nuevas en ML. Borrando ventas anteriores de ML...');
+        //   const resultado = await Venta.deleteMany({ esML: true });
+        //   console.log(`🗑️ Se borraron ${resultado.deletedCount} ventas de ML anteriores.`);
+        //   return res.json({
+        //     mensaje: 'No hay nuevas ventas para sincronizar. Se eliminaron ventas anteriores de ML.',
+        //     ventas: []
+        //   });
+        // }
+
+        // 🆕 Función auxiliar para mapear tags de ML a tus puntos de despacho
+        function mapTagsToPuntoDespacho(tags = []) {
+          if (tags.includes("no_shipping")) return "Guardia";              // Retiro en persona
+          if (tags.includes("self_service_in")) return "Punto de Despacho"; // Punto de retiro
+          if (tags.includes("to_be_agreed")) return "Llevar al Expreso";    // Envío a coordinar
+          if (tags.includes("not_delivered")) return "Punto de Despacho";   // Pendiente de entrega
+          return "Punto de Despacho"; // fallback seguro
         }
 
         const ventasAGuardar = [];
 
-        async function getShippingInfo(shippingId, access_token) {
-        if (!shippingId) {
-          console.warn("⚠️ No hay shipping ID");
-          return null;
-        }
-
-        try {
-          const url = `https://api.mercadolibre.com/shipments/${shippingId}`;
-          const response = await fetch(url, {
-            headers: {
-              Authorization: `Bearer ${access_token}`
-            }
-          });
-
-          if (!response.ok) {
-            console.error(`❌ Error HTTP ${response.status} al obtener shipping ${shippingId}`);
-            const errorText = await response.text();
-            console.error("📩 Respuesta:", errorText);
-            return null;
-          }
-
-          const data = await response.json();
-          console.log(`📦 Shipping ${shippingId} recibido correctamente:`, {
-            status: data.status,
-            mode: data.mode,
-            logistic_type: data.logistic_type
-          });
-          return data;
-        } catch (error) {
-          console.error(`❌ Error al obtener info de shipping ${shippingId}:`, error.message);
-          return null;
-        }
-      }
-
+        const ordenes = ordenesDetalladas;
 
         for (const orden of ordenes) {
-            const idVenta = orden.id.toString();
+          const idVenta = orden.id.toString();
 
-            // Evitar duplicados: Si ya existe una venta con este numeroVenta, no la agregues.
-            const existe = await Venta.findOne({ numeroVenta: idVenta });
-            if (existe) {
-                console.log(`Venta ML ${idVenta} ya existe, omitiendo.`);
-                continue;
-            }
+          // Evitar duplicados
+          const existe = await Venta.findOne({ numeroVenta: idVenta });
+          if (existe) {
+            console.log(`Venta ML ${idVenta} ya existe, omitiendo.`);
+            continue;
+          }
 
-            const item = orden.order_items[0];
-            const title = item.item.title || '';
-            const sku = item.item.seller_sku || '';
-            const quantity = item.quantity || 1;
-            const variation = item.item.variation_attributes?.map(attr => `${attr.name}: ${attr.value_name}`).join(' - ') || '';
-            const nombreFinal = variation ? `${title} (${variation})` : title;
-            const imagen = item.item.picture || '';
+          const item = orden.order_items[0];
+          const title = item.item.title || "";
+          const sku = item.item.id || "";  // ahora traemos el ID como SKU
+          const variationId = item.item.variation_id || null; 
+          const quantity = item.quantity || 1;
 
-            const cliente = orden.buyer?.nickname || 'Cliente Desconocido';
-            const numeroVenta = idVenta;
+          // 📌 Traer atributos de variación si existe variationId
+          let atributos = [];
+          if (variationId) {
+            atributos = await obtenerAtributosDeVariacion(
+              item.item.id,
+              variationId,
+              access_token,
+              axios
+            );
+          }
 
-            // // Determinar tipo de entrega
-            // const shippingMode = orden.shipping?.mode;
-            // const logisticType = orden.shipping?.logistic_type;
-            // let puntoDespacho = 'Punto de Despacho';
+          // Armar nombre con variaciones
+          const variation = atributos.length > 0
+            ? atributos.map(attr => `${attr.name}: ${attr.value_name}`).join(" - ")
+            : item.item.variation_attributes?.map(attr => `${attr.name}: ${attr.value_name}`).join(" - ") || "";
 
-            const shippingInfo = await getShippingInfo(orden.shipping?.id, access_token);
+          const nombreFinal = variation ? `${title} (${variation})` : title;
 
-            let puntoDespacho = 'Punto de Despacho';
+          // Imagen
+          const imagen = item.item.thumbnail || item.item.picture || "";
 
-            if (shippingInfo?.mode === 'me2') {
-              switch (shippingInfo.logistic_type) {
-                case 'self_service':
-                  puntoDespacho = 'Flex';
-                  break;
-                case 'drop_off':
-                case 'xd_drop_off':
-                  puntoDespacho = 'Punto de Despacho';
-                  break;
-                case 'pickup':
-                  puntoDespacho = 'Showroom';
-                  break;
-                case 'cross_docking':
-                  puntoDespacho = 'Retira el Expreso';
-                  break;
-                default:
-                  puntoDespacho = 'Punto de Despacho';
-              }
-            } else if (shippingInfo?.mode === 'not_specified') {
-              puntoDespacho = 'Llevar al Expreso';
-            }
+          // Cliente
+            const cliente =
+            (orden.buyer?.first_name && orden.buyer?.last_name
+              ? `${orden.buyer.first_name} ${orden.buyer.last_name}`
+              : orden.buyer?.nickname) || "Cliente Desconocido";
 
+          // Punto de despacho usando tags
+          const puntoDespacho = mapTagsToPuntoDespacho(orden.tags);
 
-            ventasAGuardar.push(new Venta({
-                sku,
-                nombre: nombreFinal,
-                cantidad: quantity,
-                numeroVenta,
-                cliente: shippingInfo?.receiver?.name || 'Sin nombre',
-                puntoDespacho: interpretShippingType(orden.shipping?.logistic_type, orden.shipping?.mode),
-                completada: false,
-                entregada: false,
-                imagen,
-                esML: true // Marca que es una venta de Mercado Libre
-            }));
+          ventasAGuardar.push(new Venta({
+            sku,
+            nombre: nombreFinal,
+            cantidad: quantity,
+            numeroVenta: idVenta,
+            cliente,
+            puntoDespacho,
+            completada: false,
+            entregada: false,
+            imagen,
+            esML: true,
+            variationId,
+            atributos
+          }));
         }
+
 
         if (ventasAGuardar.length === 0) {
             return res.json({ mensaje: 'No hay nuevas ventas para sincronizar.' });
@@ -360,23 +319,6 @@ router.get('/sincronizar-ventas', async (req, res) => {
     }
 });
 
-// Obtener una venta específica por ID
-router.get("/orden/:id", async (req, res) => {
-  const { id } = req.params;
-  const { access_token } = await getTokenML(); // O como lo estés guardando
 
-  try {
-    const response = await axios.get(`https://api.mercadolibre.com/orders/${id}`, {
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-      },
-    });
-
-    res.json(response.data);
-  } catch (error) {
-    console.error("❌ Error consultando orden:", error.response?.data || error.message);
-    res.status(500).json({ error: "No se pudo obtener la orden" });
-  }
-});
 
 module.exports = router;

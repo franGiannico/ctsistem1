@@ -283,6 +283,16 @@ function Apiventas() {
                       <p><strong>SKU:</strong> {venta.sku || 'N/A'}</p>
                       <p><strong>Nombre:</strong> {venta.nombre}</p>
                       <p><strong>Cantidad:</strong> {venta.cantidad}</p>
+                      {/* Mostrar atributos si existen (solo en ML) */}
+                      {venta.atributos && venta.atributos.length > 0 && (
+                        <div className={styles.atributos}>
+                          {venta.atributos.map((attr, idx) => (
+                            <p key={idx} className={styles.atributo}>
+                              {attr.nombre}: {attr.valor}
+                            </p>
+                          ))}
+                        </div>
+                      )}
                       {venta.cantidad > 1 && (
                         <span className={styles.alerta}>⚠ Ojo!</span>
                       )}

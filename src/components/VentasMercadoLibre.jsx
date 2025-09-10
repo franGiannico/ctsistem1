@@ -116,28 +116,41 @@ const VentasMercadoLibre = () => {
           {loading && <p>Cargando ventas...</p>}
           {error && <p className="text-red-500">{error}</p>}
 
-          <table>
+          <table className="min-w-full border-collapse border border-gray-300">
             <thead>
               <tr>
-                <th>Imagen</th>
-                <th>SKU</th>
-                <th>Producto</th>
-                <th>Cantidad</th>
-                <th>Cliente</th>
-                <th>Punto de despacho</th>
-                <th>Número de venta</th>
+                <th className="border px-2 py-1">Imagen</th>
+                <th className="border px-2 py-1">SKU</th>
+                <th className="border px-2 py-1">Producto</th>
+                <th className="border px-2 py-1">Cantidad</th>
+                <th className="border px-2 py-1">Cliente</th>
+                <th className="border px-2 py-1">Punto de despacho</th>
+                <th className="border px-2 py-1">N° Venta</th>
               </tr>
             </thead>
             <tbody>
               {ventas.map((venta) => (
                 <tr key={venta.numeroVenta}>
-                  <td><img src={venta.imagen} alt="producto" className="w-16 h-16" /></td>
-                  <td>{venta.sku}</td>
-                  <td>{venta.nombre}</td>
-                  <td>{venta.cantidad}</td>
-                  <td>{venta.cliente}</td>
-                  <td>{venta.puntoDespacho}</td>
-                  <td>{venta.numeroVenta}</td>
+                  <td className="border px-2 py-1">
+                    {venta.imagen && (
+                      <img src={venta.imagen} alt="producto" className="w-16 h-16" />
+                    )}
+                  </td>
+                  <td className="border px-2 py-1">{venta.sku}</td>
+                  <td className="border px-2 py-1">
+                    {venta.nombre}
+                    {venta.atributos && venta.atributos.length > 0 && (
+                      <div style={{ fontSize: "0.85em", color: "#555" }}>
+                        {venta.atributos.map((attr, idx) => (
+                          <div key={idx}>{attr.nombre}: {attr.valor}</div>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                  <td className="border px-2 py-1">{venta.cantidad}</td>
+                  <td className="border px-2 py-1">{venta.cliente}</td>
+                  <td className="border px-2 py-1">{venta.puntoDespacho}</td>
+                  <td className="border px-2 py-1">{venta.numeroVenta}</td>
                 </tr>
               ))}
             </tbody>
@@ -146,6 +159,6 @@ const VentasMercadoLibre = () => {
       )}
     </div>
   );
-}
+};
 
 export default VentasMercadoLibre;
