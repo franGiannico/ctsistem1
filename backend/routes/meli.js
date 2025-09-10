@@ -294,11 +294,7 @@ console.log("🏷️ Conteo por tags:", conteoPorTags);
 
           const item = orden.order_items[0];
           const title = item.item.title || "";
-          const sku = 
-          item.item.seller_custom_field || // si lo cargaste manualmente en la publicación
-          (atributos.find(attr => attr.nombre === "SELLER_SKU")?.valor) || 
-          "Sin SKU";
-
+          
           const variationId = item.item.variation_id || null;
           const quantity = item.quantity || 1;
 
@@ -311,6 +307,11 @@ console.log("🏷️ Conteo por tags:", conteoPorTags);
               axios
             );
           }
+
+          const sku = 
+          item.item.seller_custom_field || // si lo cargaste manualmente en la publicación
+          (atributos.find(attr => attr.nombre === "SELLER_SKU")?.valor) || 
+          "Sin SKU";
 
           const variation = atributos.length > 0
             ? atributos.map(attr => `${attr.nombre}: ${attr.valor}`).join(" - ")
