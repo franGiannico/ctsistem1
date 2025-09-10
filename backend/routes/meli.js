@@ -258,7 +258,7 @@ const ordenesFiltradas = ordenesDetalladas.filter((orden) => {
   const tags = orden.tags || [];
 
   // Mostrar si está pendiente, retiro en guardia o con envío a punto de despacho
-  if (tags.includes("not_delivered")) return true;
+  // if (tags.includes("not_delivered")) return true;
   if (tags.includes("no_shipping")) return true; 
   if (tags.includes("new_buyer_free_shipping")) return true;
 
