@@ -308,10 +308,10 @@ console.log("🏷️ Conteo por tags:", conteoPorTags);
             );
           }
 
-          const sku = 
-          item.item.seller_custom_field || // si lo cargaste manualmente en la publicación
-          (atributos.find(attr => attr.nombre === "SELLER_SKU")?.valor) || 
-          "Sin SKU";
+          const sku = item.item.seller_custom_field
+          //  || // si lo cargaste manualmente en la publicación
+          // (atributos.find(attr => attr.nombre === "SELLER_SKU")?.valor) || 
+          // "Sin SKU";
 
           const variation = atributos.length > 0
             ? atributos.map(attr => `${attr.nombre}: ${attr.valor}`).join(" - ")
