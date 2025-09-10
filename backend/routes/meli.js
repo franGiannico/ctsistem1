@@ -236,28 +236,52 @@ router.get('/sincronizar-ventas', async (req, res) => {
         }
 
         const ventasAGuardar = [];
-        
+
         // Loggear todos los estados de shipping
-        ordenesDetalladas.forEach((orden) => {
-          console.log(`🧐 Orden ${orden.id} - shipping.status: ${orden.shipping?.status || "sin shipping"}`);
-        });
+ordenesDetalladas.forEach((orden) => {
+  console.log(
+    `🧐 Orden ${orden.id} - shipping.status: ${orden.shipping?.status || "sin shipping"}`
+  );
+});
 
-        // Lista de estados permitidos
-        const estadosPermitidos = [
-          "ready_to_ship",
-          "pending",
-          "not_delivered",
-          "to_be_agreed",
-          "paid" // agregado para cubrir más casos
-        ];
+// Lista de estados permitidos
+const estadosPermitidos = [
+  "ready_to_ship",
+  "pending",
+  "not_delivered",
+  "to_be_agreed",
+  "paid" // agregado para cubrir más casos
+];
 
-      // Filtrar órdenes
-      const ordenesFiltradas = ordenesDetalladas.filter((orden) => {
-        const status = orden.shipping?.status;
-        return !orden.shipping || estadosPermitidos.includes(status);
-      });
+// Filtrar órdenes
+const ordenesFiltradas = ordenesDetalladas.filter((orden) => {
+  const status = orden.shipping?.status;
 
-      console.log(`📦 Órdenes filtradas para guardar: ${ordenesFiltradas.length}`);
+  // ✅ Mantener si tiene un shipping permitido o si directamente no tiene shipping
+  if (!orden.shipping) return true;
+  return estadosPermitidos.includes(status);
+});
+
+console.log(`📦 Órdenes filtradas para guardar: ${ordenesFiltradas.length}`);
+
+// 📊 Conteo de órdenes por shipping.status
+const conteoPorStatus = {};
+ordenesDetalladas.forEach((orden) => {
+  const status = orden.shipping?.status || "sin shipping";
+  conteoPorStatus[status] = (conteoPorStatus[status] || 0) + 1;
+});
+
+// 📊 Conteo de órdenes por tags
+const conteoPorTags = {};
+ordenesDetalladas.forEach((orden) => {
+  (orden.tags || []).forEach((tag) => {
+    conteoPorTags[tag] = (conteoPorTags[tag] || 0) + 1;
+  });
+});
+
+console.log("📊 Conteo por shipping.status:", conteoPorStatus);
+console.log("🏷️ Conteo por tags:", conteoPorTags);
+
 
       // Limpiar ventas anteriores de ML
       await Venta.deleteMany({ esML: true });
