@@ -236,17 +236,31 @@ router.get('/sincronizar-ventas', async (req, res) => {
         }
 
         const ventasAGuardar = [];
-
-       // Filtrar solo órdenes en preparación
-        const estadosPermitidos = ["ready_to_ship", "pending", "not_delivered"];
-        const ordenesFiltradas = ordenesDetalladas.filter((orden) => {
-          const status = orden.shipping?.status;
-          return !orden.shipping || estadosPermitidos.includes(status);
+        
+        // Loggear todos los estados de shipping
+        ordenesDetalladas.forEach((orden) => {
+          console.log(`🧐 Orden ${orden.id} - shipping.status: ${orden.shipping?.status || "sin shipping"}`);
         });
-        console.log(`📦 Órdenes filtradas para guardar: ${ordenesFiltradas.length}`);
 
-        // Limpiar ventas anteriores de ML
-        await Venta.deleteMany({ esML: true });
+        // Lista de estados permitidos
+        const estadosPermitidos = [
+          "ready_to_ship",
+          "pending",
+          "not_delivered",
+          "to_be_agreed",
+          "paid" // agregado para cubrir más casos
+        ];
+
+      // Filtrar órdenes
+      const ordenesFiltradas = ordenesDetalladas.filter((orden) => {
+        const status = orden.shipping?.status;
+        return !orden.shipping || estadosPermitidos.includes(status);
+      });
+
+      console.log(`📦 Órdenes filtradas para guardar: ${ordenesFiltradas.length}`);
+
+      // Limpiar ventas anteriores de ML
+      await Venta.deleteMany({ esML: true });
 
         // Acá seguimos igual que antes, pero con ordenesFiltradas
         for (const orden of ordenesFiltradas) {
