@@ -237,25 +237,27 @@ router.get('/sincronizar-ventas', async (req, res) => {
 
         const ventasAGuardar = [];
 
-        const ordenes = ordenesDetalladas;
+       // Filtrar solo órdenes en preparación
+        const estadosPermitidos = ["ready_to_ship", "pending", "not_delivered"];
+        const ordenesFiltradas = ordenesDetalladas.filter((orden) => {
+          const status = orden.shipping?.status;
+          return !orden.shipping || estadosPermitidos.includes(status);
+        });
+        console.log(`📦 Órdenes filtradas para guardar: ${ordenesFiltradas.length}`);
 
-        for (const orden of ordenes) {
+        // Limpiar ventas anteriores de ML
+        await Venta.deleteMany({ esML: true });
+
+        // Acá seguimos igual que antes, pero con ordenesFiltradas
+        for (const orden of ordenesFiltradas) {
           const idVenta = orden.id.toString();
-
-          // Evitar duplicados
-          const existe = await Venta.findOne({ numeroVenta: idVenta });
-          if (existe) {
-            console.log(`Venta ML ${idVenta} ya existe, omitiendo.`);
-            continue;
-          }
 
           const item = orden.order_items[0];
           const title = item.item.title || "";
-          const sku = item.item.id || "";  // ahora traemos el ID como SKU
-          const variationId = item.item.variation_id || null; 
+          const sku = item.item.id || "";
+          const variationId = item.item.variation_id || null;
           const quantity = item.quantity || 1;
 
-          // 📌 Traer atributos de variación si existe variationId
           let atributos = [];
           if (variationId) {
             atributos = await obtenerAtributosDeVariacion(
@@ -266,23 +268,18 @@ router.get('/sincronizar-ventas', async (req, res) => {
             );
           }
 
-          // Armar nombre con variaciones
           const variation = atributos.length > 0
-            ? atributos.map(attr => `${attr.name}: ${attr.value_name}`).join(" - ")
+            ? atributos.map(attr => `${attr.nombre}: ${attr.valor}`).join(" - ")
             : item.item.variation_attributes?.map(attr => `${attr.name}: ${attr.value_name}`).join(" - ") || "";
 
           const nombreFinal = variation ? `${title} (${variation})` : title;
 
-          // Imagen
           const imagen = item.item.thumbnail || item.item.picture || "";
-
-          // Cliente
-            const cliente =
+          const cliente =
             (orden.buyer?.first_name && orden.buyer?.last_name
               ? `${orden.buyer.first_name} ${orden.buyer.last_name}`
               : orden.buyer?.nickname) || "Cliente Desconocido";
 
-          // Punto de despacho usando tags
           const puntoDespacho = mapTagsToPuntoDespacho(orden.tags);
 
           ventasAGuardar.push(new Venta({
@@ -300,6 +297,7 @@ router.get('/sincronizar-ventas', async (req, res) => {
             atributos
           }));
         }
+
 
 
         if (ventasAGuardar.length === 0) {
