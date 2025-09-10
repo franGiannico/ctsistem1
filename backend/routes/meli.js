@@ -253,16 +253,24 @@ const estadosPermitidos = [
   "paid" // agregado para cubrir más casos
 ];
 
-// Filtrar órdenes
+// Filtrar órdenes según tags
 const ordenesFiltradas = ordenesDetalladas.filter((orden) => {
-  const status = orden.shipping?.status;
+  const tags = orden.tags || [];
 
-  // ✅ Mantener si tiene un shipping permitido o si directamente no tiene shipping
-  if (!orden.shipping) return true;
-  return estadosPermitidos.includes(status);
+  // Mostrar si está pendiente, retiro en guardia o con envío a punto de despacho
+  if (tags.includes("not_delivered")) return true;
+  if (tags.includes("no_shipping")) return true; 
+  if (tags.includes("new_buyer_free_shipping")) return true;
+
+  // Ocultar si ya está entregada
+  if (tags.includes("delivered")) return false;
+
+  // Por defecto, descartamos
+  return false;
 });
 
 console.log(`📦 Órdenes filtradas para guardar: ${ordenesFiltradas.length}`);
+
 
 // 📊 Conteo de órdenes por shipping.status
 const conteoPorStatus = {};
