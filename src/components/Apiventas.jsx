@@ -81,7 +81,13 @@ function Apiventas() {
   // Guardar venta manual
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const nuevaVenta = { ...formData, completada: false, entregada: false, imagen: null };
+    const nuevaVenta = { 
+      ...formData, 
+      completada: false, 
+      entregada: false, 
+      imagen: null, 
+      esML: false   // 👈 fuerza a que quede como manual
+    };
 
     try {
       await fetch(`${BACKEND_URL}/apiventas/guardar-ventas`, {
