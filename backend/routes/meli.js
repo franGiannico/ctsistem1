@@ -255,28 +255,25 @@ router.get('/sincronizar-ventas', async (req, res) => {
           "paid" // agregado para cubrir más casos
         ];
 
-        // Filtrar y loguear
        // Filtrar órdenes pendientes
-const ordenesFiltradas = ordenesDetalladas.filter((orden) => {
-  const tags = orden.tags || [];
-  const statusOrden = orden.status;
-  const statusEnvio = orden.shipping?.status;
+        const ordenesFiltradas = ordenesDetalladas.filter((orden) => {
+          const tags = orden.tags || [];
 
-  // 🔹 Solo consideramos órdenes efectivamente pagadas
-  if (statusOrden !== "paid") return false;
+          // ✅ Incluir solo las órdenes pagadas
+          if (!tags.includes("paid")) return false;
 
-  // 🔹 Excluir entregadas
-  if (tags.includes("delivered") || statusEnvio === "delivered") return false;
+          // ✅ Incluir pendientes
+          if (tags.includes("not_delivered")) return true;
+          if (tags.includes("no_shipping")) return true;
+          if (tags.includes("to_be_agreed")) return true;
+          if (tags.includes("new_buyer_free_shipping")) return true;
 
-  // 🔹 Incluir si están pendientes de envío o retiro
-  if (tags.includes("not_delivered")) return true;
-  if (tags.includes("no_shipping")) return true;
-  if (tags.includes("new_buyer_free_shipping")) return true;
-  if (tags.includes("to_be_agreed")) return true;
+          // 🚫 Excluir entregadas
+          if (tags.includes("delivered")) return false;
 
-  // 🔹 fallback: no incluir
-  return false;
-});
+          // Por defecto: descartar
+          return false;
+        });
 
 
         // Resumen general
@@ -321,7 +318,7 @@ const ordenesFiltradas = ordenesDetalladas.filter((orden) => {
             );
           }
 
-          const sku = item.item.seller_custom_field
+          const sku = item.item.seller_sku || "Sin SKU";
           //  || // si lo cargaste manualmente en la publicación
           // (atributos.find(attr => attr.nombre === "SELLER_SKU")?.valor) || 
           // "Sin SKU";
