@@ -175,6 +175,7 @@ router.get('/sincronizar-ventas', async (req, res) => {
         );
         console.log(`📦 Se obtuvieron detalles de ${ordenesDetalladas.length} órdenes.`);
 
+
         // Función auxiliar para obtener atributos de la variación
         async function obtenerAtributosDeVariacion(itemId, variationId, accessToken, axios) {
           try {
@@ -238,51 +239,59 @@ router.get('/sincronizar-ventas', async (req, res) => {
         const ventasAGuardar = [];
 
 
-// Lista de estados permitidos
-const estadosPermitidos = [
-  "ready_to_ship",
-  "pending",
-  "not_delivered",
-  "to_be_agreed",
-  "paid" // agregado para cubrir más casos
-];
+        // Lista de estados permitidos
+        const estadosPermitidos = [
+          "ready_to_ship",
+          "pending",
+          "not_delivered",
+          "to_be_agreed",
+          "paid" // agregado para cubrir más casos
+        ];
 
-// Filtrar órdenes según tags
-const ordenesFiltradas = ordenesDetalladas.filter((orden) => {
-  const tags = orden.tags || [];
+        // Filtrar y loguear
+        const ordenesFiltradas = ordenesDetalladas.filter((orden) => {
+        const tags = orden.tags || [];
+        const statusOrden = orden.status;
+        const statusEnvio = orden.shipping?.status;
 
-  // Mostrar si está pendiente, retiro en guardia o con envío a punto de despacho
-  if (tags.includes("not_delivered")) return true;
-  if (tags.includes("no_shipping")) return true; 
-  if (tags.includes("new_buyer_free_shipping")) return true;
+        // 🔹 Siempre incluir si la orden está pagada
+        if (statusOrden === "paid") return true;
 
-  // Ocultar si ya está entregada
-  if (tags.includes("delivered")) return false;
+        // 🔹 Incluir si hay que coordinar envío
+        if (tags.includes("to_be_agreed")) return true;
 
-  // Por defecto, descartamos
-  return false;
-});
+        // 🔹 Incluir si está pendiente, guardia o punto de despacho
+        if (tags.includes("not_delivered")) return true;
+        if (tags.includes("no_shipping")) return true; 
+        if (tags.includes("new_buyer_free_shipping")) return true;
 
-console.log(`📦 Órdenes filtradas para guardar: ${ordenesFiltradas.length}`);
+        // 🔹 Excluir si ya está entregada
+        if (tags.includes("delivered")) return false;
 
+        // 🔹 También excluir si shipping dice que ya fue entregado
+        if (statusEnvio === "delivered") return false;
 
-// 📊 Conteo de órdenes por shipping.status
-const conteoPorStatus = {};
-ordenesDetalladas.forEach((orden) => {
-  const status = orden.shipping?.status || "sin shipping";
-  conteoPorStatus[status] = (conteoPorStatus[status] || 0) + 1;
-});
+        // Por defecto: no incluir
+        return false;
+      });
 
-// 📊 Conteo de órdenes por tags
-const conteoPorTags = {};
-ordenesDetalladas.forEach((orden) => {
-  (orden.tags || []).forEach((tag) => {
-    conteoPorTags[tag] = (conteoPorTags[tag] || 0) + 1;
-  });
-});
+        // Resumen general
+        console.log(`📦 Órdenes filtradas para guardar: ${ordenesFiltradas.length}`);
 
-console.log("📊 Conteo por shipping.status:", conteoPorStatus);
-console.log("🏷️ Conteo por tags:", conteoPorTags);
+        // Resumen por status
+        const conteoStatus = ordenesDetalladas.reduce((acc, o) => {
+          const st = o.shipping?.status || "sin shipping";
+          acc[st] = (acc[st] || 0) + 1;
+          return acc;
+        }, {});
+        console.log("📊 Conteo por shipping.status:", conteoStatus);
+
+        // Resumen por tags
+        const conteoTags = ordenesDetalladas.reduce((acc, o) => {
+          (o.tags || []).forEach(t => acc[t] = (acc[t] || 0) + 1);
+          return acc;
+        }, {});
+        console.log("🏷️ Conteo por tags:", conteoTags);
 
 
       // Limpiar ventas anteriores de ML
@@ -345,13 +354,26 @@ console.log("🏷️ Conteo por tags:", conteoPorTags);
         }
 
 
+      // Si no había nada nuevo
+      if (ventasAGuardar.length === 0) {
+        const ventasFinales = await Venta.find({});
+        return res.json({
+          mensaje: 'No hay nuevas ventas para sincronizar.',
+          ventas: ventasFinales
+        });
+      }
 
-        if (ventasAGuardar.length === 0) {
-            return res.json({ mensaje: 'No hay nuevas ventas para sincronizar.' });
-        }
+      // Insertar lo nuevo
+      await Venta.insertMany(ventasAGuardar);
 
-        await Venta.insertMany(ventasAGuardar);
-        res.json({ mensaje: `${ventasAGuardar.length} ventas sincronizadas con éxito.` });
+      // 🔑 Traemos todas las ventas (manuales + ML) después de insertar
+      const ventasFinales = await Venta.find({});
+
+      res.json({
+        mensaje: `${ventasAGuardar.length} ventas sincronizadas con éxito.`,
+        ventas: ventasFinales
+      });
+
 
     } catch (error) {
         console.error('❌ Error al sincronizar ventas:', error.response?.data || error.message);

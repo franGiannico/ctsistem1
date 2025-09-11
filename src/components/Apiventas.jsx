@@ -164,30 +164,26 @@ function Apiventas() {
     return grupos;
   };
 
-  // Sincronizar ventas Mercado Libre y agregar sin duplicados
+  // Sincronizar ventas Mercado Libre y reemplazar el listado completo
   const sincronizarVentasML = async () => {
     setCargando(true);
     try {
       const response = await fetch(`${BACKEND_URL}/meli/sincronizar-ventas`, {
-      cache: 'no-store'
-    });
-      const data = await response.json();
-      const nuevasML = data.ventas || [];
-
-      setVentas((prevVentas) => {
-        const existentesNums = new Set(prevVentas.map(v => v.numeroVenta));
-        const ventasUnificadas = [
-          ...prevVentas,
-          ...nuevasML.filter(v => !existentesNums.has(v.numeroVenta))
-        ];
-        return ventasUnificadas;
+        cache: 'no-store'
       });
+      const data = await response.json();
+
+      // 🔑 ahora el backend devuelve todas las ventas unificadas
+      if (data.ventas) {
+        setVentas(data.ventas);
+      }
     } catch (error) {
       console.error("Error al sincronizar ventas ML:", error);
     } finally {
       setCargando(false);
     }
   };
+
 
   return (
     <div className={styles.container}>
@@ -282,6 +278,7 @@ function Apiventas() {
                     <div className={styles.ventaDetalle}>
                       <p><strong>SKU:</strong> {venta.sku || 'N/A'}</p>
                       <p><strong>Nombre:</strong> {venta.nombre}</p>
+                      {venta.esML && <span style={{ color: 'blue' }}> [ML]</span>}
                       <p><strong>Cantidad:</strong> {venta.cantidad}</p>
                       {/* Mostrar atributos si existen (solo en ML) */}
                       {venta.atributos && venta.atributos.length > 0 && (
