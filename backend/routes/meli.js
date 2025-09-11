@@ -249,31 +249,28 @@ router.get('/sincronizar-ventas', async (req, res) => {
         ];
 
         // Filtrar y loguear
-        const ordenesFiltradas = ordenesDetalladas.filter((orden) => {
-        const tags = orden.tags || [];
-        const statusOrden = orden.status;
-        const statusEnvio = orden.shipping?.status;
+       // Filtrar órdenes pendientes
+const ordenesFiltradas = ordenesDetalladas.filter((orden) => {
+  const tags = orden.tags || [];
+  const statusOrden = orden.status;
+  const statusEnvio = orden.shipping?.status;
 
-        // 🔹 Siempre incluir si la orden está pagada
-        if (statusOrden === "paid") return true;
+  // 🔹 Solo consideramos órdenes efectivamente pagadas
+  if (statusOrden !== "paid") return false;
 
-        // 🔹 Incluir si hay que coordinar envío
-        if (tags.includes("to_be_agreed")) return true;
+  // 🔹 Excluir entregadas
+  if (tags.includes("delivered") || statusEnvio === "delivered") return false;
 
-        // 🔹 Incluir si está pendiente, guardia o punto de despacho
-        if (tags.includes("not_delivered")) return true;
-        if (tags.includes("no_shipping")) return true; 
-        if (tags.includes("new_buyer_free_shipping")) return true;
+  // 🔹 Incluir si están pendientes de envío o retiro
+  if (tags.includes("not_delivered")) return true;
+  if (tags.includes("no_shipping")) return true;
+  if (tags.includes("new_buyer_free_shipping")) return true;
+  if (tags.includes("to_be_agreed")) return true;
 
-        // 🔹 Excluir si ya está entregada
-        if (tags.includes("delivered")) return false;
+  // 🔹 fallback: no incluir
+  return false;
+});
 
-        // 🔹 También excluir si shipping dice que ya fue entregado
-        if (statusEnvio === "delivered") return false;
-
-        // Por defecto: no incluir
-        return false;
-      });
 
         // Resumen general
         console.log(`📦 Órdenes filtradas para guardar: ${ordenesFiltradas.length}`);
