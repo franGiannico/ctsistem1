@@ -170,6 +170,13 @@ router.get('/sincronizar-ventas', async (req, res) => {
               `https://api.mercadolibre.com/orders/${ordenBasica.id}`,
               { headers: { Authorization: `Bearer ${access_token}` } }
             );
+
+             // 👇 Loguea SOLO la orden que te interesa
+            if (ordenBasica.id === 2000012999553814) {
+              console.log("🔎 Ejemplo detalle de orden:");
+              console.log(JSON.stringify(detalle.data, null, 2));
+            }
+
             return detalle.data;
           })
         );
