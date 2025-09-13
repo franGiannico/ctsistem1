@@ -234,17 +234,6 @@ router.get('/sincronizar-ventas', async (req, res) => {
 
         const Venta = mongoose.models.Venta || mongoose.model('Venta', VentaSchema);
         
-        // Si no hay órdenes nuevas, eliminar las ventas anteriores de ML
-        if (ordenes.length === 0) {
-          console.log('🔍 No hay órdenes nuevas en ML. Borrando ventas anteriores de ML...');
-          const resultado = await Venta.deleteMany({ esML: true });
-          console.log(`🗑️ Se borraron ${resultado.deletedCount} ventas de ML anteriores.`);
-          return res.json({
-            mensaje: 'No hay nuevas ventas para sincronizar. Se eliminaron ventas anteriores de ML.',
-            ventas: []
-          });
-        }
-
         // 🆕 Función auxiliar para mapear tags de ML a tus puntos de despacho
         function mapTagsToPuntoDespacho(tags = []) {
           if (tags.includes("no_shipping")) return "Guardia";              // Retiro en persona
