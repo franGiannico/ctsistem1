@@ -192,8 +192,6 @@ router.get('/sincronizar-ventas', async (req, res) => {
         const ordenesBasicas = ordersSearch.data.results;
         console.log(`📦 Se encontraron ${ordenesBasicas.length} órdenes pagadas.`);
 
-    
-        console.log(`📦 Se obtuvieron detalles de ${ordenesDetalladas.length} órdenes.`);
 
 
         // Función auxiliar para obtener atributos de la variación
