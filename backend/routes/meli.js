@@ -210,6 +210,47 @@ router.get('/sincronizar-ventas', async (req, res) => {
           }
         }
 
+        // Función auxiliar para obtener datos del envío
+        async function obtenerDatosEnvio(shippingId, accessToken, axios) {
+          if (!shippingId) return { tipoEnvio: "A coordinar" }; // no hay envío gestionado por ML
+
+          try {
+            const { data } = await axios.get(
+              `https://api.mercadolibre.com/shipments/${shippingId}`,
+              { headers: { Authorization: `Bearer ${accessToken}` } }
+            );
+
+            // Miramos los campos clave
+            const logisticType = data.logistic_type; // fulfillment | drop_off | xd_drop_off | self_service | ...
+            const status = data.status; // ready_to_ship, delivered, etc.
+
+            let tipoEnvio = "Otro";
+
+            switch (logisticType) {
+              case "fulfillment":
+                tipoEnvio = "Full";
+                break;
+              case "xd_drop_off":
+                tipoEnvio = "Flex";
+                break;
+              case "drop_off":
+                tipoEnvio = "Clásico";
+                break;
+              case "self_service":
+                tipoEnvio = "Punto de Despacho";
+                break;
+              default:
+                tipoEnvio = logisticType || "Otro";
+            }
+
+            return { tipoEnvio, estadoEnvio: status, raw: data };
+          } catch (error) {
+            console.error(`❌ Error obteniendo datos de envío ${shippingId}:`, error.response?.data || error.message);
+            return { tipoEnvio: "Desconocido" };
+          }
+        }
+
+
 
         // Importar modelo de ventas manuales (ya existente)
         const VentaSchema = new mongoose.Schema({
@@ -224,7 +265,8 @@ router.get('/sincronizar-ventas', async (req, res) => {
         imagen: String,
         esML: { type: Boolean, default: false },
         variationId: String,
-        atributos: [Object]
+        atributos: [Object],
+        tipoEnvio: String,
       });
 
         const Venta = mongoose.models.Venta || mongoose.model('Venta', VentaSchema);
@@ -347,22 +389,29 @@ router.get('/sincronizar-ventas', async (req, res) => {
               ? `${orden.buyer.first_name} ${orden.buyer.last_name}`
               : orden.buyer?.nickname) || "Cliente Desconocido";
 
-          const puntoDespacho = mapTagsToPuntoDespacho(orden.tags);
+        // 👇 seguimos calculando el punto de despacho como hasta ahora
+        const puntoDespacho = mapTagsToPuntoDespacho(orden.tags);
 
-          ventasAGuardar.push(new Venta({
-            sku,
-            nombre: nombreFinal,
-            cantidad: quantity,
-            numeroVenta: idVenta,
-            cliente,
-            puntoDespacho,
-            completada: false,
-            entregada: false,
-            imagen,
-            esML: true,
-            variationId,
-            atributos
-          }));
+        // 👇 obtenemos info adicional de envío desde /shipments/:id
+        const envio = await obtenerDatosEnvio(orden.shipping?.id, access_token, axios);
+
+        // 👇 guardamos la venta en Mongo con ambos campos
+        ventasAGuardar.push(new Venta({
+          sku,
+          nombre: nombreFinal,
+          cantidad: quantity,
+          numeroVenta: idVenta,
+          cliente,
+          puntoDespacho,
+          completada: false,
+          entregada: false,
+          imagen,
+          esML: true,
+          variationId,
+          atributos,
+          tipoEnvio: envio.tipoEnvio   // 🔑 Nuevo campo
+        }));
+
         }
 
 
