@@ -188,11 +188,6 @@ router.get('/sincronizar-ventas', async (req, res) => {
           { headers: { Authorization: `Bearer ${access_token}` } }
         );
 
-        // 2. Extraer las órdenes básicas
-        const ordenesBasicas = ordersSearch.data.results;
-        console.log(`📦 Se encontraron ${ordenesBasicas.length} órdenes pagadas.`);
-
-
 
         // Función auxiliar para obtener atributos de la variación
         async function obtenerAtributosDeVariacion(itemId, variationId, accessToken, axios) {
@@ -254,6 +249,22 @@ router.get('/sincronizar-ventas', async (req, res) => {
           "to_be_agreed",
           "paid" // agregado para cubrir más casos
         ];
+
+        // Extraer las órdenes básicas
+        const ordenesBasicas = ordersSearch.data.results;
+        console.log(`📦 Se encontraron ${ordenesBasicas.length} órdenes pagadas.`);
+
+        // 3. Traer detalles de cada orden
+        const ordenesDetalladas = await Promise.all(
+          ordenesBasicas.map(async (ordenBasica) => {
+            const detalle = await axios.get(
+              `https://api.mercadolibre.com/orders/${ordenBasica.id}`,
+              { headers: { Authorization: `Bearer ${access_token}` } }
+            );
+            return detalle.data;
+          })
+        );
+        console.log(`📦 Se obtuvieron detalles de ${ordenesDetalladas.length} órdenes.`);
 
        // Filtrar órdenes pendientes
         const ordenesFiltradas = ordenesDetalladas.filter((orden) => {
