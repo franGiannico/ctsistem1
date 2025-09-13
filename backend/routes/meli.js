@@ -234,44 +234,46 @@ router.get('/sincronizar-ventas', async (req, res) => {
         }
 
         // Función auxiliar para obtener datos del envío
-        async function obtenerDatosEnvio(shippingId, accessToken, axios) {
-          if (!shippingId) return { tipoEnvio: "A coordinar" }; // no hay envío gestionado por ML
-
-          try {
-            const { data } = await axios.get(
-              `https://api.mercadolibre.com/shipments/${shippingId}`,
-              { headers: { Authorization: `Bearer ${accessToken}` } }
-            );
-
-            // Miramos los campos clave
-            const logisticType = data.logistic_type; // fulfillment | drop_off | xd_drop_off | self_service | ...
-            const status = data.status; // ready_to_ship, delivered, etc.
-
-            let tipoEnvio = "Otro";
-
-            switch (logisticType) {
-              case "fulfillment":
-                tipoEnvio = "Full";
-                break;
-              case "xd_drop_off":
-                tipoEnvio = "Flex";
-                break;
-              case "drop_off":
-                tipoEnvio = "Clásico";
-                break;
-              case "self_service":
-                tipoEnvio = "Punto de Despacho";
-                break;
-              default:
-                tipoEnvio = logisticType || "Otro";
-            }
-
-            return { tipoEnvio, estadoEnvio: status, raw: data };
-          } catch (error) {
-            console.error(`❌ Error obteniendo datos de envío ${shippingId}:`, error.response?.data || error.message);
-            return { tipoEnvio: "Desconocido" };
-          }
+        async function obtenerDatosEnvio(shipmentId, accessToken, axios) {
+        if (!shipmentId) {
+          return { tipoEnvio: "A coordinar" }; // Sin envío asignado
         }
+
+        try {
+          const { data } = await axios.get(
+            `https://api.mercadolibre.com/shipments/${shipmentId}`,
+            { headers: { Authorization: `Bearer ${accessToken}` } }
+          );
+
+          let tipoEnvio = "Desconocido";
+
+          switch (data.logistic_type) {
+            case "fulfillment":
+              tipoEnvio = "Full";
+              break;
+            case "xd_drop_off":
+              tipoEnvio = "Punto de Despacho";
+              break;
+            case "self_service":
+              tipoEnvio = "Flex";  // 👈 ahora sí
+              break;
+            default:
+              tipoEnvio = data.logistic_type || "A coordinar";
+          }
+
+          // Agregamos status para debug/uso futuro
+          return {
+            tipoEnvio,
+            status: data.status,
+            substatus: data.substatus,
+            historial: data.substatus_history
+          };
+
+        } catch (error) {
+          console.error(`❌ Error obteniendo envío ${shipmentId}:`, error.response?.data || error.message);
+          return { tipoEnvio: "Error consultando envío" };
+        }
+      }
 
 
 
