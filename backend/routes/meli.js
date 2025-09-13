@@ -395,6 +395,9 @@ router.get('/sincronizar-ventas', async (req, res) => {
         // 👇 obtenemos info adicional de envío desde /shipments/:id
         const envio = await obtenerDatosEnvio(orden.shipping?.id, access_token, axios);
 
+        console.log(`📦 Orden ${orden.id} - shipmentId: ${orden.shipping?.id}, tipoEnvio: ${envio.tipoEnvio}`);
+
+
         // 👇 guardamos la venta en Mongo con ambos campos
         ventasAGuardar.push(new Venta({
           sku,
