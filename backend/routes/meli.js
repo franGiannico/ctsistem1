@@ -121,6 +121,34 @@ router.get('/callback', async (req, res) => {
       }
 });
 
+// Ruta de inspección: obtener detalle completo de una orden por ID
+router.get('/orden/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Buscar el token guardado
+    const tokenDoc = await MeliToken.findOne();
+    if (!tokenDoc || !tokenDoc.access_token) {
+      return res.status(401).json({ error: 'No autenticado con Mercado Libre.' });
+    }
+
+    const { access_token } = tokenDoc;
+
+    // Llamar al endpoint de órdenes de ML
+    const response = await axios.get(
+      `https://api.mercadolibre.com/orders/${id}`,
+      { headers: { Authorization: `Bearer ${access_token}` } }
+    );
+
+    // Devolver el JSON completo de ML
+    return res.json(response.data);
+
+  } catch (error) {
+    console.error('❌ Error al obtener orden específica:', error.response?.data || error.message);
+    return res.status(500).json({ error: 'Error al obtener la orden de ML.' });
+  }
+});
+
 
 
 // Ruta: GET /meli/sincronizar-ventas
@@ -164,22 +192,7 @@ router.get('/sincronizar-ventas', async (req, res) => {
         const ordenesBasicas = ordersSearch.data.results;
         console.log(`📦 Se encontraron ${ordenesBasicas.length} órdenes pagadas.`);
 
-        const ordenesDetalladas = await Promise.all(
-          ordenesBasicas.map(async (ordenBasica) => {
-            const detalle = await axios.get(
-              `https://api.mercadolibre.com/orders/${ordenBasica.id}`,
-              { headers: { Authorization: `Bearer ${access_token}` } }
-            );
-
-             // 👇 Loguea SOLO la orden que te interesa
-            if (ordenBasica.id === 2000012999553814) {
-              console.log("🔎 Ejemplo detalle de orden:");
-              console.log(JSON.stringify(detalle.data, null, 2));
-            }
-
-            return detalle.data;
-          })
-        );
+    
         console.log(`📦 Se obtuvieron detalles de ${ordenesDetalladas.length} órdenes.`);
 
 
@@ -223,16 +236,16 @@ router.get('/sincronizar-ventas', async (req, res) => {
 
         const Venta = mongoose.models.Venta || mongoose.model('Venta', VentaSchema);
         
-        // // Si no hay órdenes nuevas, eliminar las ventas anteriores de ML
-        // if (ordenes.length === 0) {
-        //   console.log('🔍 No hay órdenes nuevas en ML. Borrando ventas anteriores de ML...');
-        //   const resultado = await Venta.deleteMany({ esML: true });
-        //   console.log(`🗑️ Se borraron ${resultado.deletedCount} ventas de ML anteriores.`);
-        //   return res.json({
-        //     mensaje: 'No hay nuevas ventas para sincronizar. Se eliminaron ventas anteriores de ML.',
-        //     ventas: []
-        //   });
-        // }
+        // Si no hay órdenes nuevas, eliminar las ventas anteriores de ML
+        if (ordenes.length === 0) {
+          console.log('🔍 No hay órdenes nuevas en ML. Borrando ventas anteriores de ML...');
+          const resultado = await Venta.deleteMany({ esML: true });
+          console.log(`🗑️ Se borraron ${resultado.deletedCount} ventas de ML anteriores.`);
+          return res.json({
+            mensaje: 'No hay nuevas ventas para sincronizar. Se eliminaron ventas anteriores de ML.',
+            ventas: []
+          });
+        }
 
         // 🆕 Función auxiliar para mapear tags de ML a tus puntos de despacho
         function mapTagsToPuntoDespacho(tags = []) {
