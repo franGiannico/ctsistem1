@@ -149,6 +149,29 @@ router.get('/orden/:id', async (req, res) => {
   }
 });
 
+// Ruta de inspección de un shipment
+router.get('/shipment/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const tokenDoc = await MeliToken.findOne();
+    if (!tokenDoc || !tokenDoc.access_token) {
+      return res.status(401).json({ error: 'No autenticado con Mercado Libre.' });
+    }
+
+    const { access_token } = tokenDoc;
+
+    const response = await axios.get(
+      `https://api.mercadolibre.com/shipments/${id}`,
+      { headers: { Authorization: `Bearer ${access_token}` } }
+    );
+
+    res.json(response.data); // Devuelve todo el detalle del envío
+  } catch (error) {
+    console.error('❌ Error al obtener shipment:', error.response?.data || error.message);
+    res.status(500).json({ error: 'Error al obtener shipment.' });
+  }
+});
+
 
 
 // Ruta: GET /meli/sincronizar-ventas
