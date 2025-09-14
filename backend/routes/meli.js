@@ -174,15 +174,46 @@ router.get('/shipment/:id', async (req, res) => {
 
 
 
+// Variable para controlar el estado de sincronización
+let sincronizando = false;
+let ultimaSincronizacion = null;
+
 // Ruta: GET /meli/sincronizar-ventas
 router.get('/sincronizar-ventas', async (req, res) => {
   res.set('Cache-Control', 'no-store');
+  
+  // Si ya está sincronizando, devolver estado
+  if (sincronizando) {
+    return res.json({ 
+      mensaje: 'Sincronización en progreso...', 
+      sincronizando: true,
+      ultimaSincronizacion 
+    });
+  }
+
+  // Iniciar sincronización asíncrona
+  sincronizando = true;
   console.log('🔄 Sincronizando ventas desde Mercado Libre...');
-    try {
+  
+  // Responder inmediatamente
+  res.json({ 
+    mensaje: 'Sincronización iniciada. Procesando órdenes...', 
+    sincronizando: true 
+  });
+
+  // Procesar en background
+  procesarSincronizacion();
+});
+
+// Función para procesar la sincronización en background
+async function procesarSincronizacion() {
+  try {
         console.log('➡️ Iniciando sincronización de ventas Mercado Libre');
         let tokenDoc = await MeliToken.findOne(); // Busca el único token existente
         if (!tokenDoc || !tokenDoc.access_token) {
-            return res.status(401).json({ error: 'No autenticado con Mercado Libre. Por favor, conecta tu cuenta.' });
+            console.error('❌ No autenticado con Mercado Libre');
+            sincronizando = false;
+            return;
         }
 
         // Verificar si el token ha expirado o está cerca de expirar (ej. en los últimos 5 minutos de su vida útil)
@@ -450,35 +481,44 @@ router.get('/sincronizar-ventas', async (req, res) => {
 
       // Si no había nada nuevo
       if (ventasAGuardar.length === 0) {
-        const ventasFinales = await Venta.find({});
-        return res.json({
-          mensaje: 'No hay nuevas ventas para sincronizar.',
-          ventas: ventasFinales
-        });
+        console.log('✅ No hay nuevas ventas para sincronizar.');
+        ultimaSincronizacion = { 
+          fecha: new Date(), 
+          ventasSincronizadas: 0,
+          mensaje: 'No hay nuevas ventas para sincronizar.'
+        };
+        sincronizando = false;
+        return;
       }
 
       // Insertar lo nuevo
       await Venta.insertMany(ventasAGuardar);
+      console.log(`✅ ${ventasAGuardar.length} ventas sincronizadas con éxito.`);
 
-      // 🔑 Traemos todas las ventas (manuales + ML) después de insertar
-      const ventasFinales = await Venta.find({});
-
-      res.json({
-        mensaje: `${ventasAGuardar.length} ventas sincronizadas con éxito.`,
-        ventas: ventasFinales
-      });
-
+      ultimaSincronizacion = { 
+        fecha: new Date(), 
+        ventasSincronizadas: ventasAGuardar.length,
+        mensaje: `${ventasAGuardar.length} ventas sincronizadas con éxito.`
+      };
 
     } catch (error) {
         console.error('❌ Error al sincronizar ventas:', error.response?.data || error.message);
-        // Manejo específico para el error 403 de Mercado Libre
-        if (error.response && error.response.status === 403) {
-            return res.status(403).json({ error: 'Permisos insuficientes o ID de usuario no coincide con el token. Por favor, re-autentica o verifica la configuración de tu aplicación en Mercado Libre.' });
-        }
-        res.status(500).json({ error: 'Error al sincronizar ventas desde Mercado Libre' });
+        ultimaSincronizacion = { 
+          fecha: new Date(), 
+          ventasSincronizadas: 0,
+          error: error.message
+        };
+    } finally {
+        sincronizando = false;
     }
+}
+
+// Ruta para verificar el estado de la sincronización
+router.get('/estado-sincronizacion', (req, res) => {
+  res.json({
+    sincronizando,
+    ultimaSincronizacion
+  });
 });
-
-
 
 module.exports = router;

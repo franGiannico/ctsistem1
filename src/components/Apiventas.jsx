@@ -179,8 +179,11 @@ function Apiventas() {
       });
       const data = await response.json();
 
-      // 🔑 ahora el backend devuelve todas las ventas unificadas
-      if (data.ventas) {
+      if (data.sincronizando) {
+        // Si está sincronizando, esperar y verificar estado
+        await verificarEstadoSincronizacion();
+      } else if (data.ventas) {
+        // Si devuelve ventas directamente (caso legacy)
         setVentas(data.ventas);
       }
     } catch (error) {
@@ -188,6 +191,39 @@ function Apiventas() {
     } finally {
       setCargando(false);
     }
+  };
+
+  // Verificar estado de sincronización
+  const verificarEstadoSincronizacion = async () => {
+    const maxIntentos = 30; // 30 intentos = ~1 minuto
+    let intentos = 0;
+
+    const verificar = async () => {
+      try {
+        const response = await fetch(`${BACKEND_URL}/meli/estado-sincronizacion`);
+        const data = await response.json();
+
+        if (!data.sincronizando && data.ultimaSincronizacion) {
+          // Sincronización completada, recargar ventas
+          cargarVentasDesdeServidor();
+          console.log("✅ Sincronización completada:", data.ultimaSincronizacion.mensaje);
+          return;
+        }
+
+        if (intentos < maxIntentos) {
+          intentos++;
+          setTimeout(verificar, 2000); // Verificar cada 2 segundos
+        } else {
+          console.log("⏰ Timeout esperando sincronización");
+          cargarVentasDesdeServidor(); // Recargar de todas formas
+        }
+      } catch (error) {
+        console.error("Error verificando estado:", error);
+        cargarVentasDesdeServidor();
+      }
+    };
+
+    verificar();
   };
 
 
