@@ -456,7 +456,7 @@ async function procesarSincronizacion() {
         // 🔍 Filtrar solo ventas con status "ready_to_ship"
         if (envio.status !== "ready_to_ship") {
           console.log(`⏭️ Saltando orden ${orden.id} - status: ${envio.status} (no es ready_to_ship)`);
-          return; // Saltar esta orden
+          continue; // Saltar esta orden
         }
 
         // 👇 guardamos la venta en Mongo con ambos campos
