@@ -301,6 +301,9 @@ function Apiventas() {
                       )}
                       <p><strong>Cliente:</strong> {venta.cliente}</p>
                       <p><strong>N° Venta:</strong> {venta.numeroVenta}</p>
+                      {venta.esML && venta.tipoEnvio && (
+                        <p><strong>Tipo de Envío:</strong> {venta.tipoEnvio}</p>
+                      )}
                     </div>
                     <button
                       onClick={() => marcarCompletada(venta._id, venta.completada)}

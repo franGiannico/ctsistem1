@@ -420,8 +420,13 @@ router.get('/sincronizar-ventas', async (req, res) => {
         // 👇 obtenemos info adicional de envío desde /shipments/:id
         const envio = await obtenerDatosEnvio(orden.shipping?.id, access_token, axios);
 
-        console.log(`📦 Orden ${orden.id} - shipmentId: ${orden.shipping?.id}, tipoEnvio: ${envio.tipoEnvio}`);
+        console.log(`📦 Orden ${orden.id} - shipmentId: ${orden.shipping?.id}, tipoEnvio: ${envio.tipoEnvio}, status: ${envio.status}`);
 
+        // 🔍 Filtrar solo ventas con status "ready_to_ship"
+        if (envio.status !== "ready_to_ship") {
+          console.log(`⏭️ Saltando orden ${orden.id} - status: ${envio.status} (no es ready_to_ship)`);
+          return; // Saltar esta orden
+        }
 
         // 👇 guardamos la venta en Mongo con ambos campos
         ventasAGuardar.push(new Venta({
