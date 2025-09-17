@@ -188,7 +188,7 @@ function Apiventas() {
 
       if (data.sincronizando) {
         // Si está sincronizando, esperar y verificar estado
-        await verificarEstadoSincronizacion();
+        verificarEstadoSincronizacion();
       } else if (data.ventas) {
         // Si devuelve ventas directamente (caso legacy)
         setVentas(data.ventas);
@@ -202,6 +202,7 @@ function Apiventas() {
 
   // Verificar estado de sincronización
   const verificarEstadoSincronizacion = async () => {
+    console.log("🔄 Iniciando verificación de estado de sincronización...");
     const maxIntentos = 30; // 30 intentos = ~1 minuto
     let intentos = 0;
 
@@ -212,8 +213,8 @@ function Apiventas() {
 
         if (!data.sincronizando && data.ultimaSincronizacion) {
           // Sincronización completada, recargar ventas
-          cargarVentasDesdeServidor();
           console.log("✅ Sincronización completada:", data.ultimaSincronizacion.mensaje);
+          cargarVentasDesdeServidor();
           return;
         }
 
