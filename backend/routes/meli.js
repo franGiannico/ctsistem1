@@ -477,6 +477,9 @@ async function procesarSincronizacion() {
           continue; // Saltar esta orden
         }
 
+        // 🔍 Debug: mostrar info de la orden
+        console.log(`🔍 Procesando orden ${orden.id} - fulfilled: ${orden.fulfilled}, shipping.id: ${orden.shipping?.id}, tags: ${orden.tags?.join(', ')}`);
+
         // 🔍 Filtrar solo ventas con status "ready_to_ship" (solo para órdenes CON envío)
         if (orden.shipping?.id && envio.status !== "ready_to_ship") {
           console.log(`⏭️ Saltando orden ${orden.id} - status: ${envio.status} (no es ready_to_ship)`);
