@@ -471,20 +471,26 @@ async function procesarSincronizacion() {
 
         console.log(`📦 Orden ${orden.id} - shipmentId: ${orden.shipping?.id}, tipoEnvio: ${envio.tipoEnvio}, status: ${envio.status}`);
 
-        // 🔍 Filtrar solo ventas con status "ready_to_ship"
-        if (envio.status !== "ready_to_ship") {
+        // 🔍 Filtrar ventas ya entregadas (fulfilled: true)
+        if (orden.fulfilled === true) {
+          console.log(`⏭️ Saltando orden ${orden.id} - fulfilled: true (ya entregada)`);
+          continue; // Saltar esta orden
+        }
+
+        // 🔍 Filtrar solo ventas con status "ready_to_ship" (para órdenes con envío)
+        if (orden.shipping?.id && envio.status !== "ready_to_ship") {
           console.log(`⏭️ Saltando orden ${orden.id} - status: ${envio.status} (no es ready_to_ship)`);
           continue; // Saltar esta orden
         }
 
-        // 🚫 Filtrar ventas de tipo "Full" - no nos interesan por el momento
-        if (envio.tipoEnvio === "Full") {
+        // 🚫 Filtrar ventas de tipo "Full" - no nos interesan por el momento (solo si tienen shipment)
+        if (orden.shipping?.id && envio.tipoEnvio === "Full") {
           console.log(`⏭️ Saltando orden ${orden.id} - tipoEnvio: ${envio.tipoEnvio} (no nos interesa)`);
           continue; // Saltar esta orden
         }
 
         // 👇 calculamos el punto de despacho basado en el tipo de envío real
-        const puntoDespacho = envio.tipoEnvio;
+        const puntoDespacho = orden.shipping?.id ? envio.tipoEnvio : "A coordinar";
 
         // Obtener imagen del producto desde el endpoint de items (solo para órdenes que pasan el filtro)
         const imagen = await obtenerImagenProducto(item.item.id, access_token, axios);

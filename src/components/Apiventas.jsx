@@ -269,6 +269,7 @@ function Apiventas() {
             <option value="Retira el Expreso">Retira el Expreso</option>
             <option value="Punto de Despacho">Punto de Despacho</option>
             <option value="Flex">Flex</option>
+            <option value="A coordinar">A coordinar</option>
             <option value="Guardia">Guardia</option>
             <option value="Domicilio">Domicilio</option>
             <option value="Showroom">Showroom</option>
