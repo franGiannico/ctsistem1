@@ -453,10 +453,6 @@ async function procesarSincronizacion() {
 
           const nombreFinal = variation ? `${title} (${variation})` : title;
 
-          // Obtener imagen del producto desde el endpoint de items
-          const imagen = await obtenerImagenProducto(item.item.id, access_token, axios);
-          console.log(`🖼️ Orden ${orden.id} - Imagen obtenida: ${imagen ? 'Sí' : 'No'}`);
-
           const cliente =
             (orden.buyer?.first_name && orden.buyer?.last_name
               ? `${orden.buyer.first_name} ${orden.buyer.last_name}`
@@ -475,6 +471,10 @@ async function procesarSincronizacion() {
           console.log(`⏭️ Saltando orden ${orden.id} - status: ${envio.status} (no es ready_to_ship)`);
           continue; // Saltar esta orden
         }
+
+        // Obtener imagen del producto desde el endpoint de items (solo para órdenes que pasan el filtro)
+        const imagen = await obtenerImagenProducto(item.item.id, access_token, axios);
+        console.log(`🖼️ Orden ${orden.id} - Imagen obtenida: ${imagen ? 'Sí' : 'No'}`);
 
         // 👇 guardamos la venta en Mongo con ambos campos
         ventasAGuardar.push(new Venta({
