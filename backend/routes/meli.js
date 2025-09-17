@@ -477,7 +477,7 @@ async function procesarSincronizacion() {
         console.log(`🖼️ Orden ${orden.id} - Imagen obtenida: ${imagen ? 'Sí' : 'No'}`);
 
         // 👇 guardamos la venta en Mongo con ambos campos
-        ventasAGuardar.push(new Venta({
+        const ventaAGuardar = new Venta({
           sku,
           nombre: nombreFinal,
           cantidad: quantity,
@@ -491,7 +491,10 @@ async function procesarSincronizacion() {
           variationId,
           atributos,
           tipoEnvio: envio.tipoEnvio   // 🔑 Nuevo campo
-        }));
+        });
+        
+        console.log(`💾 Guardando venta ${idVenta} - Imagen: ${imagen ? 'Sí' : 'No'} (${imagen ? imagen.substring(0, 50) + '...' : 'N/A'})`);
+        ventasAGuardar.push(ventaAGuardar);
 
         }
 
@@ -511,6 +514,11 @@ async function procesarSincronizacion() {
       // Insertar lo nuevo
       await Venta.insertMany(ventasAGuardar);
       console.log(`✅ ${ventasAGuardar.length} ventas sincronizadas con éxito.`);
+      
+      // Verificar qué se guardó realmente
+      const ventasGuardadas = await Venta.find({ esML: true }).sort({ _id: -1 }).limit(ventasAGuardar.length);
+      const ventasConImagen = ventasGuardadas.filter(v => v.imagen && v.imagen.trim() !== '');
+      console.log(`🔍 Verificación: ${ventasGuardadas.length} ventas ML en BD, ${ventasConImagen.length} con imagen`);
 
       ultimaSincronizacion = { 
         fecha: new Date(), 
