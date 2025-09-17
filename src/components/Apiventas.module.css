@@ -60,7 +60,7 @@
     display: inline-block;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
-    padding: 2px 8px;
+    padding: 4px 10px;
     border-radius: 12px;
     font-size: 0.75rem;
     font-weight: 500;
@@ -68,6 +68,9 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    height: fit-content;
+    line-height: 1;
+    vertical-align: middle;
 }
 
 /* Lista de ventas */
