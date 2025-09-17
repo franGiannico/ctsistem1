@@ -35,6 +35,13 @@ function Apiventas() {
       const response = await fetch(`${BACKEND_URL}/apiventas/cargar-ventas`);
       const data = await response.json();
       setVentas(data);
+      
+      // Log para verificar imágenes
+      const ventasConImagen = data.filter(v => v.imagen && v.imagen.trim() !== '');
+      console.log(`📊 Total ventas: ${data.length}, Con imagen: ${ventasConImagen.length}`);
+      if (ventasConImagen.length > 0) {
+        console.log('🖼️ Ventas con imagen:', ventasConImagen.map(v => ({ id: v.numeroVenta, imagen: v.imagen.substring(0, 50) + '...' })));
+      }
     } catch (error) {
       console.error("Error al cargar ventas:", error);
     }
