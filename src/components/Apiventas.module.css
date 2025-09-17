@@ -45,6 +45,31 @@
     background-color: #0056b3;
 }
 
+/* Imagen del producto */
+.imagenProducto {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-right: 12px;
+    border: 1px solid #e0e0e0;
+}
+
+/* Etiqueta ML */
+.etiquetaML {
+    display: inline-block;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-left: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
 /* Lista de ventas */
 .lista {
     list-style: none;

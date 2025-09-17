@@ -327,7 +327,7 @@ function Apiventas() {
                     <div className={styles.ventaDetalle}>
                       <p><strong>SKU:</strong> {venta.sku || 'N/A'}</p>
                       <p><strong>Nombre:</strong> {venta.nombre}</p>
-                      {venta.esML && <span style={{ color: 'blue' }}> [ML]</span>}
+                      {venta.esML && <span className={styles.etiquetaML}>ML</span>}
                       <p><strong>Cantidad:</strong> {venta.cantidad}</p>
                       {/* Mostrar atributos si existen (solo en ML) */}
                       {venta.atributos && venta.atributos.length > 0 && (
