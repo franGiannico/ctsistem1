@@ -477,10 +477,15 @@ async function procesarSincronizacion() {
           continue; // Saltar esta orden
         }
 
-        // 🔍 Filtrar solo ventas con status "ready_to_ship" (para órdenes con envío)
+        // 🔍 Filtrar solo ventas con status "ready_to_ship" (solo para órdenes CON envío)
         if (orden.shipping?.id && envio.status !== "ready_to_ship") {
           console.log(`⏭️ Saltando orden ${orden.id} - status: ${envio.status} (no es ready_to_ship)`);
           continue; // Saltar esta orden
+        }
+
+        // ✅ Las órdenes SIN shipment (A coordinar) se incluyen automáticamente
+        if (!orden.shipping?.id) {
+          console.log(`✅ Incluyendo orden ${orden.id} - Sin shipment (A coordinar)`);
         }
 
         // 🚫 Filtrar ventas de tipo "Full" - no nos interesan por el momento (solo si tienen shipment)
