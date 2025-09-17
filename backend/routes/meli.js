@@ -264,6 +264,21 @@ async function procesarSincronizacion() {
           }
         }
 
+        // Función auxiliar para obtener imagen del producto
+        async function obtenerImagenProducto(itemId, accessToken, axios) {
+          try {
+            const { data } = await axios.get(`https://api.mercadolibre.com/items/${itemId}`, {
+              headers: { Authorization: `Bearer ${accessToken}` }
+            });
+
+            // Priorizar secure_thumbnail, luego thumbnail, luego la primera imagen de pictures
+            return data.secure_thumbnail || data.thumbnail || (data.pictures && data.pictures[0]?.secure_url) || "";
+          } catch (error) {
+            console.error(`❌ Error obteniendo imagen para ${itemId}:`, error.response?.data || error.message);
+            return "";
+          }
+        }
+
         // Función auxiliar para obtener datos del envío
         async function obtenerDatosEnvio(shipmentId, accessToken, axios) {
         if (!shipmentId) {
@@ -438,7 +453,9 @@ async function procesarSincronizacion() {
 
           const nombreFinal = variation ? `${title} (${variation})` : title;
 
-          const imagen = item.item.thumbnail || item.item.secure_thumbnail || "";
+          // Obtener imagen del producto desde el endpoint de items
+          const imagen = await obtenerImagenProducto(item.item.id, access_token, axios);
+          console.log(`🖼️ Orden ${orden.id} - Imagen obtenida: ${imagen ? 'Sí' : 'No'}`);
 
           const cliente =
             (orden.buyer?.first_name && orden.buyer?.last_name
