@@ -8,11 +8,16 @@ const VentaSchema = new mongoose.Schema({
   sku: String,
   nombre: String,
   cantidad: Number,
-  numeroVenta: Number,
+  numeroVenta: { type: String, unique: true },
   cliente: String,
   puntoDespacho: String,
   completada: { type: Boolean, default: false },
   entregada: { type: Boolean, default: false },
+  imagen: String,
+  esML: { type: Boolean, default: false },
+  variationId: String,
+  atributos: [Object],
+  tipoEnvio: String,
 });
 
 const Venta = mongoose.model("Venta", VentaSchema, "ventas");
@@ -86,11 +91,12 @@ router.post("/guardar-ventas", async (req, res) => {
       sku,
       nombre,
       cantidad,
-      numeroVenta,
+      numeroVenta: numeroVenta.toString(), // Convertir a string para consistencia
       cliente,
       puntoDespacho,
       completada: false,
       entregada: false
+      // Los campos de ML (imagen, esML, etc.) se agregarán automáticamente como undefined/null
     });
 
     await nuevaVenta.save();
