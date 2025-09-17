@@ -272,7 +272,14 @@ async function procesarSincronizacion() {
             });
 
             // Priorizar secure_thumbnail, luego thumbnail, luego la primera imagen de pictures
-            return data.secure_thumbnail || data.thumbnail || (data.pictures && data.pictures[0]?.secure_url) || "";
+            let imagenUrl = data.secure_thumbnail || data.thumbnail || (data.pictures && data.pictures[0]?.secure_url) || "";
+            
+            // Convertir HTTP a HTTPS si es necesario
+            if (imagenUrl && imagenUrl.startsWith('http://')) {
+              imagenUrl = imagenUrl.replace('http://', 'https://');
+            }
+            
+            return imagenUrl;
           } catch (error) {
             console.error(`❌ Error obteniendo imagen para ${itemId}:`, error.response?.data || error.message);
             return "";
@@ -421,6 +428,7 @@ async function procesarSincronizacion() {
 
       // Limpiar ventas anteriores de ML
       await Venta.deleteMany({ esML: true });
+      console.log('🗑️ Ventas ML anteriores eliminadas');
 
         // Acá seguimos igual que antes, pero con ordenesFiltradas
         for (const orden of ordenesFiltradas) {
