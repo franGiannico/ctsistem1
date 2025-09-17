@@ -466,9 +466,6 @@ async function procesarSincronizacion() {
               ? `${orden.buyer.first_name} ${orden.buyer.last_name}`
               : orden.buyer?.nickname) || "Cliente Desconocido";
 
-        // 👇 seguimos calculando el punto de despacho como hasta ahora
-        const puntoDespacho = mapTagsToPuntoDespacho(orden.tags);
-
         // 👇 obtenemos info adicional de envío desde /shipments/:id
         const envio = await obtenerDatosEnvio(orden.shipping?.id, access_token, axios);
 
@@ -479,6 +476,15 @@ async function procesarSincronizacion() {
           console.log(`⏭️ Saltando orden ${orden.id} - status: ${envio.status} (no es ready_to_ship)`);
           continue; // Saltar esta orden
         }
+
+        // 🚫 Filtrar ventas de tipo "Full" - no nos interesan por el momento
+        if (envio.tipoEnvio === "Full") {
+          console.log(`⏭️ Saltando orden ${orden.id} - tipoEnvio: ${envio.tipoEnvio} (no nos interesa)`);
+          continue; // Saltar esta orden
+        }
+
+        // 👇 calculamos el punto de despacho basado en el tipo de envío real
+        const puntoDespacho = envio.tipoEnvio;
 
         // Obtener imagen del producto desde el endpoint de items (solo para órdenes que pasan el filtro)
         const imagen = await obtenerImagenProducto(item.item.id, access_token, axios);
