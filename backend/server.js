@@ -89,14 +89,34 @@ const authMiddleware = (req, res, next) => {
     return next();
   }
 
-  // Temporalmente deshabilitar autenticación para debugging
-  console.log('🔍 Auth Debug - Path:', req.path);
-  console.log('🔍 Auth Debug - Headers:', Object.keys(req.headers));
-  console.log('🔍 Auth Debug - Authorization:', req.headers.authorization);
-  
-  // Permitir acceso temporalmente
-  console.log('⚠️ Auth temporalmente deshabilitado para debugging');
-  return next();
+  const authHeader = req.headers.authorization;
+  const expectedToken = process.env.API_SECRET_TOKEN || 'default-secret-token';
+
+  // Debug: mostrar qué está llegando
+  console.log('🔍 Auth Debug:', {
+    path: req.path,
+    authHeader: authHeader ? authHeader.substring(0, 10) + '...' : 'undefined',
+    expectedToken: expectedToken ? expectedToken.substring(0, 10) + '...' : 'undefined'
+  });
+
+  if (!authHeader) {
+    console.log('❌ No auth header found');
+    return res.status(401).json({ 
+      error: 'Acceso no autorizado. Token requerido.',
+      hint: 'Incluir header: Authorization: tu-token-secreto'
+    });
+  }
+
+  if (authHeader !== expectedToken) {
+    console.log('❌ Token mismatch');
+    return res.status(401).json({ 
+      error: 'Acceso no autorizado. Token inválido.',
+      hint: 'Verificar token en variables de entorno'
+    });
+  }
+
+  console.log('✅ Token válido, permitiendo acceso');
+  next();
 };
 
 // Aplicar rate limiting y autenticación a todas las rutas API

@@ -6,7 +6,7 @@ import MeliAuthButton from './MeliAuthButton';
 
 function Apiventas() {
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-  const API_TOKEN = import.meta.env.VITE_API_TOKEN || 'default-secret-token';
+  const API_TOKEN = import.meta.env.VITE_API_TOKEN || 'ctsistem-token-2024-seguro-123';
 
   // Función helper para requests autenticados
   const authenticatedFetch = async (url, options = {}) => {
