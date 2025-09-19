@@ -193,7 +193,7 @@ router.get('/sincronizar-ventas', async (req, res) => {
 
   // Iniciar sincronización asíncrona
   sincronizando = true;
-  console.log('🔄 Sincronizando ventas desde Mercado Libre...');
+  // Log removido por seguridad
   
   // Responder inmediatamente
   res.json({ 
@@ -208,7 +208,7 @@ router.get('/sincronizar-ventas', async (req, res) => {
 // Función para procesar la sincronización en background
 async function procesarSincronizacion() {
   try {
-        console.log('➡️ Iniciando sincronización de ventas Mercado Libre');
+        // Log removido por seguridad
         let tokenDoc = await MeliToken.findOne(); // Busca el único token existente
         if (!tokenDoc || !tokenDoc.access_token) {
             console.error('❌ No autenticado con Mercado Libre');
@@ -233,7 +233,7 @@ async function procesarSincronizacion() {
         }
 
         const { access_token, user_id } = tokenDoc; // <-- Aseguramos que user_id también se obtiene
-        console.log('✅ Token válido. Obteniendo órdenes del usuario:', user_id);
+        // Log removido por seguridad
 
         // Obtener las órdenes pagadas
         // 1. Obtener las órdenes pagadas (básicas)
@@ -372,7 +372,7 @@ async function procesarSincronizacion() {
 
         // Extraer las órdenes básicas
         const ordenesBasicas = ordersSearch.data.results;
-        console.log(`📦 Se encontraron ${ordenesBasicas.length} órdenes pagadas.`);
+        // Log removido por seguridad
 
         // 3. Traer detalles de cada orden
         const ordenesDetalladas = await Promise.all(
@@ -384,7 +384,7 @@ async function procesarSincronizacion() {
             return detalle.data;
           })
         );
-        console.log(`📦 Se obtuvieron detalles de ${ordenesDetalladas.length} órdenes.`);
+        // Log removido por seguridad
 
        // Filtrar órdenes pendientes
         const ordenesFiltradas = ordenesDetalladas.filter((orden) => {
@@ -408,7 +408,7 @@ async function procesarSincronizacion() {
 
 
         // Resumen general
-        console.log(`📦 Órdenes filtradas para guardar: ${ordenesFiltradas.length}`);
+        // Log removido por seguridad
 
         // Resumen por status
         const conteoStatus = ordenesDetalladas.reduce((acc, o) => {
@@ -416,7 +416,7 @@ async function procesarSincronizacion() {
           acc[st] = (acc[st] || 0) + 1;
           return acc;
         }, {});
-        console.log(`📊 Procesando ${ordenesFiltradas.length} órdenes filtradas`);
+        // Log removido por seguridad
 
         // Resumen por tags
         const conteoTags = ordenesDetalladas.reduce((acc, o) => {
@@ -428,7 +428,7 @@ async function procesarSincronizacion() {
 
       // Limpiar ventas anteriores de ML
       await Venta.deleteMany({ esML: true });
-      console.log('🗑️ Ventas ML anteriores eliminadas');
+      // Log removido por seguridad
 
         // Acá seguimos igual que antes, pero con ordenesFiltradas
         for (const orden of ordenesFiltradas) {
@@ -469,32 +469,31 @@ async function procesarSincronizacion() {
         // 👇 obtenemos info adicional de envío desde /shipments/:id
         const envio = await obtenerDatosEnvio(orden.shipping?.id, access_token, axios);
 
-        // Log de procesamiento sin información sensible
-        console.log(`📦 Procesando orden - tipoEnvio: ${envio.tipoEnvio}, status: ${envio.status}`);
+        // Log removido por seguridad
 
         // 🔍 Filtrar ventas ya entregadas (fulfilled: true)
         if (orden.fulfilled === true) {
-          console.log(`⏭️ Saltando orden - fulfilled: true (ya entregada)`);
+          // Log removido por seguridad
           continue; // Saltar esta orden
         }
 
         // 🔍 Debug: mostrar info de la orden
-        console.log(`🔍 Procesando orden - fulfilled: ${orden.fulfilled}, tags: ${orden.tags?.length || 0} tags`);
+        // Log removido por seguridad
 
         // 🔍 Filtrar solo ventas con status "ready_to_ship" (solo para órdenes CON envío)
         if (orden.shipping?.id && envio.status !== "ready_to_ship") {
-          console.log(`⏭️ Saltando orden - status: ${envio.status} (no es ready_to_ship)`);
+          // Log removido por seguridad
           continue; // Saltar esta orden
         }
 
         // ✅ Las órdenes SIN shipment (A coordinar) se incluyen automáticamente
         if (!orden.shipping?.id) {
-          console.log(`✅ Incluyendo orden - Sin shipment (A coordinar)`);
+          // Log removido por seguridad
         }
 
         // 🚫 Filtrar ventas de tipo "Full" - no nos interesan por el momento (solo si tienen shipment)
         if (orden.shipping?.id && envio.tipoEnvio === "Full") {
-          console.log(`⏭️ Saltando orden - tipoEnvio: ${envio.tipoEnvio} (no nos interesa)`);
+          // Log removido por seguridad
           continue; // Saltar esta orden
         }
 
@@ -503,7 +502,7 @@ async function procesarSincronizacion() {
 
         // Obtener imagen del producto desde el endpoint de items (solo para órdenes que pasan el filtro)
         const imagen = await obtenerImagenProducto(item.item.id, access_token, axios);
-        console.log(`🖼️ Imagen obtenida: ${imagen ? 'Sí' : 'No'}`);
+        // Log removido por seguridad
 
         // 👇 guardamos la venta en Mongo con ambos campos
         const ventaAGuardar = new Venta({
@@ -522,7 +521,7 @@ async function procesarSincronizacion() {
           tipoEnvio: envio.tipoEnvio   // 🔑 Nuevo campo
         });
         
-        console.log(`💾 Guardando venta - Imagen: ${imagen ? 'Sí' : 'No'}`);
+        // Log removido por seguridad
         ventasAGuardar.push(ventaAGuardar);
 
         }
@@ -547,7 +546,7 @@ async function procesarSincronizacion() {
       // Verificar qué se guardó realmente
       const ventasGuardadas = await Venta.find({ esML: true }).sort({ _id: -1 }).limit(ventasAGuardar.length);
       const ventasConImagen = ventasGuardadas.filter(v => v.imagen && v.imagen.trim() !== '');
-      console.log(`🔍 Verificación: ${ventasGuardadas.length} ventas ML en BD, ${ventasConImagen.length} con imagen`);
+      // Log removido por seguridad
 
       ultimaSincronizacion = { 
         fecha: new Date(), 
