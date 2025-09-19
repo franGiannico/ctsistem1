@@ -95,17 +95,7 @@ const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization;
   const expectedToken = process.env.API_SECRET_TOKEN || 'default-secret-token';
 
-  // Debug: mostrar qué está llegando (SIN exponer tokens)
-  console.log('🔍 Auth Debug:', {
-    path: req.path,
-    hasAuthHeader: !!authHeader,
-    authHeaderLength: authHeader ? authHeader.length : 0,
-    hasExpectedToken: !!expectedToken,
-    expectedTokenLength: expectedToken ? expectedToken.length : 0
-  });
-
   if (!authHeader) {
-    console.log('❌ No auth header found');
     return res.status(401).json({ 
       error: 'Acceso no autorizado. Token requerido.',
       hint: 'Incluir header: Authorization: tu-token-secreto'
@@ -113,14 +103,11 @@ const authMiddleware = (req, res, next) => {
   }
 
   if (authHeader !== expectedToken) {
-    console.log('❌ Token mismatch');
     return res.status(401).json({ 
       error: 'Acceso no autorizado. Token inválido.',
       hint: 'Verificar token en variables de entorno'
     });
   }
-
-  console.log('✅ Token válido, permitiendo acceso');
   next();
 };
 
