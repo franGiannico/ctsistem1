@@ -21,6 +21,9 @@ const sanitizeLog = (data) => {
     if (sanitized.access_token) sanitized.access_token = '***HIDDEN***';
     if (sanitized.refresh_token) sanitized.refresh_token = '***HIDDEN***';
     if (sanitized.user_id) sanitized.user_id = sanitized.user_id.substring(0, 8) + '...';
+    if (sanitized.authorization) sanitized.authorization = '***HIDDEN***';
+    if (sanitized.authHeader) sanitized.authHeader = '***HIDDEN***';
+    if (sanitized.expectedToken) sanitized.expectedToken = '***HIDDEN***';
     return sanitized;
   }
   return data;
@@ -92,11 +95,13 @@ const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization;
   const expectedToken = process.env.API_SECRET_TOKEN || 'default-secret-token';
 
-  // Debug: mostrar qué está llegando
+  // Debug: mostrar qué está llegando (SIN exponer tokens)
   console.log('🔍 Auth Debug:', {
     path: req.path,
-    authHeader: authHeader ? authHeader.substring(0, 10) + '...' : 'undefined',
-    expectedToken: expectedToken ? expectedToken.substring(0, 10) + '...' : 'undefined'
+    hasAuthHeader: !!authHeader,
+    authHeaderLength: authHeader ? authHeader.length : 0,
+    hasExpectedToken: !!expectedToken,
+    expectedTokenLength: expectedToken ? expectedToken.length : 0
   });
 
   if (!authHeader) {
