@@ -9,6 +9,56 @@ const mongoose = require("mongoose");
 const path = require("path");
 const app = express();
 
+// Función para sanitizar logs
+const sanitizeLog = (data) => {
+  if (typeof data === 'string') {
+    // Ocultar IDs largos (mostrar solo primeros 8 caracteres)
+    return data.replace(/\b\d{10,}\b/g, (match) => match.substring(0, 8) + '...');
+  }
+  if (typeof data === 'object' && data !== null) {
+    const sanitized = { ...data };
+    // Ocultar campos sensibles
+    if (sanitized.access_token) sanitized.access_token = '***HIDDEN***';
+    if (sanitized.refresh_token) sanitized.refresh_token = '***HIDDEN***';
+    if (sanitized.user_id) sanitized.user_id = sanitized.user_id.substring(0, 8) + '...';
+    return sanitized;
+  }
+  return data;
+};
+
+// Rate limiting simple
+const requestCounts = new Map();
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutos
+const MAX_REQUESTS_PER_WINDOW = 100; // 100 requests por ventana
+
+const rateLimitMiddleware = (req, res, next) => {
+  const clientIP = req.ip || req.connection.remoteAddress;
+  const now = Date.now();
+  
+  if (!requestCounts.has(clientIP)) {
+    requestCounts.set(clientIP, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+  } else {
+    const clientData = requestCounts.get(clientIP);
+    
+    if (now > clientData.resetTime) {
+      // Reset window
+      clientData.count = 1;
+      clientData.resetTime = now + RATE_LIMIT_WINDOW;
+    } else {
+      clientData.count++;
+      
+      if (clientData.count > MAX_REQUESTS_PER_WINDOW) {
+        return res.status(429).json({ 
+          error: 'Demasiadas solicitudes. Intenta más tarde.',
+          resetTime: new Date(clientData.resetTime)
+        });
+      }
+    }
+  }
+  
+  next();
+};
+
 // ✅ Importa las rutas personalizadas
 const meliRoutes = require('./routes/meli');
 
@@ -31,6 +81,32 @@ app.options('*', cors()); // Para manejar pre-flight requests
 
 // 📦 Middleware para leer JSON
 app.use(express.json());
+
+// 🔐 Middleware de autenticación básica
+const authMiddleware = (req, res, next) => {
+  // Permitir acceso público solo a la ruta raíz
+  if (req.path === '/' || req.path === '/health') {
+    return next();
+  }
+
+  const authHeader = req.headers.authorization;
+  const expectedToken = process.env.API_SECRET_TOKEN || 'default-secret-token';
+
+  if (!authHeader || authHeader !== expectedToken) {
+    return res.status(401).json({ 
+      error: 'Acceso no autorizado. Token requerido.',
+      hint: 'Incluir header: Authorization: tu-token-secreto'
+    });
+  }
+
+  next();
+};
+
+// Aplicar rate limiting y autenticación a todas las rutas API
+app.use('/apiventas', rateLimitMiddleware, authMiddleware);
+app.use('/apiingresos', rateLimitMiddleware, authMiddleware);
+app.use('/apitareas', rateLimitMiddleware, authMiddleware);
+app.use('/meli', rateLimitMiddleware, authMiddleware);
 
 // 🌐 Configurar conexión a MongoDB
 mongoose.set('strictQuery', true); // Recomendado en versiones recientes de Mongoose

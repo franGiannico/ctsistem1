@@ -6,6 +6,30 @@ import MeliAuthButton from './MeliAuthButton';
 
 function Apiventas() {
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+  const API_TOKEN = import.meta.env.VITE_API_TOKEN || 'default-secret-token';
+
+  // Función helper para requests autenticados
+  const authenticatedFetch = async (url, options = {}) => {
+    const defaultOptions = {
+      headers: {
+        'Authorization': API_TOKEN,
+        'Content-Type': 'application/json',
+        ...options.headers
+      },
+      ...options
+    };
+    
+    try {
+      const response = await fetch(url, defaultOptions);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return response;
+    } catch (error) {
+      console.error('Error en request autenticado:', error);
+      throw error;
+    }
+  };
 
   // Estado general de ventas (internas + Mercado Libre)
   const [ventas, setVentas] = useState([]);
@@ -32,7 +56,7 @@ function Apiventas() {
   // Cargar ventas internas
   const cargarVentasDesdeServidor = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/apiventas/cargar-ventas`);
+      const response = await authenticatedFetch(`${BACKEND_URL}/apiventas/cargar-ventas`);
       const data = await response.json();
       setVentas(data);
       
@@ -50,7 +74,7 @@ function Apiventas() {
   // Obtener hora límite
   const obtenerHoraLimiteDesdeBackend = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/apiventas/obtener-hora-limite`);
+      const response = await authenticatedFetch(`${BACKEND_URL}/apiventas/obtener-hora-limite`);
       const data = await response.json();
       if (data.horaLimiteGeneral) {
         setHoraLimite(data.horaLimiteGeneral);
@@ -64,9 +88,8 @@ function Apiventas() {
   // Actualizar hora límite
   const actualizarHoraLimiteEnBackend = async (hora) => {
     try {
-      await fetch(`${BACKEND_URL}/apiventas/actualizar-hora-limite`, {
+      await authenticatedFetch(`${BACKEND_URL}/apiventas/actualizar-hora-limite`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ horaLimite: hora })
       });
     } catch (error) {
@@ -97,9 +120,8 @@ function Apiventas() {
     };
 
     try {
-      await fetch(`${BACKEND_URL}/apiventas/guardar-ventas`, {
+      await authenticatedFetch(`${BACKEND_URL}/apiventas/guardar-ventas`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(nuevaVenta)
       });
       cargarVentasDesdeServidor();
@@ -113,9 +135,8 @@ function Apiventas() {
   const marcarCompletada = async (id, estadoActual) => {
     try {
       const nuevoEstado = !estadoActual;
-      const response = await fetch(`${BACKEND_URL}/apiventas/actualizar-venta/${id}`, {
+      const response = await authenticatedFetch(`${BACKEND_URL}/apiventas/actualizar-venta/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ completada: nuevoEstado })
       });
       if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
@@ -131,9 +152,8 @@ function Apiventas() {
   const marcarEntregada = async (id, estadoActual) => {
     try {
       const nuevoEstado = !estadoActual;
-      const response = await fetch(`${BACKEND_URL}/apiventas/actualizar-venta/${id}`, {
+      const response = await authenticatedFetch(`${BACKEND_URL}/apiventas/actualizar-venta/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ entregada: nuevoEstado })
       });
       if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
@@ -149,7 +169,7 @@ function Apiventas() {
   // Borrar venta
   const borrarVenta = async (id) => {
     try {
-      await fetch(`${BACKEND_URL}/apiventas/borrar-venta/${id}`, { method: "DELETE" });
+      await authenticatedFetch(`${BACKEND_URL}/apiventas/borrar-venta/${id}`, { method: "DELETE" });
       cargarVentasDesdeServidor();
     } catch (error) {
       console.error("Error al borrar venta:", error);
@@ -160,7 +180,7 @@ function Apiventas() {
   const borrarVentasCompletadas = async () => {
     if (!window.confirm("¿Seguro que quieres eliminar todas las ventas completadas y entregadas?")) return;
     try {
-      await fetch(`${BACKEND_URL}/apiventas/borrar-ventas-completadas`, { method: "DELETE" });
+      await authenticatedFetch(`${BACKEND_URL}/apiventas/borrar-ventas-completadas`, { method: "DELETE" });
       cargarVentasDesdeServidor();
     } catch (error) {
       console.error("Error al borrar ventas completadas:", error);
@@ -181,7 +201,7 @@ function Apiventas() {
   const sincronizarVentasML = async () => {
     setCargando(true);
     try {
-      const response = await fetch(`${BACKEND_URL}/meli/sincronizar-ventas`, {
+      const response = await authenticatedFetch(`${BACKEND_URL}/meli/sincronizar-ventas`, {
         cache: 'no-store'
       });
       const data = await response.json();
@@ -208,7 +228,7 @@ function Apiventas() {
 
     const verificar = async () => {
       try {
-        const response = await fetch(`${BACKEND_URL}/meli/estado-sincronizacion`);
+        const response = await authenticatedFetch(`${BACKEND_URL}/meli/estado-sincronizacion`);
         const data = await response.json();
 
         if (!data.sincronizando && data.ultimaSincronizacion) {
