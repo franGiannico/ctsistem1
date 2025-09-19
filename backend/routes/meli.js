@@ -469,31 +469,31 @@ async function procesarSincronizacion() {
         // 👇 obtenemos info adicional de envío desde /shipments/:id
         const envio = await obtenerDatosEnvio(orden.shipping?.id, access_token, axios);
 
-        console.log(`📦 Orden ${orden.id?.substring(0, 8)}... - shipmentId: ${orden.shipping?.id?.substring(0, 8) || 'null'}, tipoEnvio: ${envio.tipoEnvio}, status: ${envio.status}`);
+        console.log(`📦 Orden ${String(orden.id)?.substring(0, 8)}... - shipmentId: ${String(orden.shipping?.id)?.substring(0, 8) || 'null'}, tipoEnvio: ${envio.tipoEnvio}, status: ${envio.status}`);
 
         // 🔍 Filtrar ventas ya entregadas (fulfilled: true)
         if (orden.fulfilled === true) {
-          console.log(`⏭️ Saltando orden ${orden.id?.substring(0, 8)}... - fulfilled: true (ya entregada)`);
+          console.log(`⏭️ Saltando orden ${String(orden.id)?.substring(0, 8)}... - fulfilled: true (ya entregada)`);
           continue; // Saltar esta orden
         }
 
         // 🔍 Debug: mostrar info de la orden
-        console.log(`🔍 Procesando orden ${orden.id?.substring(0, 8)}... - fulfilled: ${orden.fulfilled}, shipping.id: ${orden.shipping?.id?.substring(0, 8) || 'null'}, tags: ${orden.tags?.join(', ')}`);
+        console.log(`🔍 Procesando orden ${String(orden.id)?.substring(0, 8)}... - fulfilled: ${orden.fulfilled}, shipping.id: ${String(orden.shipping?.id)?.substring(0, 8) || 'null'}, tags: ${orden.tags?.join(', ')}`);
 
         // 🔍 Filtrar solo ventas con status "ready_to_ship" (solo para órdenes CON envío)
         if (orden.shipping?.id && envio.status !== "ready_to_ship") {
-          console.log(`⏭️ Saltando orden ${orden.id?.substring(0, 8)}... - status: ${envio.status} (no es ready_to_ship)`);
+          console.log(`⏭️ Saltando orden ${String(orden.id)?.substring(0, 8)}... - status: ${envio.status} (no es ready_to_ship)`);
           continue; // Saltar esta orden
         }
 
         // ✅ Las órdenes SIN shipment (A coordinar) se incluyen automáticamente
         if (!orden.shipping?.id) {
-          console.log(`✅ Incluyendo orden ${orden.id?.substring(0, 8)}... - Sin shipment (A coordinar)`);
+          console.log(`✅ Incluyendo orden ${String(orden.id)?.substring(0, 8)}... - Sin shipment (A coordinar)`);
         }
 
         // 🚫 Filtrar ventas de tipo "Full" - no nos interesan por el momento (solo si tienen shipment)
         if (orden.shipping?.id && envio.tipoEnvio === "Full") {
-          console.log(`⏭️ Saltando orden ${orden.id?.substring(0, 8)}... - tipoEnvio: ${envio.tipoEnvio} (no nos interesa)`);
+          console.log(`⏭️ Saltando orden ${String(orden.id)?.substring(0, 8)}... - tipoEnvio: ${envio.tipoEnvio} (no nos interesa)`);
           continue; // Saltar esta orden
         }
 
@@ -502,7 +502,7 @@ async function procesarSincronizacion() {
 
         // Obtener imagen del producto desde el endpoint de items (solo para órdenes que pasan el filtro)
         const imagen = await obtenerImagenProducto(item.item.id, access_token, axios);
-        console.log(`🖼️ Orden ${orden.id?.substring(0, 8)}... - Imagen obtenida: ${imagen ? 'Sí' : 'No'}`);
+        console.log(`🖼️ Orden ${String(orden.id)?.substring(0, 8)}... - Imagen obtenida: ${imagen ? 'Sí' : 'No'}`);
 
         // 👇 guardamos la venta en Mongo con ambos campos
         const ventaAGuardar = new Venta({
@@ -521,7 +521,7 @@ async function procesarSincronizacion() {
           tipoEnvio: envio.tipoEnvio   // 🔑 Nuevo campo
         });
         
-        console.log(`💾 Guardando venta ${idVenta?.substring(0, 8)}... - Imagen: ${imagen ? 'Sí' : 'No'} (${imagen ? imagen.substring(0, 30) + '...' : 'N/A'})`);
+        console.log(`💾 Guardando venta ${String(idVenta)?.substring(0, 8)}... - Imagen: ${imagen ? 'Sí' : 'No'} (${imagen ? imagen.substring(0, 30) + '...' : 'N/A'})`);
         ventasAGuardar.push(ventaAGuardar);
 
         }
