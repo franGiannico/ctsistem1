@@ -7,6 +7,30 @@ const ApiIngresos = () => {
     // URL base de tu backend, obtenida de las variables de entorno de Vite
     // ¡Esta línea es CRUCIAL y debe estar presente!
     const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+    const API_TOKEN = import.meta.env.VITE_API_TOKEN || 'ctsistem-token-2024-seguro-123';
+
+    // Función helper para requests autenticados
+    const authenticatedFetch = async (url, options = {}) => {
+        const defaultOptions = {
+            headers: {
+                'Authorization': API_TOKEN,
+                'Content-Type': 'application/json',
+                ...options.headers
+            },
+            ...options
+        };
+        
+        try {
+            const response = await fetch(url, defaultOptions);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response;
+        } catch (error) {
+            console.error('Error en request autenticado:', error);
+            throw error;
+        }
+    };
 
     const [items, setItems] = useState([]);
     const [formData, setFormData] = useState({
@@ -28,8 +52,7 @@ const ApiIngresos = () => {
     const loadItems = async () => {
         try {
             // Usar la variable BACKEND_URL
-            const response = await fetch(`${BACKEND_URL}/apiingresos/get-items`);
-            if (!response.ok) throw new Error("No se pudieron cargar los artículos");
+            const response = await authenticatedFetch(`${BACKEND_URL}/apiingresos/get-items`);
             const data = await response.json();
             setItems(data);
         } catch (error) {
@@ -47,7 +70,7 @@ const ApiIngresos = () => {
 
         try {
             // Usar la variable BACKEND_URL
-            const response = await fetch(`${BACKEND_URL}/apiingresos/buscar-producto/${codigoBarras}`);
+            const response = await authenticatedFetch(`${BACKEND_URL}/apiingresos/buscar-producto/${codigoBarras}`);
             if (!response.ok) throw new Error("Producto no encontrado");
 
             const producto = await response.json();
@@ -92,9 +115,8 @@ const ApiIngresos = () => {
 
         try {
             // Usar la variable BACKEND_URL
-            await fetch(`${BACKEND_URL}/apiingresos/add-item`, {
+            await authenticatedFetch(`${BACKEND_URL}/apiingresos/add-item`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(nuevoArticulo)
             });
             loadItems();
@@ -111,9 +133,8 @@ const ApiIngresos = () => {
     const toggleChecked = async (id, checked) => {
         try {
             // Usar la variable BACKEND_URL
-            await fetch(`${BACKEND_URL}/apiingresos/update-item/${id}`, {
+            await authenticatedFetch(`${BACKEND_URL}/apiingresos/update-item/${id}`, {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ checked: !checked }) // Alternar estado
             });
             loadItems(); // Recargar lista después de actualizar
@@ -129,7 +150,7 @@ const ApiIngresos = () => {
 
         try {
             // Usar la variable BACKEND_URL
-            const response = await fetch(`${BACKEND_URL}/apiingresos/clear-checked-items`, {
+            const response = await authenticatedFetch(`${BACKEND_URL}/apiingresos/clear-checked-items`, {
                 method: "DELETE"
             });
 

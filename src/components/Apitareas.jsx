@@ -6,8 +6,32 @@ import { Container, Row, Col, Button, Form, ListGroup } from "react-bootstrap";
 export default function Apitareas() {
     // URL base de tu backend, obtenida de las variables de entorno de Vite
     const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+    const API_TOKEN = import.meta.env.VITE_API_TOKEN || 'ctsistem-token-2024-seguro-123';
     // Construimos la URL específica para las tareas
     const API_TAREAS_URL = `${BACKEND_URL}/apitareas`;
+
+    // Función helper para requests autenticados
+    const authenticatedFetch = async (url, options = {}) => {
+        const defaultOptions = {
+            headers: {
+                'Authorization': API_TOKEN,
+                'Content-Type': 'application/json',
+                ...options.headers
+            },
+            ...options
+        };
+        
+        try {
+            const response = await fetch(url, defaultOptions);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response;
+        } catch (error) {
+            console.error('Error en request autenticado:', error);
+            throw error;
+        }
+    };
 
     const [tareas, setTareas] = useState([]);
     const [descripcion, setDescripcion] = useState("");
@@ -17,7 +41,7 @@ export default function Apitareas() {
 
     const cargarTareasSiCambian = async () => {
     try {
-        const res = await fetch(`${API_TAREAS_URL}/cargar-tareas`); // o tu endpoint real
+        const res = await authenticatedFetch(`${API_TAREAS_URL}/cargar-tareas`); // o tu endpoint real
         const nuevasTareas = await res.json();
 
         // Comparación con las anteriores
@@ -43,9 +67,8 @@ export default function Apitareas() {
 
         try {
             // Usar la variable API_TAREAS_URL
-            const res = await fetch(`${API_TAREAS_URL}/guardar-tareas`, {
+            const res = await authenticatedFetch(`${API_TAREAS_URL}/guardar-tareas`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(nuevaTarea),
             });
 
@@ -61,9 +84,8 @@ export default function Apitareas() {
     const marcarComoCompletada = async (tarea) => {
         try {
             // Usar la variable API_TAREAS_URL
-            const res = await fetch(`${API_TAREAS_URL}/update-tarea`, {
+            const res = await authenticatedFetch(`${API_TAREAS_URL}/update-tarea`, {
                 method: "PUT",
-                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ _id: tarea._id, completada: !tarea.completada }),
             });
 
@@ -81,7 +103,7 @@ export default function Apitareas() {
 
         try {
             // Usar la variable API_TAREAS_URL
-            const res = await fetch(`${API_TAREAS_URL}/limpiar-tareas`, {
+            const res = await authenticatedFetch(`${API_TAREAS_URL}/limpiar-tareas`, {
                 method: "DELETE",
             });
 
