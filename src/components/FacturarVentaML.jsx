@@ -5,15 +5,48 @@ export default function FacturarVentaML() {
   const [datosVenta, setDatosVenta] = useState(null);
   const [mensajeEnviado, setMensajeEnviado] = useState('');
 
+  // Configuración de autenticación
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+  const API_TOKEN = import.meta.env.VITE_API_TOKEN || 'ctsistem-token-2024-seguro-123';
+
+  // Función helper para requests autenticados
+  const authenticatedFetch = async (url, options = {}) => {
+    const defaultOptions = {
+      headers: {
+        'Authorization': API_TOKEN,
+        'Content-Type': 'application/json',
+        ...options.headers
+      },
+      ...options
+    };
+    
+    try {
+      const response = await fetch(url, defaultOptions);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return response;
+    } catch (error) {
+      console.error('Error en request autenticado:', error);
+      throw error;
+    }
+  };
+
   const buscarVenta = async () => {
-    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/meli/factura/${numeroVenta}`);
-    const data = await res.json();
-    if (data.error) {
+    try {
+      const res = await authenticatedFetch(`${BACKEND_URL}/meli/factura/${numeroVenta}`);
+      const data = await res.json();
+      if (data.error) {
+        setDatosVenta(null);
+        setMensajeEnviado('No se encontró la venta');
+      } else {
+        setDatosVenta(data);
+        setMensajeEnviado('');
+      }
+    } catch (error) {
+      console.error('Error buscando venta:', error);
       setDatosVenta(null);
-      setMensajeEnviado('No se encontró la venta');
-    } else {
-      setDatosVenta(data);
-      setMensajeEnviado('');
+      setMensajeEnviado('Error al buscar la venta');
     }
   };
 
