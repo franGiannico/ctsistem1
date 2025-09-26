@@ -632,15 +632,50 @@ router.get('/factura/:id', async (req, res) => {
       }
     }
 
+    // Intentar obtener datos de shipping para la dirección
+    let datosEnvio = {};
+    if (orden.shipping?.id) {
+      try {
+        console.log(`🔍 Consultando shipping: ${orden.shipping.id}`);
+        const shippingResponse = await axios.get(`https://api.mercadolibre.com/shipments/${orden.shipping.id}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        datosEnvio = shippingResponse.data;
+        console.log(`✅ Shipping obtenido:`, datosEnvio);
+      } catch (shippingError) {
+        console.log(`⚠️ No se pudo obtener shipping:`, shippingError.message);
+      }
+    }
+
     const producto = orden.order_items[0]?.item.title || '';
     const cantidad = orden.order_items[0]?.quantity || 1;
     const precio = orden.order_items[0]?.unit_price || 0;
     const total = orden.total_amount;
-    const cliente = `${orden.buyer?.first_name || ''} ${orden.buyer?.last_name || ''}`.trim() || orden.buyer?.nickname || '';
-    const direccion = orden.shipping?.receiver_address?.address_line || '';
+    
+    // Mejorar extracción del nombre del cliente
+    const nombreCompleto = `${orden.buyer?.first_name || ''} ${orden.buyer?.last_name || ''}`.trim();
+    const cliente = nombreCompleto || orden.buyer?.nickname || 'Cliente Desconocido';
+    
+    // Extraer dirección del shipping
+    const direccion = datosEnvio.receiver_address?.address_line || 
+                     datosEnvio.receiver_address?.street_name || 
+                     orden.shipping?.receiver_address?.address_line || 
+                     '---';
+    
+    // Extraer datos de facturación
     const dni = datosFacturacion.doc_number || '';
     const cuit = datosFacturacion.doc_number || '';
     const tipoConsumidor = datosFacturacion.doc_type || 'Consumidor Final';
+    
+    // Información adicional para debug
+    const infoAdicional = {
+      buyerId: orden.buyer?.id,
+      nickname: orden.buyer?.nickname,
+      billingInfoId: orden.buyer?.billing_info?.id,
+      shippingId: orden.shipping?.id,
+      tieneBillingInfo: !!datosFacturacion.doc_number,
+      tieneDireccion: !!direccion && direccion !== '---'
+    };
 
     return res.json({
       producto,
@@ -650,6 +685,9 @@ router.get('/factura/:id', async (req, res) => {
       cliente,
       direccion,
       dni,
+      cuit,
+      tipoConsumidor,
+      infoAdicional // Para debug
     });
 
   } catch (err) {
