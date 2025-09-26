@@ -87,8 +87,8 @@ app.use(express.json());
 
 // 🔐 Middleware de autenticación básica
 const authMiddleware = (req, res, next) => {
-  // Permitir acceso público solo a la ruta raíz
-  if (req.path === '/' || req.path === '/health') {
+  // Permitir acceso público solo a la ruta raíz y debug
+  if (req.path === '/' || req.path === '/health' || req.path.startsWith('/debug/')) {
     return next();
   }
 

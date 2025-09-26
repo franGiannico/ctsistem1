@@ -641,4 +641,51 @@ router.get('/factura/:id', async (req, res) => {
   }
 });
 
+// Endpoint público para debug - NO requiere autenticación
+router.get('/debug/orden/:id', async (req, res) => {
+  const numeroVenta = req.params.id;
+  console.log(`🔍 [DEBUG] Consultando orden completa: ${numeroVenta}`);
+
+  try {
+    let tokenDoc = await MeliToken.findOne();
+    if (!tokenDoc || !tokenDoc.access_token) {
+      return res.status(401).json({ error: 'No autenticado con Mercado Libre.' });
+    }
+
+    // Verificar si el token ha expirado o está cerca de expirar
+    const now = Date.now();
+    const tokenCreatedAt = new Date(tokenDoc.created_at).getTime();
+    const expiresInMs = tokenDoc.expires_in * 1000;
+    const bufferTimeMs = 5 * 60 * 1000;
+
+    if (now > tokenCreatedAt + expiresInMs - bufferTimeMs) {
+      console.log('🔄 [DEBUG] Token expirado, refrescando...');
+      try {
+        tokenDoc.access_token = await refreshMeliToken(tokenDoc);
+      } catch (refreshError) {
+        console.error('❌ [DEBUG] Fallo al refrescar token:', refreshError.message);
+        return res.status(401).json({ error: 'Token expirado y no se pudo refrescar.' });
+      }
+    }
+
+    const accessToken = tokenDoc.access_token;
+    console.log(`🌐 [DEBUG] Consultando orden ${numeroVenta} en ML...`);
+
+    // Buscar la orden completa en ML
+    const ordenResponse = await axios.get(`https://api.mercadolibre.com/orders/${numeroVenta}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    const orden = ordenResponse.data;
+    console.log(`✅ [DEBUG] Orden obtenida exitosamente`);
+
+    // Devolver el JSON completo
+    return res.json(orden);
+
+  } catch (err) {
+    console.error('❌ [DEBUG] Error consultando orden:', err.message);
+    return res.status(404).json({ error: 'No se encontró la orden' });
+  }
+});
+
 module.exports = router;
