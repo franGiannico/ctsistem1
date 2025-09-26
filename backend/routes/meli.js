@@ -579,9 +579,25 @@ router.get('/factura/:id', async (req, res) => {
   const numeroVenta = req.params.id;
 
   try {
-    const tokenDoc = await MeliToken.findOne();
+    let tokenDoc = await MeliToken.findOne();
     if (!tokenDoc || !tokenDoc.access_token) {
       return res.status(401).json({ error: 'No autenticado con Mercado Libre.' });
+    }
+
+    // Verificar si el token ha expirado o está cerca de expirar
+    const now = Date.now();
+    const tokenCreatedAt = new Date(tokenDoc.created_at).getTime();
+    const expiresInMs = tokenDoc.expires_in * 1000; // Convertir segundos a milisegundos
+    const bufferTimeMs = 5 * 60 * 1000; // 5 minutos antes de la expiración real
+
+    if (now > tokenCreatedAt + expiresInMs - bufferTimeMs) {
+      console.log('Token de ML está expirado o a punto de expirar. Intentando refrescar...');
+      try {
+        tokenDoc.access_token = await refreshMeliToken(tokenDoc);
+      } catch (refreshError) {
+        console.error('Fallo al refrescar el token:', refreshError.message);
+        return res.status(401).json({ error: 'Token de Mercado Libre expirado y no se pudo refrescar. Por favor, vuelve a autenticarte.' });
+      }
     }
 
     const accessToken = tokenDoc.access_token;
