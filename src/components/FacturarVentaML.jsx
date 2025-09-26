@@ -63,6 +63,7 @@ export default function FacturarVentaML() {
 📑 Tipo de factura: A
 🧍 DNI/CUIT: ${datosVenta.dni || '---'}
 🏢 Razón social: ${datosVenta.cliente}
+👤 Tipo consumidor: ${datosVenta.tipoConsumidor || 'Consumidor Final'}
 📍 Dirección: ${datosVenta.direccion || '---'}
 `.trim();
 
@@ -93,6 +94,7 @@ export default function FacturarVentaML() {
           <p><strong>Total:</strong> ${datosVenta.total}</p>
           <p><strong>Cliente:</strong> {datosVenta.cliente}</p>
           <p><strong>CUIT/DNI:</strong> {datosVenta.dni || '---'}</p>
+          <p><strong>Tipo consumidor:</strong> {datosVenta.tipoConsumidor || 'Consumidor Final'}</p>
           <p><strong>Dirección:</strong> {datosVenta.direccion || '---'}</p>
 
           <button onClick={enviarPorWhatsApp} className="mt-4 bg-green-600 text-white px-3 py-1 rounded">

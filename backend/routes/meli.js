@@ -617,13 +617,30 @@ router.get('/factura/:id', async (req, res) => {
 
     const orden = ordenResponse.data;
 
+    // Intentar obtener datos de facturación del billing_info
+    let datosFacturacion = {};
+    if (orden.buyer?.billing_info?.id) {
+      try {
+        console.log(`🔍 Consultando billing info: ${orden.buyer.billing_info.id}`);
+        const billingResponse = await axios.get(`https://api.mercadolibre.com/users/${orden.buyer.id}/billing_info`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        datosFacturacion = billingResponse.data;
+        console.log(`✅ Billing info obtenido:`, datosFacturacion);
+      } catch (billingError) {
+        console.log(`⚠️ No se pudo obtener billing info:`, billingError.message);
+      }
+    }
+
     const producto = orden.order_items[0]?.item.title || '';
     const cantidad = orden.order_items[0]?.quantity || 1;
     const precio = orden.order_items[0]?.unit_price || 0;
     const total = orden.total_amount;
     const cliente = `${orden.buyer?.first_name || ''} ${orden.buyer?.last_name || ''}`.trim() || orden.buyer?.nickname || '';
     const direccion = orden.shipping?.receiver_address?.address_line || '';
-    const dni = orden.buyer?.billing_info?.doc_number || '';
+    const dni = datosFacturacion.doc_number || '';
+    const cuit = datosFacturacion.doc_number || '';
+    const tipoConsumidor = datosFacturacion.doc_type || 'Consumidor Final';
 
     return res.json({
       producto,
