@@ -577,12 +577,18 @@ router.get('/estado-sincronizacion', (req, res) => {
 // Ruta para obtener datos de facturación de una venta ML
 router.get('/factura/:id', async (req, res) => {
   const numeroVenta = req.params.id;
+  console.log(`🔍 Buscando factura para venta: ${numeroVenta}`);
 
   try {
     let tokenDoc = await MeliToken.findOne();
+    console.log(`🔑 Token encontrado:`, tokenDoc ? 'Sí' : 'No');
+    
     if (!tokenDoc || !tokenDoc.access_token) {
+      console.log('❌ No hay token válido');
       return res.status(401).json({ error: 'No autenticado con Mercado Libre.' });
     }
+
+    console.log(`🔑 Token válido encontrado, user_id: ${tokenDoc.user_id}`);
 
     // Verificar si el token ha expirado o está cerca de expirar
     const now = Date.now();
@@ -591,16 +597,18 @@ router.get('/factura/:id', async (req, res) => {
     const bufferTimeMs = 5 * 60 * 1000; // 5 minutos antes de la expiración real
 
     if (now > tokenCreatedAt + expiresInMs - bufferTimeMs) {
-      console.log('Token de ML está expirado o a punto de expirar. Intentando refrescar...');
+      console.log('🔄 Token de ML está expirado o a punto de expirar. Intentando refrescar...');
       try {
         tokenDoc.access_token = await refreshMeliToken(tokenDoc);
+        console.log('✅ Token refrescado exitosamente');
       } catch (refreshError) {
-        console.error('Fallo al refrescar el token:', refreshError.message);
+        console.error('❌ Fallo al refrescar el token:', refreshError.message);
         return res.status(401).json({ error: 'Token de Mercado Libre expirado y no se pudo refrescar. Por favor, vuelve a autenticarte.' });
       }
     }
 
     const accessToken = tokenDoc.access_token;
+    console.log(`🌐 Consultando orden ${numeroVenta} en ML...`);
 
     // Buscar la orden en ML
     const ordenResponse = await axios.get(`https://api.mercadolibre.com/orders/${numeroVenta}`, {
