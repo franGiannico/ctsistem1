@@ -115,14 +115,9 @@ export default function Apitareas() {
     };
 
     useEffect(() => {
-        cargarTareasSiCambian(); // Primera carga inmediata
-
-        const interval = setInterval(() => {
-            cargarTareasSiCambian();
-        }, 1000); // cada 1 segundo
-
-        return () => clearInterval(interval);
-        }, []);
+        cargarTareasSiCambian(); // Solo carga inicial
+        // Polling removido para reducir logs de router
+    }, []);
 
     return (
         <Container fluid className="mt-4 px-4">

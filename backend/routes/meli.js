@@ -574,4 +574,47 @@ router.get('/estado-sincronizacion', (req, res) => {
   });
 });
 
+// Ruta para obtener datos de facturación de una venta ML
+router.get('/factura/:id', async (req, res) => {
+  const numeroVenta = req.params.id;
+
+  try {
+    const tokenDoc = await MeliToken.findOne();
+    if (!tokenDoc || !tokenDoc.access_token) {
+      return res.status(401).json({ error: 'No autenticado con Mercado Libre.' });
+    }
+
+    const accessToken = tokenDoc.access_token;
+
+    // Buscar la orden en ML
+    const ordenResponse = await axios.get(`https://api.mercadolibre.com/orders/${numeroVenta}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    const orden = ordenResponse.data;
+
+    const producto = orden.order_items[0]?.item.title || '';
+    const cantidad = orden.order_items[0]?.quantity || 1;
+    const precio = orden.order_items[0]?.unit_price || 0;
+    const total = orden.total_amount;
+    const cliente = `${orden.buyer?.first_name || ''} ${orden.buyer?.last_name || ''}`.trim() || orden.buyer?.nickname || '';
+    const direccion = orden.shipping?.receiver_address?.address_line || '';
+    const dni = orden.buyer?.billing_info?.doc_number || '';
+
+    return res.json({
+      producto,
+      cantidad,
+      precio,
+      total,
+      cliente,
+      direccion,
+      dni,
+    });
+
+  } catch (err) {
+    console.error('❌ Error buscando venta:', err.message);
+    return res.status(404).json({ error: 'No se encontró la venta' });
+  }
+});
+
 module.exports = router;

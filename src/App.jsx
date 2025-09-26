@@ -6,6 +6,7 @@ import Home from "./pages/Home"; // Asegúrate de crear este componente
 import ApiventasPage from "./pages/Apiventas";
 import ApiingresosPage from "./pages/Apiingresos";
 import ApitareasPage from "./pages/Apitareas";
+import FacturarVentaML from "./components/FacturarVentaML";
 import "./App.css"; // Importación de estilos CSS
 import CallbackMeli from "./pages/CallbackMeli";
 
@@ -20,6 +21,7 @@ function App() {
         <Route path="/ventas" element={<ApiventasPage />} />
         <Route path="/ingresos" element={<ApiingresosPage />} />
         <Route path="/tareas" element={<ApitareasPage />} />
+        <Route path="/facturar-ml" element={<FacturarVentaML />} />
       </Routes>
     </Router>
   );
