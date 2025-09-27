@@ -653,6 +653,9 @@ router.get('/factura/:id', async (req, res) => {
       }
     }
 
+    // Declarar payment antes de usarlo
+    const payment = orden.payments?.[0];
+    
     // Intentar obtener datos del payment específico
     let datosPayment = {};
     if (payment?.id) {
@@ -690,7 +693,7 @@ router.get('/factura/:id', async (req, res) => {
     
     // Extraer datos de facturación de la orden misma
     // Los datos pueden estar en payments[0] o en buyer
-    const payment = orden.payments?.[0];
+    // (payment ya está declarado arriba)
     
     // Mejorar extracción del nombre del cliente
     const nombreCompleto = `${orden.buyer?.first_name || ''} ${orden.buyer?.last_name || ''}`.trim();
