@@ -643,6 +643,10 @@ router.get('/factura/:id', async (req, res) => {
     const precio = orden.order_items[0]?.unit_price || 0;
     const total = orden.total_amount;
     
+    // Extraer datos de facturación de la orden misma
+    // Los datos pueden estar en payments[0] o en buyer
+    const payment = orden.payments?.[0];
+    
     // Mejorar extracción del nombre del cliente
     const nombreCompleto = `${orden.buyer?.first_name || ''} ${orden.buyer?.last_name || ''}`.trim();
     const cliente = nombreCompleto || orden.buyer?.nickname || 'Cliente Desconocido';
@@ -659,10 +663,6 @@ router.get('/factura/:id', async (req, res) => {
                           datosEnvio.receiver_address?.street_name || 
                           orden.shipping?.receiver_address?.address_line || 
                           '---';
-    
-    // Extraer datos de facturación de la orden misma
-    // Los datos pueden estar en payments[0] o en buyer
-    const payment = orden.payments?.[0];
     const dni = payment?.payer_id?.toString() || 
                 orden.buyer?.billing_info?.doc_number || 
                 '';
