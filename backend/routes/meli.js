@@ -638,6 +638,21 @@ router.get('/factura/:id', async (req, res) => {
       }
     }
 
+    // Intentar obtener datos de billing info para el DNI
+    let datosBilling = {};
+    if (orden.buyer?.billing_info?.id) {
+      try {
+        console.log(`🔍 Consultando billing info: ${orden.buyer.billing_info.id}`);
+        const billingResponse = await axios.get(`https://api.mercadolibre.com/users/${orden.buyer.id}/billing_info`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        datosBilling = billingResponse.data;
+        console.log(`✅ Datos de billing obtenidos:`, datosBilling);
+      } catch (billingError) {
+        console.log(`⚠️ No se pudo obtener billing info:`, billingError.message);
+      }
+    }
+
     // Intentar obtener datos de shipping para la dirección
     let datosEnvio = {};
     if (orden.shipping?.id) {
@@ -689,15 +704,17 @@ router.get('/factura/:id', async (req, res) => {
     console.log(`📋 Receiver name:`, datosEnvio.receiver_address?.receiver_name);
     console.log(`📋 Payment payer_id:`, payment?.payer_id);
     console.log(`📋 Buyer billing_info:`, orden.buyer?.billing_info);
-    console.log(`📋 Datos usuario completos:`, JSON.stringify(datosUsuario, null, 2));
+    console.log(`📋 Datos billing completos:`, JSON.stringify(datosBilling, null, 2));
     
-    // El DNI puede estar en el receiver_address o en otros campos
-    const dni = datosEnvio.receiver_address?.receiver_name?.match(/\d+/)?.[0] ||
+    // El DNI puede estar en billing info o en otros campos
+    const dni = datosBilling.doc_number ||
+                datosBilling.identification?.number ||
+                datosEnvio.receiver_address?.receiver_name?.match(/\d+/)?.[0] ||
                 payment?.payer_id?.toString() || 
                 orden.buyer?.billing_info?.doc_number || 
                 '';
     const cuit = dni; // En ML, DNI y CUIT suelen ser lo mismo
-    const tipoConsumidor = 'Consumidor Final'; // Por defecto
+    const tipoConsumidor = datosBilling.consumer_type || 'Consumidor Final';
     
     // Información adicional para debug
     const infoAdicional = {
@@ -712,7 +729,9 @@ router.get('/factura/:id', async (req, res) => {
       tieneDireccionEnvio: !!direccionEnvio && direccionEnvio !== '---',
       tienePayment: !!payment,
       tieneDatosUsuario: !!datosUsuario.identification,
-      datosUsuarioCompleto: datosUsuario
+      tieneDatosBilling: !!datosBilling.doc_number,
+      datosUsuarioCompleto: datosUsuario,
+      datosBillingCompleto: datosBilling
     };
 
     return res.json({
