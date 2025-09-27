@@ -87,22 +87,8 @@ app.use(express.json());
 
 // 🔐 Middleware de autenticación básica
 const authMiddleware = (req, res, next) => {
-  // Permitir acceso público solo a la ruta raíz
-  if (req.path === '/' || req.path === '/health') {
-    return next();
-  }
-
-  // Para debug, requerir token especial (opcional)
-  if (req.path.startsWith('/debug/')) {
-    const debugToken = req.headers['x-debug-token'];
-    const expectedDebugToken = process.env.DEBUG_TOKEN || 'debug-token-2024';
-    
-    if (!debugToken || debugToken !== expectedDebugToken) {
-      return res.status(401).json({ 
-        error: 'Debug token requerido.',
-        hint: 'Incluir header: x-debug-token: debug-token-2024'
-      });
-    }
+  // Permitir acceso público solo a la ruta raíz y debug
+  if (req.path === '/' || req.path === '/health' || req.path.startsWith('/debug/')) {
     return next();
   }
 
