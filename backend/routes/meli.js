@@ -617,20 +617,11 @@ router.get('/factura/:id', async (req, res) => {
 
     const orden = ordenResponse.data;
 
-    // Intentar obtener datos de facturación del billing_info
-    let datosFacturacion = {};
-    if (orden.buyer?.billing_info?.id) {
-      try {
-        console.log(`🔍 Consultando billing info: ${orden.buyer.billing_info.id}`);
-        const billingResponse = await axios.get(`https://api.mercadolibre.com/users/${orden.buyer.id}/billing_info`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        datosFacturacion = billingResponse.data;
-        console.log(`✅ Billing info obtenido:`, datosFacturacion);
-      } catch (billingError) {
-        console.log(`⚠️ No se pudo obtener billing info:`, billingError.message);
-      }
-    }
+    // Los datos de facturación están en la orden misma, no en un endpoint separado
+    console.log(`🔍 Analizando datos de facturación en la orden...`);
+    console.log(`📋 Buyer completo:`, orden.buyer);
+    console.log(`📋 Payments:`, orden.payments);
+    console.log(`📋 Shipping:`, orden.shipping);
 
     // Intentar obtener datos de shipping para la dirección
     let datosEnvio = {};
@@ -662,10 +653,14 @@ router.get('/factura/:id', async (req, res) => {
                      orden.shipping?.receiver_address?.address_line || 
                      '---';
     
-    // Extraer datos de facturación
-    const dni = datosFacturacion.doc_number || '';
-    const cuit = datosFacturacion.doc_number || '';
-    const tipoConsumidor = datosFacturacion.doc_type || 'Consumidor Final';
+    // Extraer datos de facturación de la orden misma
+    // Los datos pueden estar en payments[0] o en buyer
+    const payment = orden.payments?.[0];
+    const dni = payment?.payer_id?.toString() || 
+                orden.buyer?.billing_info?.doc_number || 
+                '';
+    const cuit = dni; // En ML, DNI y CUIT suelen ser lo mismo
+    const tipoConsumidor = 'Consumidor Final'; // Por defecto, ML no siempre proporciona esto
     
     // Información adicional para debug
     const infoAdicional = {
@@ -673,8 +668,11 @@ router.get('/factura/:id', async (req, res) => {
       nickname: orden.buyer?.nickname,
       billingInfoId: orden.buyer?.billing_info?.id,
       shippingId: orden.shipping?.id,
-      tieneBillingInfo: !!datosFacturacion.doc_number,
-      tieneDireccion: !!direccion && direccion !== '---'
+      paymentId: payment?.id,
+      payerId: payment?.payer_id,
+      tieneBillingInfo: !!orden.buyer?.billing_info,
+      tieneDireccion: !!direccion && direccion !== '---',
+      tienePayment: !!payment
     };
 
     return res.json({
