@@ -668,7 +668,9 @@ router.get('/factura/:id', async (req, res) => {
     
     // Extraer dirección de FACTURACIÓN (no de envío)
     // La dirección de facturación está en buyer.billing_info o en payments
-    const direccionFacturacion = datosUsuario.address?.address_line ||
+    const direccionFacturacion = datosEnvio.receiver_address?.address_line ||
+                                datosEnvio.receiver_address?.street_name ||
+                                datosUsuario.address?.address_line ||
                                 datosUsuario.address?.street_name ||
                                 orden.buyer?.billing_info?.address_line ||
                                 orden.buyer?.billing_info?.street_name ||
@@ -682,13 +684,20 @@ router.get('/factura/:id', async (req, res) => {
                           '---';
     
     // Extraer datos de facturación del usuario
-    const dni = datosUsuario.identification?.number ||
-                datosUsuario.doc_number ||
+    // Buscar el DNI en todos los campos posibles
+    console.log(`🔍 Buscando DNI en todos los campos...`);
+    console.log(`📋 Receiver name:`, datosEnvio.receiver_address?.receiver_name);
+    console.log(`📋 Payment payer_id:`, payment?.payer_id);
+    console.log(`📋 Buyer billing_info:`, orden.buyer?.billing_info);
+    console.log(`📋 Datos usuario completos:`, JSON.stringify(datosUsuario, null, 2));
+    
+    // El DNI puede estar en el receiver_address o en otros campos
+    const dni = datosEnvio.receiver_address?.receiver_name?.match(/\d+/)?.[0] ||
                 payment?.payer_id?.toString() || 
                 orden.buyer?.billing_info?.doc_number || 
                 '';
     const cuit = dni; // En ML, DNI y CUIT suelen ser lo mismo
-    const tipoConsumidor = datosUsuario.identification?.type || 'Consumidor Final';
+    const tipoConsumidor = 'Consumidor Final'; // Por defecto
     
     // Información adicional para debug
     const infoAdicional = {
