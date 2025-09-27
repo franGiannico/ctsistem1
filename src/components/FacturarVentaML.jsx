@@ -4,6 +4,7 @@ export default function FacturarVentaML() {
   const [numeroVenta, setNumeroVenta] = useState('');
   const [datosVenta, setDatosVenta] = useState(null);
   const [mensajeEnviado, setMensajeEnviado] = useState('');
+  const [dniManual, setDniManual] = useState('');
 
   // Configuración de autenticación
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
@@ -53,6 +54,8 @@ export default function FacturarVentaML() {
   const enviarPorWhatsApp = () => {
     if (!datosVenta) return;
 
+    const dniFinal = dniManual || datosVenta.dni || '---';
+
     const texto = `
 💳 *FACTURAR VENTA ML*  
 🗓️ Fecha: ${new Date().toLocaleDateString()}
@@ -61,7 +64,7 @@ export default function FacturarVentaML() {
 💲 Precio final: $${datosVenta.precio}
 📈 Total: $${datosVenta.total}
 📑 Tipo de factura: A
-🧍 DNI/CUIT: ${datosVenta.dni || '---'}
+🧍 DNI/CUIT: ${dniFinal}
 🏢 Razón social: ${datosVenta.cliente}
 👤 Tipo consumidor: ${datosVenta.tipoConsumidor || 'Consumidor Final'}
 📍 Dirección: ${datosVenta.direccion || '---'}
@@ -93,7 +96,23 @@ export default function FacturarVentaML() {
           <p><strong>Precio final:</strong> ${datosVenta.precio}</p>
           <p><strong>Total:</strong> ${datosVenta.total}</p>
           <p><strong>Cliente:</strong> {datosVenta.cliente}</p>
-          <p><strong>CUIT/DNI:</strong> {datosVenta.dni || '---'}</p>
+          
+          <div className="mt-3">
+            <label className="block text-sm font-medium mb-1">
+              <strong>DNI/CUIT:</strong> (ML no expone el DNI real por privacidad)
+            </label>
+            <input
+              type="text"
+              placeholder="Ingrese el DNI/CUIT del cliente"
+              value={dniManual}
+              onChange={(e) => setDniManual(e.target.value)}
+              className="border px-2 py-1 w-full"
+            />
+            <p className="text-xs text-gray-600 mt-1">
+              Valor actual: {datosVenta.dni || '---'} (ID interno de ML)
+            </p>
+          </div>
+          
           <p><strong>Tipo consumidor:</strong> {datosVenta.tipoConsumidor || 'Consumidor Final'}</p>
           <p><strong>Dirección:</strong> {datosVenta.direccion || '---'}</p>
 
