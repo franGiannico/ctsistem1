@@ -647,11 +647,18 @@ router.get('/factura/:id', async (req, res) => {
     const nombreCompleto = `${orden.buyer?.first_name || ''} ${orden.buyer?.last_name || ''}`.trim();
     const cliente = nombreCompleto || orden.buyer?.nickname || 'Cliente Desconocido';
     
-    // Extraer dirección del shipping
-    const direccion = datosEnvio.receiver_address?.address_line || 
-                     datosEnvio.receiver_address?.street_name || 
-                     orden.shipping?.receiver_address?.address_line || 
-                     '---';
+    // Extraer dirección de FACTURACIÓN (no de envío)
+    // La dirección de facturación está en buyer.billing_info o en payments
+    const direccionFacturacion = orden.buyer?.billing_info?.address_line ||
+                                orden.buyer?.billing_info?.street_name ||
+                                payment?.billing_address?.address_line ||
+                                '---';
+    
+    // Dirección de envío (para referencia, pero no para facturación)
+    const direccionEnvio = datosEnvio.receiver_address?.address_line || 
+                          datosEnvio.receiver_address?.street_name || 
+                          orden.shipping?.receiver_address?.address_line || 
+                          '---';
     
     // Extraer datos de facturación de la orden misma
     // Los datos pueden estar en payments[0] o en buyer
@@ -671,8 +678,10 @@ router.get('/factura/:id', async (req, res) => {
       paymentId: payment?.id,
       payerId: payment?.payer_id,
       tieneBillingInfo: !!orden.buyer?.billing_info,
-      tieneDireccion: !!direccion && direccion !== '---',
-      tienePayment: !!payment
+      tieneDireccionFacturacion: !!direccionFacturacion && direccionFacturacion !== '---',
+      tieneDireccionEnvio: !!direccionEnvio && direccionEnvio !== '---',
+      tienePayment: !!payment,
+      billingInfoCompleto: orden.buyer?.billing_info
     };
 
     return res.json({
@@ -681,7 +690,8 @@ router.get('/factura/:id', async (req, res) => {
       precio,
       total,
       cliente,
-      direccion,
+      direccion: direccionFacturacion, // Usar dirección de facturación
+      direccionEnvio, // Para referencia
       dni,
       cuit,
       tipoConsumidor,
