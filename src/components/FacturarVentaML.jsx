@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import styles from './FacturarVentaML.module.css';
 
 export default function FacturarVentaML() {
   const [numeroVenta, setNumeroVenta] = useState('');
@@ -130,20 +131,20 @@ export default function FacturarVentaML() {
   };
 
   return (
-    <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">Facturar Venta</h2>
+    <div className={styles.container}>
+      <h2 className={styles.title}>Facturar Venta</h2>
 
       {/* Toggle entre modo ML y manual */}
-      <div className="mb-4">
+      <div className={styles.modeToggle}>
         <button
           onClick={() => setModoManual(false)}
-          className={`px-4 py-2 rounded-l ${!modoManual ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+          className={`${styles.modeButton} ${!modoManual ? styles.active : ''}`}
         >
           Buscar en ML
         </button>
         <button
           onClick={() => setModoManual(true)}
-          className={`px-4 py-2 rounded-r ${modoManual ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+          className={`${styles.modeButton} ${modoManual ? styles.active : ''}`}
         >
           Cargar Manual
         </button>
@@ -151,115 +152,115 @@ export default function FacturarVentaML() {
 
       {/* Modo búsqueda ML */}
       {!modoManual && (
-        <div className="mb-4">
+        <div className={styles.searchSection}>
           <input
             type="text"
             placeholder="Número de venta ML"
             value={numeroVenta}
             onChange={(e) => setNumeroVenta(e.target.value)}
-            className="border px-2 py-1 mr-2"
+            className={styles.searchInput}
           />
-          <button onClick={buscarVenta} className="bg-blue-500 text-white px-3 py-1 rounded">Buscar</button>
+          <button onClick={buscarVenta} className={styles.searchButton}>Buscar</button>
         </div>
       )}
 
       {/* Modo manual */}
       {modoManual && (
-        <div className="border p-4 bg-gray-50 rounded mb-4">
-          <h3 className="text-lg font-semibold mb-3">Datos de la Venta</h3>
+        <div className={styles.manualForm}>
+          <h3 className={styles.formTitle}>Datos de la Venta</h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Producto *</label>
+          <div className={styles.formGrid}>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Producto *</label>
               <input
                 type="text"
                 name="producto"
                 value={datosManuales.producto}
                 onChange={handleInputChange}
-                className="border px-2 py-1 w-full"
+                className={styles.formInput}
                 placeholder="Nombre del producto"
                 required
               />
             </div>
             
-            <div>
-              <label className="block text-sm font-medium mb-1">Cliente *</label>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Cliente *</label>
               <input
                 type="text"
                 name="cliente"
                 value={datosManuales.cliente}
                 onChange={handleInputChange}
-                className="border px-2 py-1 w-full"
+                className={styles.formInput}
                 placeholder="Nombre del cliente"
                 required
               />
             </div>
             
-            <div>
-              <label className="block text-sm font-medium mb-1">Cantidad *</label>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Cantidad *</label>
               <input
                 type="number"
                 name="cantidad"
                 value={datosManuales.cantidad}
                 onChange={(e) => {
                   handleInputChange(e);
-                  setTimeout(calcularTotal, 100); // Calcular total después del cambio
+                  setTimeout(calcularTotal, 100);
                 }}
-                className="border px-2 py-1 w-full"
+                className={styles.formInput}
                 min="1"
                 required
               />
             </div>
             
-            <div>
-              <label className="block text-sm font-medium mb-1">Precio Unitario *</label>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Precio Unitario *</label>
               <input
                 type="number"
                 name="precio"
                 value={datosManuales.precio}
                 onChange={(e) => {
                   handleInputChange(e);
-                  setTimeout(calcularTotal, 100); // Calcular total después del cambio
+                  setTimeout(calcularTotal, 100);
                 }}
-                className="border px-2 py-1 w-full"
+                className={styles.formInput}
                 step="0.01"
                 min="0"
                 required
               />
             </div>
             
-            <div>
-              <label className="block text-sm font-medium mb-1">Total</label>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Total</label>
               <input
                 type="number"
                 name="total"
                 value={datosManuales.total}
                 onChange={handleInputChange}
-                className="border px-2 py-1 w-full bg-gray-100"
+                className={`${styles.formInput} ${styles.readonly}`}
                 step="0.01"
                 readOnly
               />
             </div>
             
-            <div>
-              <label className="block text-sm font-medium mb-1">DNI/CUIT</label>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>DNI/CUIT</label>
               <input
                 type="text"
                 name="dni"
                 value={datosManuales.dni}
                 onChange={handleInputChange}
-                className="border px-2 py-1 w-full"
+                className={styles.formInput}
                 placeholder="DNI o CUIT del cliente"
               />
             </div>
             
-            <div>
-              <label className="block text-sm font-medium mb-1">Tipo de Consumidor</label>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Tipo de Consumidor</label>
               <select
                 name="tipoConsumidor"
                 value={datosManuales.tipoConsumidor}
                 onChange={handleInputChange}
-                className="border px-2 py-1 w-full"
+                className={styles.formSelect}
               >
                 <option value="Consumidor Final">Consumidor Final</option>
                 <option value="Responsable Inscripto">Responsable Inscripto</option>
@@ -268,26 +269,26 @@ export default function FacturarVentaML() {
               </select>
             </div>
             
-            <div>
-              <label className="block text-sm font-medium mb-1">Dirección</label>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Dirección</label>
               <input
                 type="text"
                 name="direccion"
                 value={datosManuales.direccion}
                 onChange={handleInputChange}
-                className="border px-2 py-1 w-full"
+                className={styles.formInput}
                 placeholder="Dirección del cliente"
               />
             </div>
             
-            <div>
-              <label className="block text-sm font-medium mb-1">Ciudad</label>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Ciudad</label>
               <input
                 type="text"
                 name="ciudad"
                 value={datosManuales.ciudad}
                 onChange={handleInputChange}
-                className="border px-2 py-1 w-full"
+                className={styles.formInput}
                 placeholder="Ciudad del cliente"
               />
             </div>
@@ -295,7 +296,7 @@ export default function FacturarVentaML() {
           
           <button 
             onClick={enviarPorWhatsApp} 
-            className="mt-4 bg-green-600 text-white px-4 py-2 rounded"
+            className={styles.submitButton}
           >
             Enviar por WhatsApp
           </button>
@@ -304,41 +305,75 @@ export default function FacturarVentaML() {
 
       {/* Mostrar datos de ML solo cuando no esté en modo manual */}
       {!modoManual && datosVenta && (
-        <div className="mt-4 border p-4 bg-gray-50 rounded">
-          <h3 className="text-lg font-semibold mb-3">Datos de la Venta ML</h3>
-          <p><strong>Producto:</strong> {datosVenta.producto}</p>
-          <p><strong>Cantidad:</strong> {datosVenta.cantidad}</p>
-          <p><strong>Precio final:</strong> ${datosVenta.precio}</p>
-          <p><strong>Total:</strong> ${datosVenta.total}</p>
-          <p><strong>Cliente:</strong> {datosVenta.cliente}</p>
+        <div className={styles.mlDataSection}>
+          <h3 className={styles.mlDataTitle}>Datos de la Venta ML</h3>
           
-          <div className="mt-3">
-            <label className="block text-sm font-medium mb-1">
-              <strong>DNI/CUIT:</strong> (ML no expone el DNI real por privacidad)
-            </label>
+          <div className={styles.dataGrid}>
+            <div className={styles.dataItem}>
+              <div className={styles.dataLabel}>Producto</div>
+              <div className={styles.dataValue}>{datosVenta.producto}</div>
+            </div>
+            <div className={styles.dataItem}>
+              <div className={styles.dataLabel}>Cantidad</div>
+              <div className={styles.dataValue}>{datosVenta.cantidad}</div>
+            </div>
+            <div className={styles.dataItem}>
+              <div className={styles.dataLabel}>Precio Final</div>
+              <div className={styles.dataValue}>${datosVenta.precio}</div>
+            </div>
+            <div className={styles.dataItem}>
+              <div className={styles.dataLabel}>Total</div>
+              <div className={styles.dataValue}>${datosVenta.total}</div>
+            </div>
+            <div className={styles.dataItem}>
+              <div className={styles.dataLabel}>Cliente</div>
+              <div className={styles.dataValue}>{datosVenta.cliente}</div>
+            </div>
+            <div className={styles.dataItem}>
+              <div className={styles.dataLabel}>Tipo Consumidor</div>
+              <div className={styles.dataValue}>{datosVenta.tipoConsumidor || 'Consumidor Final'}</div>
+            </div>
+            <div className={styles.dataItem}>
+              <div className={styles.dataLabel}>Dirección</div>
+              <div className={styles.dataValue}>{datosVenta.direccion || '---'}</div>
+            </div>
+            <div className={styles.dataItem}>
+              <div className={styles.dataLabel}>Ciudad</div>
+              <div className={styles.dataValue}>{datosVenta.ciudad || '---'}</div>
+            </div>
+          </div>
+          
+          <div className={styles.dniSection}>
+            <div className={styles.dniLabel}>
+              DNI/CUIT (ML no expone el DNI real por privacidad)
+            </div>
             <input
               type="text"
               placeholder="Ingrese el DNI/CUIT del cliente"
               value={dniManual}
               onChange={(e) => setDniManual(e.target.value)}
-              className="border px-2 py-1 w-full"
+              className={styles.dniInput}
             />
-            <p className="text-xs text-gray-600 mt-1">
+            <div className={styles.dniNote}>
               Valor actual: {datosVenta.dni || '---'} (ID interno de ML)
-            </p>
+            </div>
           </div>
-          
-          <p><strong>Tipo consumidor:</strong> {datosVenta.tipoConsumidor || 'Consumidor Final'}</p>
-          <p><strong>Dirección:</strong> {datosVenta.direccion || '---'}</p>
-          <p><strong>Ciudad:</strong> {datosVenta.ciudad || '---'}</p>
 
-          <button onClick={enviarPorWhatsApp} className="mt-4 bg-green-600 text-white px-3 py-1 rounded">
+          <button onClick={enviarPorWhatsApp} className={styles.whatsappButton}>
             Enviar por WhatsApp
           </button>
         </div>
       )}
 
-      {mensajeEnviado && <p className="mt-4 text-blue-600">{mensajeEnviado}</p>}
+      {mensajeEnviado && (
+        <div className={`${styles.message} ${
+          mensajeEnviado.includes('enviado') ? styles.success : 
+          mensajeEnviado.includes('Error') ? styles.error : 
+          styles.info
+        }`}>
+          {mensajeEnviado}
+        </div>
+      )}
     </div>
   );
 }

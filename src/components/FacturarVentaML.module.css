@@ -1,0 +1,395 @@
+.container {
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 20px auto;
+    max-width: 100%;
+    padding: 20px;
+    width: 90vw;
+}
+
+.title {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 2rem;
+    color: #333;
+    text-align: center;
+}
+
+/* Toggle entre modos */
+.modeToggle {
+    display: flex;
+    margin-bottom: 2rem;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.modeButton {
+    padding: 12px 24px;
+    border: none;
+    background-color: #e9ecef;
+    color: #495057;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    min-width: 150px;
+}
+
+.modeButton:first-child {
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px;
+}
+
+.modeButton:last-child {
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.modeButton.active {
+    background-color: #007bff;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0,123,255,0.3);
+}
+
+.modeButton:hover:not(.active) {
+    background-color: #f8f9fa;
+    color: #007bff;
+}
+
+/* Sección de búsqueda ML */
+.searchSection {
+    width: 100%;
+    max-width: 600px;
+    margin-bottom: 2rem;
+}
+
+.searchInput {
+    width: 70%;
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    margin-right: 12px;
+    transition: border-color 0.3s ease;
+}
+
+.searchInput:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+}
+
+.searchButton {
+    padding: 12px 24px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.searchButton:hover {
+    background-color: #0056b3;
+}
+
+.searchButton:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+}
+
+/* Formulario manual */
+.manualForm {
+    width: 100%;
+    max-width: 800px;
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.formTitle {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    color: #333;
+    text-align: center;
+}
+
+.formGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+}
+
+.formLabel {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.formInput {
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+    background-color: white;
+}
+
+.formInput:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+}
+
+.formInput.readonly {
+    background-color: #f8f9fa;
+    color: #6c757d;
+    cursor: not-allowed;
+}
+
+.formSelect {
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    background-color: white;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+}
+
+.formSelect:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+}
+
+.submitButton {
+    width: 100%;
+    padding: 14px 24px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-top: 1rem;
+}
+
+.submitButton:hover {
+    background-color: #218838;
+}
+
+/* Sección de datos ML */
+.mlDataSection {
+    width: 100%;
+    max-width: 800px;
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.mlDataTitle {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    color: #333;
+    text-align: center;
+}
+
+.dataGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.dataItem {
+    padding: 0.75rem;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #007bff;
+}
+
+.dataLabel {
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+}
+
+.dataValue {
+    color: #333;
+    font-size: 1rem;
+}
+
+.dniSection {
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+.dniLabel {
+    font-weight: 600;
+    color: #856404;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.dniInput {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #ffeaa7;
+    border-radius: 6px;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.dniInput:focus {
+    outline: none;
+    border-color: #ffc107;
+    box-shadow: 0 0 0 3px rgba(255,193,7,0.1);
+}
+
+.dniNote {
+    font-size: 0.8rem;
+    color: #856404;
+    font-style: italic;
+}
+
+.whatsappButton {
+    width: 100%;
+    padding: 14px 24px;
+    background-color: #25d366;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-top: 1rem;
+}
+
+.whatsappButton:hover {
+    background-color: #1da851;
+}
+
+/* Mensajes de estado */
+.message {
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin: 1rem 0;
+    font-weight: 500;
+    text-align: center;
+}
+
+.message.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.message.info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+        width: 95vw;
+    }
+    
+    .title {
+        font-size: 1.5rem;
+    }
+    
+    .modeToggle {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .modeButton {
+        border-radius: 0 !important;
+        min-width: auto;
+    }
+    
+    .modeButton:first-child {
+        border-top-left-radius: 8px !important;
+        border-top-right-radius: 8px !important;
+    }
+    
+    .modeButton:last-child {
+        border-bottom-left-radius: 8px !important;
+        border-bottom-right-radius: 8px !important;
+    }
+    
+    .searchInput {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 12px;
+    }
+    
+    .searchButton {
+        width: 100%;
+    }
+    
+    .formGrid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .dataGrid {
+        grid-template-columns: 1fr;
+    }
+    
+    .manualForm,
+    .mlDataSection {
+        padding: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .title {
+        font-size: 1.25rem;
+    }
+    
+    .manualForm,
+    .mlDataSection {
+        padding: 1rem;
+    }
+    
+    .formTitle,
+    .mlDataTitle {
+        font-size: 1.25rem;
+    }
+}
