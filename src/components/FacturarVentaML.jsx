@@ -170,7 +170,7 @@ export default function FacturarVentaML() {
           <h3 className={styles.formTitle}>Datos de la Venta</h3>
           
           <div className={styles.formGrid}>
-            <div className={styles.formGroup}>
+            <div key="form-producto" className={styles.formGroup}>
               <label className={styles.formLabel}>Producto *</label>
               <input
                 type="text"
@@ -183,7 +183,7 @@ export default function FacturarVentaML() {
               />
             </div>
             
-            <div className={styles.formGroup}>
+            <div key="form-cliente" className={styles.formGroup}>
               <label className={styles.formLabel}>Cliente *</label>
               <input
                 type="text"
@@ -196,7 +196,7 @@ export default function FacturarVentaML() {
               />
             </div>
             
-            <div className={styles.formGroup}>
+            <div key="form-cantidad" className={styles.formGroup}>
               <label className={styles.formLabel}>Cantidad *</label>
               <input
                 type="number"
@@ -212,7 +212,7 @@ export default function FacturarVentaML() {
               />
             </div>
             
-            <div className={styles.formGroup}>
+            <div key="form-precio" className={styles.formGroup}>
               <label className={styles.formLabel}>Precio Unitario *</label>
               <input
                 type="number"
@@ -229,7 +229,7 @@ export default function FacturarVentaML() {
               />
             </div>
             
-            <div className={styles.formGroup}>
+            <div key="form-total" className={styles.formGroup}>
               <label className={styles.formLabel}>Total</label>
               <input
                 type="number"
@@ -242,7 +242,7 @@ export default function FacturarVentaML() {
               />
             </div>
             
-            <div className={styles.formGroup}>
+            <div key="form-dni" className={styles.formGroup}>
               <label className={styles.formLabel}>DNI/CUIT</label>
               <input
                 type="text"
@@ -254,7 +254,7 @@ export default function FacturarVentaML() {
               />
             </div>
             
-            <div className={styles.formGroup}>
+            <div key="form-tipo-consumidor" className={styles.formGroup}>
               <label className={styles.formLabel}>Tipo de Consumidor</label>
               <select
                 name="tipoConsumidor"
@@ -269,7 +269,7 @@ export default function FacturarVentaML() {
               </select>
             </div>
             
-            <div className={styles.formGroup}>
+            <div key="form-direccion" className={styles.formGroup}>
               <label className={styles.formLabel}>Dirección</label>
               <input
                 type="text"
@@ -281,7 +281,7 @@ export default function FacturarVentaML() {
               />
             </div>
             
-            <div className={styles.formGroup}>
+            <div key="form-ciudad" className={styles.formGroup}>
               <label className={styles.formLabel}>Ciudad</label>
               <input
                 type="text"
