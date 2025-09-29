@@ -684,6 +684,8 @@ router.get('/factura/:id', async (req, res) => {
       } catch (shippingError) {
         console.log(`⚠️ No se pudo obtener shipping:`, shippingError.message);
       }
+    } else {
+      console.log(`⚠️ Orden sin shipping.id - tipo "Acordás la entrega"`);
     }
 
     const producto = orden.order_items[0]?.item.title || '';
@@ -709,6 +711,11 @@ router.get('/factura/:id', async (req, res) => {
                                 orden.buyer?.billing_info?.street_name ||
                                 payment?.billing_address?.address_line ||
                                 '---';
+    
+    // Para órdenes "Acordás la entrega", usar datos del usuario
+    const direccionFinal = direccionFacturacion === '---' && datosUsuario.address ? 
+                          `${datosUsuario.address.city}, ${datosUsuario.address.state}` : 
+                          direccionFacturacion;
     
     // Dirección de envío (para referencia, pero no para facturación)
     const direccionEnvio = datosEnvio.receiver_address?.address_line || 
@@ -763,7 +770,7 @@ router.get('/factura/:id', async (req, res) => {
       precio,
       total,
       cliente,
-      direccion: direccionFacturacion, // Usar dirección de facturación
+      direccion: direccionFinal, // Usar dirección final (incluye "Acordás la entrega")
       direccionEnvio, // Para referencia
       dni,
       cuit,
