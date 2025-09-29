@@ -824,4 +824,64 @@ router.get('/debug/orden/:id', async (req, res) => {
   }
 });
 
+// Ruta pública para debug de billing info (sin autenticación)
+router.get('/debug/billing/:user_id', async (req, res) => {
+  const userId = req.params.user_id;
+  console.log(`🔍 [DEBUG] Consultando billing info para usuario: ${userId}`);
+
+  try {
+    let tokenDoc = await MeliToken.findOne();
+    if (!tokenDoc || !tokenDoc.access_token) {
+      return res.status(401).json({ error: 'No autenticado con Mercado Libre.' });
+    }
+
+    // Verificar si el token ha expirado o está cerca de expirar
+    const now = Date.now();
+    const tokenCreatedAt = new Date(tokenDoc.created_at).getTime();
+    const expiresInMs = tokenDoc.expires_in * 1000;
+    const bufferTimeMs = 5 * 60 * 1000; // 5 minutos antes de la expiración real
+
+    if (now > tokenCreatedAt + expiresInMs - bufferTimeMs) {
+      console.log('🔄 [DEBUG] Token de ML está expirado. Intentando refrescar...');
+      try {
+        tokenDoc.access_token = await refreshMeliToken(tokenDoc);
+        console.log('✅ [DEBUG] Token refrescado exitosamente');
+      } catch (refreshError) {
+        console.error('❌ [DEBUG] Fallo al refrescar el token:', refreshError.message);
+        return res.status(401).json({ error: 'Token de Mercado Libre expirado y no se pudo refrescar.' });
+      }
+    }
+
+    const accessToken = tokenDoc.access_token;
+
+    // Consultar billing info del usuario
+    const billingResponse = await axios.get(`https://api.mercadolibre.com/users/${userId}/billing_info`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    const billingInfo = billingResponse.data;
+
+    // Devolver la información de billing completa para debug
+    return res.json({
+      billing_info_completo: billingInfo,
+      info_debug: {
+        user_id: userId,
+        doc_number: billingInfo.doc_number,
+        company_name: billingInfo.company_name,
+        consumer_type: billingInfo.consumer_type,
+        address: billingInfo.address
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ [DEBUG] Error consultando billing info:', err.message);
+    return res.status(404).json({ 
+      error: 'No se pudo obtener billing info', 
+      details: err.message,
+      status_code: err.response?.status,
+      url_tentada: `https://api.mercadolibre.com/users/${userId}/billing_info`
+    });
+  }
+});
+
 module.exports = router;
