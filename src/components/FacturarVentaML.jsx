@@ -16,7 +16,8 @@ export default function FacturarVentaML() {
     cliente: '',
     dni: '',
     tipoConsumidor: 'Consumidor Final',
-    direccion: ''
+    direccion: '',
+    ciudad: ''
   });
 
   // Configuración de autenticación
@@ -102,7 +103,8 @@ export default function FacturarVentaML() {
         cliente: datosVenta.cliente,
         dni: dniManual || datosVenta.dni || '---',
         tipoConsumidor: datosVenta.tipoConsumidor || 'Consumidor Final',
-        direccion: datosVenta.direccion || '---'
+        direccion: datosVenta.direccion || '---',
+        ciudad: datosVenta.ciudad || '---'
       };
     }
 
@@ -118,6 +120,7 @@ export default function FacturarVentaML() {
 🏢 Razón social: ${datosParaEnviar.cliente}
 👤 Tipo consumidor: ${datosParaEnviar.tipoConsumidor}
 📍 Dirección: ${datosParaEnviar.direccion}
+🏙️ Ciudad: ${datosParaEnviar.ciudad}
 `.trim();
 
     const numeroFacturacion = "5493515193175";
@@ -276,6 +279,18 @@ export default function FacturarVentaML() {
                 placeholder="Dirección del cliente"
               />
             </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Ciudad</label>
+              <input
+                type="text"
+                name="ciudad"
+                value={datosManuales.ciudad}
+                onChange={handleInputChange}
+                className="border px-2 py-1 w-full"
+                placeholder="Ciudad del cliente"
+              />
+            </div>
           </div>
           
           <button 
@@ -315,6 +330,7 @@ export default function FacturarVentaML() {
           
           <p><strong>Tipo consumidor:</strong> {datosVenta.tipoConsumidor || 'Consumidor Final'}</p>
           <p><strong>Dirección:</strong> {datosVenta.direccion || '---'}</p>
+          <p><strong>Ciudad:</strong> {datosVenta.ciudad || '---'}</p>
 
           <button onClick={enviarPorWhatsApp} className="mt-4 bg-green-600 text-white px-3 py-1 rounded">
             Enviar por WhatsApp

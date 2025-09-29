@@ -722,6 +722,14 @@ router.get('/factura/:id', async (req, res) => {
                           `${datosUsuario.address.city}, ${datosUsuario.address.state}` : 
                           direccionFacturacion;
     
+    // Extraer ciudad de diferentes fuentes
+    const ciudad = datosEnvio.receiver_address?.city_name ||
+                   datosEnvio.receiver_address?.city ||
+                   datosUsuario.address?.city ||
+                   orden.buyer?.billing_info?.city ||
+                   payment?.billing_address?.city ||
+                   '---';
+    
     // Dirección de envío (para referencia, pero no para facturación)
     const direccionEnvio = datosEnvio.receiver_address?.address_line || 
                           datosEnvio.receiver_address?.street_name || 
@@ -777,6 +785,7 @@ router.get('/factura/:id', async (req, res) => {
       cliente,
       direccion: direccionFinal, // Usar dirección final (incluye "Acordás la entrega")
       direccionEnvio, // Para referencia
+      ciudad, // Ciudad extraída de diferentes fuentes
       dni,
       cuit,
       tipoConsumidor,
