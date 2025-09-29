@@ -309,35 +309,35 @@ export default function FacturarVentaML() {
           <h3 className={styles.mlDataTitle}>Datos de la Venta ML</h3>
           
           <div className={styles.dataGrid}>
-            <div className={styles.dataItem}>
+            <div key="producto" className={styles.dataItem}>
               <div className={styles.dataLabel}>Producto</div>
               <div className={styles.dataValue}>{datosVenta.producto}</div>
             </div>
-            <div className={styles.dataItem}>
+            <div key="cantidad" className={styles.dataItem}>
               <div className={styles.dataLabel}>Cantidad</div>
               <div className={styles.dataValue}>{datosVenta.cantidad}</div>
             </div>
-            <div className={styles.dataItem}>
+            <div key="precio" className={styles.dataItem}>
               <div className={styles.dataLabel}>Precio Final</div>
               <div className={styles.dataValue}>${datosVenta.precio}</div>
             </div>
-            <div className={styles.dataItem}>
+            <div key="total" className={styles.dataItem}>
               <div className={styles.dataLabel}>Total</div>
               <div className={styles.dataValue}>${datosVenta.total}</div>
             </div>
-            <div className={styles.dataItem}>
+            <div key="cliente" className={styles.dataItem}>
               <div className={styles.dataLabel}>Cliente</div>
               <div className={styles.dataValue}>{datosVenta.cliente}</div>
             </div>
-            <div className={styles.dataItem}>
+            <div key="tipo-consumidor" className={styles.dataItem}>
               <div className={styles.dataLabel}>Tipo Consumidor</div>
               <div className={styles.dataValue}>{datosVenta.tipoConsumidor || 'Consumidor Final'}</div>
             </div>
-            <div className={styles.dataItem}>
+            <div key="direccion" className={styles.dataItem}>
               <div className={styles.dataLabel}>Dirección</div>
               <div className={styles.dataValue}>{datosVenta.direccion || '---'}</div>
             </div>
-            <div className={styles.dataItem}>
+            <div key="ciudad" className={styles.dataItem}>
               <div className={styles.dataLabel}>Ciudad</div>
               <div className={styles.dataValue}>{datosVenta.ciudad || '---'}</div>
             </div>
