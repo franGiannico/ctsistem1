@@ -433,6 +433,7 @@ async function procesarSincronizacion() {
         // Acá seguimos igual que antes, pero con ordenesFiltradas
         for (const orden of ordenesFiltradas) {
           const idVenta = orden.id.toString();
+          console.log(`🔍 Procesando orden: ${idVenta}`);
 
           const item = orden.order_items[0];
           const title = item.item.title || "";
@@ -520,6 +521,8 @@ async function procesarSincronizacion() {
           atributos,
           tipoEnvio: envio.tipoEnvio   // 🔑 Nuevo campo
         });
+        
+        console.log(`💾 Guardando venta: ${idVenta} - ${nombreFinal} - ${cliente}`);
         
         // Log removido por seguridad
         ventasAGuardar.push(ventaAGuardar);
