@@ -56,6 +56,7 @@ export default function FacturarVentaML() {
         setDatosVenta(null);
         setMensajeEnviado('No se encontró la venta');
       } else {
+        console.log('Datos recibidos del backend:', data);
         setDatosVenta(data);
         setMensajeEnviado('');
       }
@@ -97,15 +98,15 @@ export default function FacturarVentaML() {
     } else {
       if (!datosVenta) return;
       datosParaEnviar = {
-        producto: datosVenta.producto,
-        cantidad: datosVenta.cantidad,
-        precio: datosVenta.precio,
-        total: datosVenta.total,
-        cliente: datosVenta.cliente,
-        dni: dniManual || datosVenta.dni || '---',
-        tipoConsumidor: datosVenta.tipoConsumidor || 'Consumidor Final',
-        direccion: datosVenta.direccion || '---',
-        ciudad: datosVenta.ciudad || '---'
+        producto: String(datosVenta.producto || '---'),
+        cantidad: String(datosVenta.cantidad || '---'),
+        precio: String(datosVenta.precio || '---'),
+        total: String(datosVenta.total || '---'),
+        cliente: String(datosVenta.cliente || '---'),
+        dni: String(dniManual || datosVenta.dni || '---'),
+        tipoConsumidor: String(datosVenta.tipoConsumidor || 'Consumidor Final'),
+        direccion: String(datosVenta.direccion || '---'),
+        ciudad: String(datosVenta.ciudad || '---')
       };
     }
 
@@ -311,35 +312,35 @@ export default function FacturarVentaML() {
           <div className={styles.dataGrid}>
             <div key="producto" className={styles.dataItem}>
               <div className={styles.dataLabel}>Producto</div>
-              <div className={styles.dataValue}>{datosVenta.producto}</div>
+              <div className={styles.dataValue}>{String(datosVenta.producto || '---')}</div>
             </div>
             <div key="cantidad" className={styles.dataItem}>
               <div className={styles.dataLabel}>Cantidad</div>
-              <div className={styles.dataValue}>{datosVenta.cantidad}</div>
+              <div className={styles.dataValue}>{String(datosVenta.cantidad || '---')}</div>
             </div>
             <div key="precio" className={styles.dataItem}>
               <div className={styles.dataLabel}>Precio Final</div>
-              <div className={styles.dataValue}>${datosVenta.precio}</div>
+              <div className={styles.dataValue}>${String(datosVenta.precio || '---')}</div>
             </div>
             <div key="total" className={styles.dataItem}>
               <div className={styles.dataLabel}>Total</div>
-              <div className={styles.dataValue}>${datosVenta.total}</div>
+              <div className={styles.dataValue}>${String(datosVenta.total || '---')}</div>
             </div>
             <div key="cliente" className={styles.dataItem}>
               <div className={styles.dataLabel}>Cliente</div>
-              <div className={styles.dataValue}>{datosVenta.cliente}</div>
+              <div className={styles.dataValue}>{String(datosVenta.cliente || '---')}</div>
             </div>
             <div key="tipo-consumidor" className={styles.dataItem}>
               <div className={styles.dataLabel}>Tipo Consumidor</div>
-              <div className={styles.dataValue}>{datosVenta.tipoConsumidor || 'Consumidor Final'}</div>
+              <div className={styles.dataValue}>{String(datosVenta.tipoConsumidor || 'Consumidor Final')}</div>
             </div>
             <div key="direccion" className={styles.dataItem}>
               <div className={styles.dataLabel}>Dirección</div>
-              <div className={styles.dataValue}>{datosVenta.direccion || '---'}</div>
+              <div className={styles.dataValue}>{String(datosVenta.direccion || '---')}</div>
             </div>
             <div key="ciudad" className={styles.dataItem}>
               <div className={styles.dataLabel}>Ciudad</div>
-              <div className={styles.dataValue}>{datosVenta.ciudad || '---'}</div>
+              <div className={styles.dataValue}>{String(datosVenta.ciudad || '---')}</div>
             </div>
           </div>
           
