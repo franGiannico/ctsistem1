@@ -780,7 +780,13 @@ router.get('/factura/:id', async (req, res) => {
 
   } catch (err) {
     console.error('❌ Error buscando venta:', err.message);
-    return res.status(404).json({ error: 'No se encontró la venta' });
+    return res.status(404).json({ 
+      error: 'No se encontró la venta en Mercado Libre',
+      orden_id: numeroVenta,
+      detalles: err.message,
+      posible_causa: 'Orden no existe, no es tuya, o ML no la expone',
+      sugerencia: 'Verifica en tu panel de ML que la orden existe y es tuya'
+    });
   }
 });
 
