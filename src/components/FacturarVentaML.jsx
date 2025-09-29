@@ -5,6 +5,19 @@ export default function FacturarVentaML() {
   const [datosVenta, setDatosVenta] = useState(null);
   const [mensajeEnviado, setMensajeEnviado] = useState('');
   const [dniManual, setDniManual] = useState('');
+  const [modoManual, setModoManual] = useState(false);
+  
+  // Estados para formulario manual
+  const [datosManuales, setDatosManuales] = useState({
+    producto: '',
+    cantidad: 1,
+    precio: '',
+    total: '',
+    cliente: '',
+    dni: '',
+    tipoConsumidor: 'Consumidor Final',
+    direccion: ''
+  });
 
   // Configuración de autenticación
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
@@ -51,23 +64,60 @@ export default function FacturarVentaML() {
     }
   };
 
-  const enviarPorWhatsApp = () => {
-    if (!datosVenta) return;
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setDatosManuales(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
-    const dniFinal = dniManual || datosVenta.dni || '---';
+  const calcularTotal = () => {
+    const cantidad = parseFloat(datosManuales.cantidad) || 0;
+    const precio = parseFloat(datosManuales.precio) || 0;
+    const total = cantidad * precio;
+    setDatosManuales(prev => ({
+      ...prev,
+      total: total.toString()
+    }));
+  };
+
+  const enviarPorWhatsApp = () => {
+    let datosParaEnviar;
+    
+    if (modoManual) {
+      // Validar campos requeridos
+      if (!datosManuales.producto || !datosManuales.cantidad || !datosManuales.precio || !datosManuales.cliente) {
+        setMensajeEnviado('Por favor complete todos los campos requeridos');
+        return;
+      }
+      datosParaEnviar = datosManuales;
+    } else {
+      if (!datosVenta) return;
+      datosParaEnviar = {
+        producto: datosVenta.producto,
+        cantidad: datosVenta.cantidad,
+        precio: datosVenta.precio,
+        total: datosVenta.total,
+        cliente: datosVenta.cliente,
+        dni: dniManual || datosVenta.dni || '---',
+        tipoConsumidor: datosVenta.tipoConsumidor || 'Consumidor Final',
+        direccion: datosVenta.direccion || '---'
+      };
+    }
 
     const texto = `
-💳 *FACTURAR VENTA ML*  
+💳 *FACTURAR VENTA${modoManual ? ' MANUAL' : ' ML'}*  
 🗓️ Fecha: ${new Date().toLocaleDateString()}
-🧾 Producto: ${datosVenta.producto}
-📦 Unidades: ${datosVenta.cantidad}
-💲 Precio final: $${datosVenta.precio}
-📈 Total: $${datosVenta.total}
+🧾 Producto: ${datosParaEnviar.producto}
+📦 Unidades: ${datosParaEnviar.cantidad}
+💲 Precio final: $${datosParaEnviar.precio}
+📈 Total: $${datosParaEnviar.total}
 📑 Tipo de factura: A
-🧍 DNI/CUIT: ${dniFinal}
-🏢 Razón social: ${datosVenta.cliente}
-👤 Tipo consumidor: ${datosVenta.tipoConsumidor || 'Consumidor Final'}
-📍 Dirección: ${datosVenta.direccion || '---'}
+🧍 DNI/CUIT: ${datosParaEnviar.dni}
+🏢 Razón social: ${datosParaEnviar.cliente}
+👤 Tipo consumidor: ${datosParaEnviar.tipoConsumidor}
+📍 Dirección: ${datosParaEnviar.direccion}
 `.trim();
 
     const numeroFacturacion = "5493515193175";
@@ -78,19 +128,169 @@ export default function FacturarVentaML() {
 
   return (
     <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">Facturar Venta Mercado Libre</h2>
+      <h2 className="text-xl font-bold mb-4">Facturar Venta</h2>
 
-      <input
-        type="text"
-        placeholder="Número de venta ML"
-        value={numeroVenta}
-        onChange={(e) => setNumeroVenta(e.target.value)}
-        className="border px-2 py-1 mr-2"
-      />
-      <button onClick={buscarVenta} className="bg-blue-500 text-white px-3 py-1 rounded">Buscar</button>
+      {/* Toggle entre modo ML y manual */}
+      <div className="mb-4">
+        <button
+          onClick={() => setModoManual(false)}
+          className={`px-4 py-2 rounded-l ${!modoManual ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+        >
+          Buscar en ML
+        </button>
+        <button
+          onClick={() => setModoManual(true)}
+          className={`px-4 py-2 rounded-r ${modoManual ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+        >
+          Cargar Manual
+        </button>
+      </div>
 
-      {datosVenta && (
+      {/* Modo búsqueda ML */}
+      {!modoManual && (
+        <div className="mb-4">
+          <input
+            type="text"
+            placeholder="Número de venta ML"
+            value={numeroVenta}
+            onChange={(e) => setNumeroVenta(e.target.value)}
+            className="border px-2 py-1 mr-2"
+          />
+          <button onClick={buscarVenta} className="bg-blue-500 text-white px-3 py-1 rounded">Buscar</button>
+        </div>
+      )}
+
+      {/* Modo manual */}
+      {modoManual && (
+        <div className="border p-4 bg-gray-50 rounded mb-4">
+          <h3 className="text-lg font-semibold mb-3">Datos de la Venta</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Producto *</label>
+              <input
+                type="text"
+                name="producto"
+                value={datosManuales.producto}
+                onChange={handleInputChange}
+                className="border px-2 py-1 w-full"
+                placeholder="Nombre del producto"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Cliente *</label>
+              <input
+                type="text"
+                name="cliente"
+                value={datosManuales.cliente}
+                onChange={handleInputChange}
+                className="border px-2 py-1 w-full"
+                placeholder="Nombre del cliente"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Cantidad *</label>
+              <input
+                type="number"
+                name="cantidad"
+                value={datosManuales.cantidad}
+                onChange={(e) => {
+                  handleInputChange(e);
+                  setTimeout(calcularTotal, 100); // Calcular total después del cambio
+                }}
+                className="border px-2 py-1 w-full"
+                min="1"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Precio Unitario *</label>
+              <input
+                type="number"
+                name="precio"
+                value={datosManuales.precio}
+                onChange={(e) => {
+                  handleInputChange(e);
+                  setTimeout(calcularTotal, 100); // Calcular total después del cambio
+                }}
+                className="border px-2 py-1 w-full"
+                step="0.01"
+                min="0"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Total</label>
+              <input
+                type="number"
+                name="total"
+                value={datosManuales.total}
+                onChange={handleInputChange}
+                className="border px-2 py-1 w-full bg-gray-100"
+                step="0.01"
+                readOnly
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">DNI/CUIT</label>
+              <input
+                type="text"
+                name="dni"
+                value={datosManuales.dni}
+                onChange={handleInputChange}
+                className="border px-2 py-1 w-full"
+                placeholder="DNI o CUIT del cliente"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Tipo de Consumidor</label>
+              <select
+                name="tipoConsumidor"
+                value={datosManuales.tipoConsumidor}
+                onChange={handleInputChange}
+                className="border px-2 py-1 w-full"
+              >
+                <option value="Consumidor Final">Consumidor Final</option>
+                <option value="Responsable Inscripto">Responsable Inscripto</option>
+                <option value="Monotributo">Monotributo</option>
+                <option value="Exento">Exento</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Dirección</label>
+              <input
+                type="text"
+                name="direccion"
+                value={datosManuales.direccion}
+                onChange={handleInputChange}
+                className="border px-2 py-1 w-full"
+                placeholder="Dirección del cliente"
+              />
+            </div>
+          </div>
+          
+          <button 
+            onClick={enviarPorWhatsApp} 
+            className="mt-4 bg-green-600 text-white px-4 py-2 rounded"
+          >
+            Enviar por WhatsApp
+          </button>
+        </div>
+      )}
+
+      {/* Mostrar datos de ML solo cuando no esté en modo manual */}
+      {!modoManual && datosVenta && (
         <div className="mt-4 border p-4 bg-gray-50 rounded">
+          <h3 className="text-lg font-semibold mb-3">Datos de la Venta ML</h3>
           <p><strong>Producto:</strong> {datosVenta.producto}</p>
           <p><strong>Cantidad:</strong> {datosVenta.cantidad}</p>
           <p><strong>Precio final:</strong> ${datosVenta.precio}</p>
