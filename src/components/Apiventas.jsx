@@ -178,7 +178,7 @@ function Apiventas() {
 
   // Borrar ventas completadas y entregadas
   const borrarVentasCompletadas = async () => {
-    if (!window.confirm("¿Seguro que quieres eliminar todas las ventas completadas y entregadas?")) return;
+    if (!window.confirm("¿Seguro que quieres eliminar todas las ventas que estén COMPLETADAS Y ENTREGADAS?")) return;
     try {
       await authenticatedFetch(`${BACKEND_URL}/apiventas/borrar-ventas-completadas`, { method: "DELETE" });
       cargarVentasDesdeServidor();
