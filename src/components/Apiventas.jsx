@@ -320,6 +320,9 @@ function Apiventas() {
             <p className={styles.ventasPreparadas}>
               Ventas Preparadas: {ventas.filter((v) => v.completada).length}
             </p>
+            <p className={styles.ventasEntregadas}>
+              Ventas Entregadas: {ventas.filter((v) => v.entregada).length}
+            </p>
           </div>
 
           <h3>Hora Límite: {horaLimite}</h3>

@@ -241,6 +241,11 @@
     font-weight: bold;
 }
 
+.ventasEntregadas {
+    color: blue;
+    font-weight: bold;
+}
+
 
 /* 📱 **RESPONSIVE**: Ajustes para pantallas pequeñas */
 @media (max-width: 768px) {
@@ -253,7 +258,7 @@
         padding: 5px 0; /* Ajusta el espaciado */
     }
 
-    .ventasTotales, .ventasPreparadas {
+    .ventasTotales, .ventasPreparadas, .ventasEntregadas {
         font-size: 0.9rem; /* Reduce el tamaño de fuente */
         display: block; /* Hace que cada línea se vea en su propio espacio */
     }
