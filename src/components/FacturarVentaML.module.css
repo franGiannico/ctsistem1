@@ -291,12 +291,13 @@
 
 .tipoConsumidorSelect {
     width: 100%;
-    padding: 0.75rem;
+    padding: 0.5rem;
     border: 2px solid #e1e5e9;
-    border-radius: 8px;
-    font-size: 1rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
     background-color: white;
     transition: all 0.2s ease;
+    margin-top: 0.25rem;
 }
 
 .tipoConsumidorSelect:focus {

@@ -337,7 +337,16 @@ export default function FacturarVentaML() {
             </div>
             <div key="tipo-consumidor" className={styles.dataItem}>
               <div className={styles.dataLabel}>Tipo Consumidor</div>
-              <div className={styles.dataValue}>{String(datosVenta.tipoConsumidor || 'Consumidor Final')}</div>
+              <select
+                value={tipoConsumidorSeleccionado}
+                onChange={(e) => setTipoConsumidorSeleccionado(e.target.value)}
+                className={styles.tipoConsumidorSelect}
+              >
+                <option value="Consumidor Final">Consumidor Final</option>
+                <option value="Responsable Inscripto">Responsable Inscripto</option>
+                <option value="Monotributo">Monotributo</option>
+                <option value="Exento">Exento</option>
+              </select>
             </div>
             <div key="direccion" className={styles.dataItem}>
               <div className={styles.dataLabel}>Dirección</div>
@@ -363,22 +372,6 @@ export default function FacturarVentaML() {
             <div className={styles.dniNote}>
               Valor actual: {datosVenta.dni || '---'} (ID interno de ML)
             </div>
-          </div>
-
-          <div className={styles.tipoConsumidorSection}>
-            <div className={styles.tipoConsumidorLabel}>
-              Tipo de Consumidor
-            </div>
-            <select
-              value={tipoConsumidorSeleccionado}
-              onChange={(e) => setTipoConsumidorSeleccionado(e.target.value)}
-              className={styles.tipoConsumidorSelect}
-            >
-              <option value="Consumidor Final">Consumidor Final</option>
-              <option value="Responsable Inscripto">Responsable Inscripto</option>
-              <option value="Monotributo">Monotributo</option>
-              <option value="Exento">Exento</option>
-            </select>
           </div>
 
           <button onClick={enviarPorWhatsApp} className={styles.whatsappButton}>
