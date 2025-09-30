@@ -7,6 +7,7 @@ export default function FacturarVentaML() {
   const [mensajeEnviado, setMensajeEnviado] = useState('');
   const [dniManual, setDniManual] = useState('');
   const [modoManual, setModoManual] = useState(false);
+  const [tipoConsumidorSeleccionado, setTipoConsumidorSeleccionado] = useState('Consumidor Final');
   
   // Estados para formulario manual
   const [datosManuales, setDatosManuales] = useState({
@@ -108,7 +109,7 @@ export default function FacturarVentaML() {
         total: String(datosVenta.total || '---'),
         cliente: String(datosVenta.cliente || '---'),
         dni: String(dniManual || datosVenta.dni || '---'),
-        tipoConsumidor: String(datosVenta.tipoConsumidor || 'Consumidor Final'),
+               tipoConsumidor: tipoConsumidorSeleccionado,
         direccion: String(datosVenta.direccion || '---'),
         ciudad: String(datosVenta.ciudad || '---')
       };
@@ -362,6 +363,22 @@ export default function FacturarVentaML() {
             <div className={styles.dniNote}>
               Valor actual: {datosVenta.dni || '---'} (ID interno de ML)
             </div>
+          </div>
+
+          <div className={styles.tipoConsumidorSection}>
+            <div className={styles.tipoConsumidorLabel}>
+              Tipo de Consumidor
+            </div>
+            <select
+              value={tipoConsumidorSeleccionado}
+              onChange={(e) => setTipoConsumidorSeleccionado(e.target.value)}
+              className={styles.tipoConsumidorSelect}
+            >
+              <option value="Consumidor Final">Consumidor Final</option>
+              <option value="Responsable Inscripto">Responsable Inscripto</option>
+              <option value="Monotributo">Monotributo</option>
+              <option value="Exento">Exento</option>
+            </select>
           </div>
 
           <button onClick={enviarPorWhatsApp} className={styles.whatsappButton}>

@@ -757,7 +757,8 @@ router.get('/factura/:id', async (req, res) => {
                 orden.buyer?.billing_info?.doc_number || 
                 '';
     const cuit = dni; // En ML, DNI y CUIT suelen ser lo mismo
-    const tipoConsumidor = datosBilling.consumer_type || datosPayment.payer?.consumer_type || 'Consumidor Final';
+    // Campo booleano para indicar si necesita selección de tipo de consumidor
+    const necesitaSeleccionTipoConsumidor = true;
     
     // Información adicional para debug
     const infoAdicional = {
@@ -790,7 +791,7 @@ router.get('/factura/:id', async (req, res) => {
       ciudad, // Ciudad extraída de diferentes fuentes
       dni,
       cuit,
-      tipoConsumidor,
+      necesitaSeleccionTipoConsumidor,
       infoAdicional // Para debug
     });
 
@@ -825,7 +826,7 @@ router.get('/factura/:id', async (req, res) => {
             ciudad: '---',
             dni: primeraOrden.buyer?.id?.toString() || '---',
             cuit: primeraOrden.buyer?.id?.toString() || '---',
-            tipoConsumidor: 'Consumidor Final',
+            necesitaSeleccionTipoConsumidor: true,
             infoAdicional: {
               esPack: true,
               packId: numeroVenta,

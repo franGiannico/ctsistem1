@@ -277,6 +277,38 @@
     font-style: italic;
 }
 
+/* Tipo de Consumidor Section */
+.tipoConsumidorSection {
+    margin-bottom: 1rem;
+}
+
+.tipoConsumidorLabel {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.tipoConsumidorSelect {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e1e5e9;
+    border-radius: 8px;
+    font-size: 1rem;
+    background-color: white;
+    transition: all 0.2s ease;
+}
+
+.tipoConsumidorSelect:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.tipoConsumidorSelect:hover {
+    border-color: #007bff;
+}
+
 .whatsappButton {
     width: 100%;
     padding: 14px 24px;
