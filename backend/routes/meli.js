@@ -719,13 +719,13 @@ router.get('/factura/:id', async (req, res) => {
     
     // Para órdenes "Acordás la entrega", usar datos del usuario
     const direccionFinal = direccionFacturacion === '---' && datosUsuario.address ? 
-                          `${datosUsuario.address.city}, ${datosUsuario.address.state}` : 
+                          `${datosUsuario.address.city?.name || '---'}, ${datosUsuario.address.state?.name || '---'}` : 
                           direccionFacturacion;
     
     // Extraer ciudad de diferentes fuentes
     const ciudad = datosEnvio.receiver_address?.city_name ||
-                   datosEnvio.receiver_address?.city ||
-                   datosUsuario.address?.city ||
+                   datosEnvio.receiver_address?.city?.name ||
+                   datosUsuario.address?.city?.name ||
                    orden.buyer?.billing_info?.city ||
                    payment?.billing_address?.city ||
                    '---';
