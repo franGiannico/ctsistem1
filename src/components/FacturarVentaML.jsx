@@ -115,14 +115,17 @@ export default function FacturarVentaML() {
       };
     }
 
-    const texto = `
+           // Determinar tipo de factura según tipo de consumidor
+           const tipoFactura = datosParaEnviar.tipoConsumidor === 'Consumidor Final' ? 'B' : 'A';
+
+           const texto = `
 💳 *FACTURAR VENTA${modoManual ? ' MANUAL' : ' ML'}*  
 🗓️ Fecha: ${new Date().toLocaleDateString()}
 🧾 Producto: ${datosParaEnviar.producto}
 📦 Unidades: ${datosParaEnviar.cantidad}
 💲 Precio final: $${datosParaEnviar.precio}
 📈 Total: $${datosParaEnviar.total}
-📑 Tipo de factura: A
+📑 Tipo de factura: ${tipoFactura}
 🧍 DNI/CUIT: ${datosParaEnviar.dni}
 🏢 Razón social: ${datosParaEnviar.cliente}
 👤 Tipo consumidor: ${datosParaEnviar.tipoConsumidor}
