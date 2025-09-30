@@ -54,7 +54,7 @@ export default function FacturarVentaML() {
       const data = await res.json();
       if (data.error) {
         setDatosVenta(null);
-        setMensajeEnviado('No se encontró la venta');
+        setMensajeEnviado(`No se encontró la venta: ${data.error}`);
       } else {
         console.log('Datos recibidos del backend:', data);
         setDatosVenta(data);
@@ -63,7 +63,11 @@ export default function FacturarVentaML() {
     } catch (error) {
       console.error('Error buscando venta:', error);
       setDatosVenta(null);
-      setMensajeEnviado('Error al buscar la venta');
+      if (error.message.includes('404')) {
+        setMensajeEnviado(`La venta ${numeroVenta} no existe o no es accesible desde tu cuenta de ML`);
+      } else {
+        setMensajeEnviado(`Error al buscar la venta: ${error.message}`);
+      }
     }
   };
 
