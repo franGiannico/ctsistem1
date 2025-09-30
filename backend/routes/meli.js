@@ -793,7 +793,50 @@ router.get('/factura/:id', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('❌ Error buscando venta:', err.message);
+    console.error('❌ Error buscando venta individual:', err.message);
+    
+    // Si no se encuentra como orden individual, intentar como pack
+    if (err.response?.status === 404) {
+      console.log(`🔄 Intentando buscar como pack: ${numeroVenta}`);
+      try {
+        const packResponse = await axios.get(`https://api.mercadolibre.com/marketplace/orders/pack/${numeroVenta}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        
+        const packData = packResponse.data;
+        console.log(`✅ Pack encontrado con ${packData.orders?.length || 0} órdenes`);
+        
+        // Si el pack tiene órdenes, tomar la primera
+        if (packData.orders && packData.orders.length > 0) {
+          const primeraOrden = packData.orders[0];
+          console.log(`📦 Usando primera orden del pack: ${primeraOrden.id}`);
+          
+          // Procesar la primera orden del pack como si fuera una orden individual
+          // (Aquí podrías repetir la lógica de procesamiento, pero por simplicidad devolvemos info del pack)
+          return res.json({
+            producto: primeraOrden.order_items?.[0]?.item?.title || 'Producto del pack',
+            cantidad: primeraOrden.order_items?.[0]?.quantity || 1,
+            precio: primeraOrden.order_items?.[0]?.unit_price || 0,
+            total: primeraOrden.total_amount || 0,
+            cliente: `${primeraOrden.buyer?.first_name || ''} ${primeraOrden.buyer?.last_name || ''}`.trim() || primeraOrden.buyer?.nickname || 'Cliente del pack',
+            direccion: '---', // Los packs pueden tener múltiples direcciones
+            ciudad: '---',
+            dni: primeraOrden.buyer?.id?.toString() || '---',
+            cuit: primeraOrden.buyer?.id?.toString() || '---',
+            tipoConsumidor: 'Consumidor Final',
+            infoAdicional: {
+              esPack: true,
+              packId: numeroVenta,
+              totalOrdenes: packData.orders?.length || 0,
+              ordenes: packData.orders?.map(o => o.id) || []
+            }
+          });
+        }
+      } catch (packError) {
+        console.error('❌ Error buscando pack:', packError.message);
+      }
+    }
+    
     return res.status(404).json({ 
       error: 'No se encontró la venta en Mercado Libre',
       orden_id: numeroVenta,
