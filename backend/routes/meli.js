@@ -836,6 +836,8 @@ router.get('/factura/:id', async (req, res) => {
         }
       } catch (packError) {
         console.error('❌ Error buscando pack:', packError.message);
+        console.error('📊 Status del error pack:', packError.response?.status);
+        console.error('📊 Response pack:', packError.response?.data);
       }
     }
     
