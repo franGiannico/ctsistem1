@@ -426,6 +426,17 @@ async function procesarSincronizacion() {
         // Log de tags removido por seguridad
 
 
+      // Obtener estados existentes de ventas ML antes de sincronizar
+      const ventasExistentes = await Venta.find({ esML: true });
+      const estadosExistentes = {};
+      ventasExistentes.forEach(venta => {
+        estadosExistentes[venta.numeroVenta] = {
+          completada: venta.completada,
+          entregada: venta.entregada
+        };
+      });
+      console.log(`📊 Estados preservados para ${Object.keys(estadosExistentes).length} ventas ML existentes`);
+
       // Limpiar ventas anteriores de ML
       await Venta.deleteMany({ esML: true });
       // Log removido por seguridad
@@ -507,7 +518,8 @@ async function procesarSincronizacion() {
         const imagen = await obtenerImagenProducto(item.item.id, access_token, axios);
         // Log removido por seguridad
 
-        // 👇 guardamos la venta en Mongo con ambos campos
+        // 👇 guardamos la venta en Mongo preservando estados existentes
+        const estadoExistente = estadosExistentes[idVenta] || { completada: false, entregada: false };
         const ventaAGuardar = new Venta({
           sku,
           nombre: nombreFinal,
@@ -515,8 +527,8 @@ async function procesarSincronizacion() {
           numeroVenta: idVenta,
           cliente,
           puntoDespacho,
-          completada: false,
-          entregada: false,
+          completada: estadoExistente.completada,
+          entregada: estadoExistente.entregada,
           imagen,
           esML: true,
           variationId,
@@ -524,7 +536,7 @@ async function procesarSincronizacion() {
           tipoEnvio: envio.tipoEnvio   // 🔑 Nuevo campo
         });
         
-        console.log(`💾 Guardando venta: Usando=${idVenta} (ID=${orden.id}, PackID=${packId}) - ${nombreFinal} - ${cliente}`);
+        console.log(`💾 Guardando venta: Usando=${idVenta} (ID=${orden.id}, PackID=${packId}) - ${nombreFinal} - ${cliente} - Estados: completada=${estadoExistente.completada}, entregada=${estadoExistente.entregada}`);
         
         // Log removido por seguridad
         ventasAGuardar.push(ventaAGuardar);
