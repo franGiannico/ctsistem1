@@ -841,12 +841,27 @@ router.get('/factura/:id', async (req, res) => {
       }
     }
     
+    // Determinar el tipo de error específico
+    let errorMessage = 'No se encontró la venta en Mercado Libre';
+    let posibleCausa = 'Orden no existe, no es tuya, o ML no la expone';
+    let sugerencia = 'Verifica en tu panel de ML que la orden existe y es tuya';
+    
+    if (err.response?.status === 403 && err.response?.data?.message === 'Invalid caller.id') {
+      errorMessage = 'Esta venta no pertenece a tu cuenta de Mercado Libre';
+      posibleCausa = 'El pack/orden pertenece a otro vendedor';
+      sugerencia = 'Verifica que estés usando el ID correcto de una venta tuya';
+    } else if (err.response?.status === 404) {
+      errorMessage = 'La venta no existe en Mercado Libre';
+      posibleCausa = 'ID incorrecto o venta eliminada';
+      sugerencia = 'Verifica el número de venta en tu panel de ML';
+    }
+    
     return res.status(404).json({ 
-      error: 'No se encontró la venta en Mercado Libre',
+      error: errorMessage,
       orden_id: numeroVenta,
       detalles: err.message,
-      posible_causa: 'Orden no existe, no es tuya, o ML no la expone',
-      sugerencia: 'Verifica en tu panel de ML que la orden existe y es tuya'
+      posible_causa: posibleCausa,
+      sugerencia: sugerencia
     });
   }
 });
