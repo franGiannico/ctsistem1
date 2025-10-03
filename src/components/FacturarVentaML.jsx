@@ -10,11 +10,16 @@ export default function FacturarVentaML() {
   const [tipoConsumidorSeleccionado, setTipoConsumidorSeleccionado] = useState('Consumidor Final');
   
   // Estados para formulario manual
-  const [datosManuales, setDatosManuales] = useState({
-    producto: '',
-    cantidad: 1,
-    precio: '',
-    total: '',
+  const [productos, setProductos] = useState([
+    {
+      id: 1,
+      producto: '',
+      cantidad: 1,
+      precio: '',
+      total: ''
+    }
+  ]);
+  const [datosCliente, setDatosCliente] = useState({
     cliente: '',
     dni: '',
     tipoConsumidor: 'Consumidor Final',
@@ -72,34 +77,86 @@ export default function FacturarVentaML() {
     }
   };
 
-  const handleInputChange = (e) => {
+  // Función para manejar cambios en datos del cliente
+  const handleClienteChange = (e) => {
     const { name, value } = e.target;
-    setDatosManuales(prev => ({
+    setDatosCliente(prev => ({
       ...prev,
       [name]: value
     }));
   };
 
-  const calcularTotal = () => {
-    const cantidad = parseFloat(datosManuales.cantidad) || 0;
-    const precio = parseFloat(datosManuales.precio) || 0;
-    const total = cantidad * precio;
-    setDatosManuales(prev => ({
-      ...prev,
-      total: total.toString()
+  // Función para manejar cambios en productos
+  const handleProductoChange = (productoId, e) => {
+    const { name, value } = e.target;
+    setProductos(prev => prev.map(producto => {
+      if (producto.id === productoId) {
+        const updatedProducto = {
+          ...producto,
+          [name]: value
+        };
+        
+        // Calcular total automáticamente si cambian cantidad o precio
+        if (name === 'cantidad' || name === 'precio') {
+          const cantidad = parseFloat(updatedProducto.cantidad) || 0;
+          const precio = parseFloat(updatedProducto.precio) || 0;
+          updatedProducto.total = (cantidad * precio).toString();
+        }
+        
+        return updatedProducto;
+      }
+      return producto;
     }));
   };
+
+  // Función para agregar un nuevo producto
+  const agregarProducto = () => {
+    const nuevoId = Math.max(...productos.map(p => p.id)) + 1;
+    setProductos(prev => [...prev, {
+      id: nuevoId,
+      producto: '',
+      cantidad: 1,
+      precio: '',
+      total: ''
+    }]);
+  };
+
+  // Función para eliminar un producto
+  const eliminarProducto = (productoId) => {
+    if (productos.length > 1) {
+      setProductos(prev => prev.filter(p => p.id !== productoId));
+    }
+  };
+
+  // Función para calcular el total general
+  const calcularTotalGeneral = () => {
+    return productos.reduce((total, producto) => {
+      return total + (parseFloat(producto.total) || 0);
+    }, 0);
+  };
+
 
   const enviarPorWhatsApp = () => {
     let datosParaEnviar;
     
     if (modoManual) {
       // Validar campos requeridos
-      if (!datosManuales.producto || !datosManuales.cantidad || !datosManuales.precio || !datosManuales.cliente) {
-        setMensajeEnviado('Por favor complete todos los campos requeridos');
+      const productosIncompletos = productos.some(p => !p.producto || !p.cantidad || !p.precio);
+      if (productosIncompletos || !datosCliente.cliente) {
+        setMensajeEnviado('Por favor complete todos los campos requeridos de productos y cliente');
         return;
       }
-      datosParaEnviar = datosManuales;
+      
+      // Preparar datos para envío con múltiples productos
+      datosParaEnviar = {
+        productos: productos,
+        cliente: datosCliente.cliente,
+        dni: datosCliente.dni || '---',
+        tipoConsumidor: datosCliente.tipoConsumidor,
+        direccion: datosCliente.direccion || '---',
+        ciudad: datosCliente.ciudad || '---',
+        totalGeneral: calcularTotalGeneral()
+      };
     } else {
       if (!datosVenta) return;
       datosParaEnviar = {
@@ -118,12 +175,34 @@ export default function FacturarVentaML() {
            // Determinar tipo de factura según tipo de consumidor
            const tipoFactura = datosParaEnviar.tipoConsumidor === 'Consumidor Final' ? 'B' : 'A';
 
-           const texto = `
+           let texto;
+           if (modoManual && datosParaEnviar.productos) {
+             // Formato para múltiples productos
+             const productosTexto = datosParaEnviar.productos.map((p, index) => 
+               `${index + 1}. ${p.producto} - ${p.cantidad}u x $${p.precio} = $${p.total}`
+             ).join('\n');
+             
+             texto = `
+💳 *FACTURAR VENTA MANUAL*  
+🗓️ Fecha: ${new Date().toLocaleDateString()}
+📋 Productos:
+${productosTexto}
+📈 Total General: $${datosParaEnviar.totalGeneral}
+📑 Tipo de factura: ${tipoFactura}
+🧍 DNI/CUIT: ${datosParaEnviar.dni}
+🏢 Razón social: ${datosParaEnviar.cliente}
+👤 Tipo consumidor: ${datosParaEnviar.tipoConsumidor}
+📍 Dirección: ${datosParaEnviar.direccion}
+🏙️ Ciudad: ${datosParaEnviar.ciudad}
+`.trim();
+           } else {
+             // Formato para un solo producto (ML o manual simple)
+             texto = `
 💳 *FACTURAR VENTA${modoManual ? ' MANUAL' : ' ML'}*  
 🗓️ Fecha: ${new Date().toLocaleDateString()}
 🧾 Producto: ${datosParaEnviar.producto}
 📦 Unidades: ${datosParaEnviar.cantidad}
-💲 Precio final: $${datosParaEnviar.precio}
+💲 Precio Unitario: $${datosParaEnviar.precio}
 📈 Total: $${datosParaEnviar.total}
 📑 Tipo de factura: ${tipoFactura}
 🧍 DNI/CUIT: ${datosParaEnviar.dni}
@@ -132,6 +211,7 @@ export default function FacturarVentaML() {
 📍 Dirección: ${datosParaEnviar.direccion}
 🏙️ Ciudad: ${datosParaEnviar.ciudad}
 `.trim();
+           }
 
     const numeroFacturacion = "5493515193175";
     const url = `https://wa.me/${numeroFacturacion}?text=${encodeURIComponent(texto)}`;
@@ -178,128 +258,165 @@ export default function FacturarVentaML() {
         <div className={styles.manualForm}>
           <h3 className={styles.formTitle}>Datos de la Venta</h3>
           
-          <div className={styles.formGrid}>
-            <div key="form-producto" className={styles.formGroup}>
-              <label className={styles.formLabel}>Producto *</label>
-              <input
-                type="text"
-                name="producto"
-                value={datosManuales.producto}
-                onChange={handleInputChange}
-                className={styles.formInput}
-                placeholder="Nombre del producto"
-                required
-              />
-            </div>
-            
-            <div key="form-cliente" className={styles.formGroup}>
-              <label className={styles.formLabel}>Cliente *</label>
-              <input
-                type="text"
-                name="cliente"
-                value={datosManuales.cliente}
-                onChange={handleInputChange}
-                className={styles.formInput}
-                placeholder="Nombre del cliente"
-                required
-              />
-            </div>
-            
-            <div key="form-cantidad" className={styles.formGroup}>
-              <label className={styles.formLabel}>Cantidad *</label>
-              <input
-                type="number"
-                name="cantidad"
-                value={datosManuales.cantidad}
-                onChange={(e) => {
-                  handleInputChange(e);
-                  setTimeout(calcularTotal, 100);
-                }}
-                className={styles.formInput}
-                min="1"
-                required
-              />
-            </div>
-            
-            <div key="form-precio" className={styles.formGroup}>
-              <label className={styles.formLabel}>Precio Unitario *</label>
-              <input
-                type="number"
-                name="precio"
-                value={datosManuales.precio}
-                onChange={(e) => {
-                  handleInputChange(e);
-                  setTimeout(calcularTotal, 100);
-                }}
-                className={styles.formInput}
-                step="0.01"
-                min="0"
-                required
-              />
-            </div>
-            
-            <div key="form-total" className={styles.formGroup}>
-              <label className={styles.formLabel}>Total</label>
-              <input
-                type="number"
-                name="total"
-                value={datosManuales.total}
-                onChange={handleInputChange}
-                className={`${styles.formInput} ${styles.readonly}`}
-                step="0.01"
-                readOnly
-              />
-            </div>
-            
-            <div key="form-dni" className={styles.formGroup}>
-              <label className={styles.formLabel}>DNI/CUIT</label>
-              <input
-                type="text"
-                name="dni"
-                value={datosManuales.dni}
-                onChange={handleInputChange}
-                className={styles.formInput}
-                placeholder="DNI o CUIT del cliente"
-              />
-            </div>
-            
-            <div key="form-tipo-consumidor" className={styles.formGroup}>
-              <label className={styles.formLabel}>Tipo de Consumidor</label>
-              <select
-                name="tipoConsumidor"
-                value={datosManuales.tipoConsumidor}
-                onChange={handleInputChange}
-                className={styles.formSelect}
+          {/* Sección de productos */}
+          <div className={styles.productosSection}>
+            <div className={styles.productosHeader}>
+              <h4 className={styles.productosTitle}>Productos</h4>
+              <button 
+                onClick={agregarProducto} 
+                className={styles.addProductButton}
+                type="button"
               >
-                <option value="Consumidor Final">Consumidor Final</option>
-                <option value="Responsable Inscripto">Responsable Inscripto</option>
-                <option value="Monotributo">Monotributo</option>
-                <option value="Exento">Exento</option>
-              </select>
+                + Agregar Producto
+              </button>
             </div>
             
-            <div key="form-direccion" className={styles.formGroup}>
-              <label className={styles.formLabel}>Dirección</label>
-              <input
-                type="text"
-                name="direccion"
-                value={datosManuales.direccion}
-                onChange={handleInputChange}
-                className={styles.formInput}
-                placeholder="Dirección del cliente"
-              />
-            </div>
+            {productos.map((producto, index) => (
+              <div key={producto.id} className={styles.productoCard}>
+                <div className={styles.productoHeader}>
+                  <h5 className={styles.productoNumber}>Producto {index + 1}</h5>
+                  {productos.length > 1 && (
+                    <button 
+                      onClick={() => eliminarProducto(producto.id)}
+                      className={styles.deleteProductButton}
+                      type="button"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+                
+                <div className={styles.productoGrid}>
+                  <div className={styles.formGroup}>
+                    <label className={styles.formLabel}>Nombre del Producto *</label>
+                    <input
+                      type="text"
+                      name="producto"
+                      value={producto.producto}
+                      onChange={(e) => handleProductoChange(producto.id, e)}
+                      className={styles.formInput}
+                      placeholder="Nombre del producto"
+                      required
+                    />
+                  </div>
+                  
+                  <div className={styles.formGroup}>
+                    <label className={styles.formLabel}>Cantidad *</label>
+                    <input
+                      type="number"
+                      name="cantidad"
+                      value={producto.cantidad}
+                      onChange={(e) => handleProductoChange(producto.id, e)}
+                      className={styles.formInput}
+                      min="1"
+                      required
+                    />
+                  </div>
+                  
+                  <div className={styles.formGroup}>
+                    <label className={styles.formLabel}>Precio Unitario *</label>
+                    <input
+                      type="number"
+                      name="precio"
+                      value={producto.precio}
+                      onChange={(e) => handleProductoChange(producto.id, e)}
+                      className={styles.formInput}
+                      step="0.01"
+                      min="0"
+                      required
+                    />
+                  </div>
+                  
+                  <div className={styles.formGroup}>
+                    <label className={styles.formLabel}>Total</label>
+                    <input
+                      type="number"
+                      name="total"
+                      value={producto.total}
+                      className={`${styles.formInput} ${styles.readonly}`}
+                      step="0.01"
+                      readOnly
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
             
-            <div key="form-ciudad" className={styles.formGroup}>
-              <label className={styles.formLabel}>Ciudad</label>
-              <input
-                type="text"
-                name="ciudad"
-                value={datosManuales.ciudad}
-                onChange={handleInputChange}
-                className={styles.formInput}
-                placeholder="Ciudad del cliente"
-              />
+            {/* Total General */}
+            <div className={styles.totalGeneralSection}>
+              <div className={styles.totalGeneralLabel}>Total General:</div>
+              <div className={styles.totalGeneralValue}>${calcularTotalGeneral().toFixed(2)}</div>
+            </div>
+          </div>
+          
+          {/* Sección de datos del cliente */}
+          <div className={styles.clienteSection}>
+            <h4 className={styles.clienteTitle}>Datos del Cliente</h4>
+            
+            <div className={styles.formGrid}>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Cliente *</label>
+                <input
+                  type="text"
+                  name="cliente"
+                  value={datosCliente.cliente}
+                  onChange={handleClienteChange}
+                  className={styles.formInput}
+                  placeholder="Nombre del cliente"
+                  required
+                />
+              </div>
+              
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>DNI/CUIT</label>
+                <input
+                  type="text"
+                  name="dni"
+                  value={datosCliente.dni}
+                  onChange={handleClienteChange}
+                  className={styles.formInput}
+                  placeholder="DNI o CUIT del cliente"
+                />
+              </div>
+              
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Tipo de Consumidor</label>
+                <select
+                  name="tipoConsumidor"
+                  value={datosCliente.tipoConsumidor}
+                  onChange={handleClienteChange}
+                  className={styles.formSelect}
+                >
+                  <option value="Consumidor Final">Consumidor Final</option>
+                  <option value="Responsable Inscripto">Responsable Inscripto</option>
+                  <option value="Monotributo">Monotributo</option>
+                  <option value="Exento">Exento</option>
+                </select>
+              </div>
+              
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Dirección</label>
+                <input
+                  type="text"
+                  name="direccion"
+                  value={datosCliente.direccion}
+                  onChange={handleClienteChange}
+                  className={styles.formInput}
+                  placeholder="Dirección del cliente"
+                />
+              </div>
+              
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Ciudad</label>
+                <input
+                  type="text"
+                  name="ciudad"
+                  value={datosCliente.ciudad}
+                  onChange={handleClienteChange}
+                  className={styles.formInput}
+                  placeholder="Ciudad del cliente"
+                />
+              </div>
             </div>
           </div>
           
@@ -327,7 +444,7 @@ export default function FacturarVentaML() {
               <div className={styles.dataValue}>{String(datosVenta.cantidad || '---')}</div>
             </div>
             <div key="precio" className={styles.dataItem}>
-              <div className={styles.dataLabel}>Precio Final</div>
+              <div className={styles.dataLabel}>Precio Unitario</div>
               <div className={styles.dataValue}>${String(datosVenta.precio || '---')}</div>
             </div>
             <div key="total" className={styles.dataItem}>
