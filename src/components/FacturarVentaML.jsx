@@ -213,7 +213,7 @@ ${productosTexto}
 `.trim();
            }
 
-    const numeroFacturacion = "5493515193175";
+    const numeroFacturacion = "5493515198950";
     const url = `https://wa.me/${numeroFacturacion}?text=${encodeURIComponent(texto)}`;
     window.open(url, '_blank');
     setMensajeEnviado('Mensaje enviado a WhatsApp');
