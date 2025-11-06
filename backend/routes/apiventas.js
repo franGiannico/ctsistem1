@@ -9,6 +9,7 @@ const VentaSchema = new mongoose.Schema({
   nombre: String,
   cantidad: Number,
   numeroVenta: { type: String, unique: true },
+  packId: String,
   cliente: String,
   puntoDespacho: String,
   completada: { type: Boolean, default: false },

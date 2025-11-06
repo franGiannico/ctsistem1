@@ -336,6 +336,7 @@ async function procesarSincronizacion() {
         nombre: String,
         cantidad: Number,
         numeroVenta: { type: String, unique: true },
+        packId: String,
         cliente: String,
         puntoDespacho: String,
         completada: Boolean,
@@ -443,10 +444,11 @@ async function procesarSincronizacion() {
 
         // Acá seguimos igual que antes, pero con ordenesFiltradas
         for (const orden of ordenesFiltradas) {
-          // Usar pack_id si existe, sino usar id
-          const idVenta = orden.pack_id ? orden.pack_id.toString() : orden.id.toString();
-          const packId = orden.pack_id ? orden.pack_id.toString() : 'null';
-          console.log(`🔍 Procesando orden: ID=${orden.id}, PackID=${packId}, Usando=${idVenta}`);
+          const packId = orden.pack_id ? orden.pack_id.toString() : null;
+          const orderId = orden.id.toString();
+          const numeroVenta = packId ? `${packId}-${orderId}` : orderId;
+          const packLog = packId ? packId : 'null';
+          console.log(`🔍 Procesando orden: ID=${orden.id}, PackID=${packLog}, Usando=${numeroVenta}`);
 
           const item = orden.order_items[0];
           const title = item.item.title || "";
@@ -519,12 +521,13 @@ async function procesarSincronizacion() {
         // Log removido por seguridad
 
         // 👇 guardamos la venta en Mongo preservando estados existentes
-        const estadoExistente = estadosExistentes[idVenta] || { completada: false, entregada: false };
+        const estadoExistente = estadosExistentes[numeroVenta] || { completada: false, entregada: false };
         const ventaAGuardar = new Venta({
           sku,
           nombre: nombreFinal,
           cantidad: quantity,
-          numeroVenta: idVenta,
+          numeroVenta,
+          packId,
           cliente,
           puntoDespacho,
           completada: estadoExistente.completada,
@@ -536,7 +539,7 @@ async function procesarSincronizacion() {
           tipoEnvio: envio.tipoEnvio   // 🔑 Nuevo campo
         });
         
-        console.log(`💾 Guardando venta: Usando=${idVenta} (ID=${orden.id}, PackID=${packId}) - ${nombreFinal} - ${cliente} - Estados: completada=${estadoExistente.completada}, entregada=${estadoExistente.entregada}`);
+        console.log(`💾 Guardando venta: Usando=${numeroVenta} (ID=${orden.id}, PackID=${packLog}) - ${nombreFinal} - ${cliente} - Estados: completada=${estadoExistente.completada}, entregada=${estadoExistente.entregada}`);
         
         // Log removido por seguridad
         ventasAGuardar.push(ventaAGuardar);
