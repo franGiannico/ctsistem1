@@ -278,7 +278,7 @@ function Apiventas() {
 
       {/* Cargar ventas manuales */}
       {activeTab === "cargar" && (
-        <>
+        <div className={styles.cargarWrapper}>
           <form onSubmit={handleSubmit} className={styles.form}>
             <input type="text" name="sku" value={formData.sku} onChange={handleInputChange} placeholder="SKU" required />
             <input type="text" name="nombre" value={formData.nombre} onChange={handleInputChange} placeholder="Producto (color/talle opcional)" required />
@@ -317,7 +317,7 @@ function Apiventas() {
           <Link to="/facturar-ml" className={styles.facturarLink}>
             Facturar una venta
           </Link>
-        </>
+        </div>
       )}
 
       {/* Listado unificado de ventas manuales + ML */}
@@ -335,15 +335,24 @@ function Apiventas() {
 
           <h3>Hora Límite: {horaLimite}</h3>
 
-          <button onClick={borrarVentasCompletadas} className={styles.borrarCompletadas}>
-            Borrar Ventas Completadas
-          </button>
-            
-          <MeliAuthButton className={styles.meliConnectBtn} />
+          <div className={styles.actionsRow}>
+            <button onClick={borrarVentasCompletadas} className={`${styles.borrarCompletadas} ${styles.actionButton}`}>
+              Borrar Ventas Completadas
+            </button>
 
-          <button onClick={sincronizarVentasML} disabled={cargando} className={styles.meliSyncBtn}>
-            {cargando ? 'Sincronizando...' : 'Sincronizar ventas Mercado Libre'}
-          </button>
+            <MeliAuthButton
+              className={`${styles.meliConnectBtn} ${styles.actionButton}`}
+              wrapperClassName={styles.actionItem}
+            />
+
+            <button
+              onClick={sincronizarVentasML}
+              disabled={cargando}
+              className={`${styles.meliSyncBtn} ${styles.actionButton}`}
+            >
+              {cargando ? 'Sincronizando...' : 'Sincronizar ventas Mercado Libre'}
+            </button>
+          </div>
 
           {Object.entries(agruparVentasPorPunto()).map(([puntoDespacho, ventasGrupo]) => (
             <div key={puntoDespacho}>

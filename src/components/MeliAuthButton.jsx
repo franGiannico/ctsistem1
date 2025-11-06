@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 
-function MeliAuthButton({ className = '' }) {
+function MeliAuthButton({ className = '', wrapperClassName = '' }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -31,7 +31,7 @@ function MeliAuthButton({ className = '' }) {
   };
 
   return (
-    <div>
+    <div className={wrapperClassName}>
       <button className={className} onClick={iniciarAutenticacion} disabled={loading}>
         {loading ? 'Conectando...' : 'Conectar con Mercado Libre'}
       </button>
