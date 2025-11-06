@@ -274,6 +274,9 @@ function Apiventas() {
         >
           Ver Ventas
         </button>
+        <Link to="/facturar-ml" className={styles.facturarTabLink}>
+          Facturar una venta
+        </Link>
       </div>
 
       {/* Cargar ventas manuales */}
@@ -314,9 +317,6 @@ function Apiventas() {
             </div>
           </form>
 
-          <Link to="/facturar-ml" className={styles.facturarLink}>
-            Facturar una venta
-          </Link>
         </div>
       )}
 
