@@ -15,7 +15,6 @@ const Header = () => {
                         <Nav.Link as={Link} to="/ventas">Ventas</Nav.Link>
                         <Nav.Link as={Link} to="/ingresos">Ingresos</Nav.Link>
                         <Nav.Link as={Link} to="/tareas">Tareas</Nav.Link>
-                        <Nav.Link as={Link} to="/facturar-ml">Facturar ML</Nav.Link>
                     </Nav>
                 </Navbar.Collapse>
             </Container>

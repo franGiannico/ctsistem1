@@ -1,5 +1,6 @@
 // src/components/Apiventas.jsx
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import styles from './Apiventas.module.css';
 import MeliAuthButton from './MeliAuthButton';
 
@@ -277,39 +278,46 @@ function Apiventas() {
 
       {/* Cargar ventas manuales */}
       {activeTab === "cargar" && (
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <input type="text" name="sku" value={formData.sku} onChange={handleInputChange} placeholder="SKU" required />
-          <input type="text" name="nombre" value={formData.nombre} onChange={handleInputChange} placeholder="Producto (color/talle opcional)" required />
-          <input type="number" name="cantidad" value={formData.cantidad} onChange={handleInputChange} min="1" required />
-          <input type="number" name="numeroVenta" value={formData.numeroVenta} onChange={handleInputChange} placeholder="N° Venta" required />
-          <input type="text" name="cliente" value={formData.cliente} onChange={handleInputChange} placeholder="Cliente" required />
+        <>
+          <form onSubmit={handleSubmit} className={styles.form}>
+            <input type="text" name="sku" value={formData.sku} onChange={handleInputChange} placeholder="SKU" required />
+            <input type="text" name="nombre" value={formData.nombre} onChange={handleInputChange} placeholder="Producto (color/talle opcional)" required />
+            <input type="number" name="cantidad" value={formData.cantidad} onChange={handleInputChange} min="1" required />
+            <input type="number" name="numeroVenta" value={formData.numeroVenta} onChange={handleInputChange} placeholder="N° Venta" required />
+            <input type="text" name="cliente" value={formData.cliente} onChange={handleInputChange} placeholder="Cliente" required />
 
-          <select name="puntoDespacho" value={formData.puntoDespacho} onChange={handleInputChange} required>
-            <option value="Llevar al Expreso">Llevar al Expreso</option>
-            <option value="Retira el Expreso">Retira el Expreso</option>
-            <option value="Punto de Despacho">Punto de Despacho</option>
-            <option value="Flex">Flex</option>
-            <option value="A coordinar">A coordinar</option>
-            <option value="Guardia">Guardia</option>
-            <option value="Domicilio">Domicilio</option>
-            <option value="Showroom">Showroom</option>
-          </select>
+            <select name="puntoDespacho" value={formData.puntoDespacho} onChange={handleInputChange} required>
+              <option value="Llevar al Expreso">Llevar al Expreso</option>
+              <option value="Retira el Expreso">Retira el Expreso</option>
+              <option value="Punto de Despacho">Punto de Despacho</option>
+              <option value="Flex">Flex</option>
+              <option value="A coordinar">A coordinar</option>
+              <option value="Guardia">Guardia</option>
+              <option value="Domicilio">Domicilio</option>
+              <option value="Showroom">Showroom</option>
+              <option value="Enviar a Savio">Enviar a Savio</option>
+            </select>
 
-          <button type="submit">Agregar Venta</button>
+            <button type="submit">Agregar Venta</button>
 
-          <div className={styles.horaLimiteContainer}>
-            <label className={styles.horaLimiteLabel}>Hora Límite de Entrega:</label>
-            <input
-              type="time"
-              value={horaLimiteTemporal}
-              onChange={handleHoraLimiteInputChange}
-              className={styles.horaLimiteInput}
-            />
-            <button type="button" onClick={enviarHoraLimite} className={styles.enviarHoraLimiteBtn}>
-              Set
-            </button>
-          </div>
-        </form>
+            <div className={styles.horaLimiteContainer}>
+              <label className={styles.horaLimiteLabel}>Hora Límite de Entrega:</label>
+              <input
+                type="time"
+                value={horaLimiteTemporal}
+                onChange={handleHoraLimiteInputChange}
+                className={styles.horaLimiteInput}
+              />
+              <button type="button" onClick={enviarHoraLimite} className={styles.enviarHoraLimiteBtn}>
+                Set
+              </button>
+            </div>
+          </form>
+
+          <Link to="/facturar-ml" className={styles.facturarLink}>
+            Facturar una venta
+          </Link>
+        </>
       )}
 
       {/* Listado unificado de ventas manuales + ML */}
@@ -331,10 +339,10 @@ function Apiventas() {
             Borrar Ventas Completadas
           </button>
             
-          <MeliAuthButton /> {/*Botón para autenticación Mercado Libre */}
+          <MeliAuthButton className={styles.meliConnectBtn} />
 
-          <button onClick={sincronizarVentasML} disabled={cargando} style={{ marginLeft: '10px' }}>
-            {cargando ? 'Sincronizando ML...' : 'Sincronizar Ventas Mercado Libre'}
+          <button onClick={sincronizarVentasML} disabled={cargando} className={styles.meliSyncBtn}>
+            {cargando ? 'Sincronizando...' : 'Sincronizar ventas Mercado Libre'}
           </button>
 
           {Object.entries(agruparVentasPorPunto()).map(([puntoDespacho, ventasGrupo]) => (

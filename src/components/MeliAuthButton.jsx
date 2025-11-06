@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 
-function MeliAuthButton() {
+function MeliAuthButton({ className = '' }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -31,10 +31,12 @@ function MeliAuthButton() {
   };
 
   return (
-    <button onClick={iniciarAutenticacion} disabled={loading}>
-      {loading ? 'Redirigiendo...' : 'Iniciar autenticación Mercado Libre'}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-    </button>
+    <div>
+      <button className={className} onClick={iniciarAutenticacion} disabled={loading}>
+        {loading ? 'Conectando...' : 'Conectar con Mercado Libre'}
+      </button>
+      {error && <p style={{ color: 'red', marginTop: '8px' }}>{error}</p>}
+    </div>
   );
 }
 
