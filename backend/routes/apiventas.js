@@ -19,6 +19,7 @@ const VentaSchema = new mongoose.Schema({
   variationId: String,
   atributos: [Object],
   tipoEnvio: String,
+  nota: String,
 });
 
 const Venta = mongoose.model("Venta", VentaSchema, "ventas");
@@ -112,17 +113,21 @@ router.post("/guardar-ventas", async (req, res) => {
 // Actualizar el estado de completada o entregada en una venta
 router.patch("/actualizar-venta/:id", async (req, res) => {
   try {
-    const { completada, entregada } = req.body;
+    const { completada, entregada, nota } = req.body;
 
-    // Validar que al menos uno de los dos campos venga en el body
-    if (typeof completada !== "boolean" && typeof entregada !== "boolean") {
-      return res.status(400).json({ error: "Debe enviarse 'completada' o 'entregada' como booleano" });
+    // Validar que al menos uno de los campos venga en el body
+    if (typeof completada !== "boolean" && typeof entregada !== "boolean" && typeof nota === "undefined") {
+      return res.status(400).json({ error: "Debe enviarse 'completada', 'entregada' o 'nota'" });
     }
 
     // Crear objeto de actualización dinámico
     const updateFields = {};
     if (typeof completada === "boolean") updateFields.completada = completada;
     if (typeof entregada === "boolean") updateFields.entregada = entregada;
+    if (typeof nota !== "undefined") {
+      // Si la nota está vacía o es null, establecerla como cadena vacía o null
+      updateFields.nota = nota === "" || nota === null ? "" : nota;
+    }
 
     const ventaActualizada = await Venta.findByIdAndUpdate(
       req.params.id,

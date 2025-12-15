@@ -390,3 +390,60 @@
     background-color: #4caf50; /* verde distinto */
     color: white;
 }
+
+/* Estilos para el botón de nota (lápiz) */
+.notaBtn {
+    padding: 8px 12px;
+    background-color: #ffc107;
+    color: #333;
+    border: 1px solid #ff9800;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.2s;
+}
+
+.notaBtn:hover {
+    background-color: #ffb300;
+}
+
+/* Contenedor del input de nota */
+.notaInputContainer {
+    width: 100%;
+    padding: 10px;
+    background-color: #f5f5f5;
+    border-top: 1px solid #ddd;
+    margin-top: 5px;
+}
+
+.notaInput {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    font-family: Arial, sans-serif;
+}
+
+.notaInput:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Estilos para la nota guardada */
+.notaGuardada {
+    width: 100%;
+    padding: 8px 10px;
+    background-color: #e8f5e9;
+    border-left: 3px solid #4caf50;
+    margin-top: 5px;
+    font-size: 0.9rem;
+    color: #2e7d32;
+    border-radius: 4px;
+}
+
+.notaGuardada strong {
+    color: #1b5e20;
+    margin-right: 5px;
+}

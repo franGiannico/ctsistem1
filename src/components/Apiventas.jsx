@@ -46,6 +46,8 @@ function Apiventas() {
   const [horaLimiteTemporal, setHoraLimiteTemporal] = useState('');
   const [activeTab, setActiveTab] = useState("cargar"); // 'cargar' o 'listado'
   const [cargando, setCargando] = useState(false);
+  const [ventasConNotaAbierta, setVentasConNotaAbierta] = useState(new Set()); // IDs de ventas con input de nota abierto
+  const [notasTemporales, setNotasTemporales] = useState({}); // Notas temporales mientras se editan
 
   useEffect(() => {
     if (activeTab === 'listado') {
@@ -164,6 +166,78 @@ function Apiventas() {
       );
     } catch (error) {
       console.error("Error al actualizar entrega:", error);
+    }
+  };
+
+  // Toggle para abrir/cerrar el input de nota
+  const toggleNotaInput = (ventaId, notaActual) => {
+    const nuevoSet = new Set(ventasConNotaAbierta);
+    if (nuevoSet.has(ventaId)) {
+      nuevoSet.delete(ventaId);
+    } else {
+      nuevoSet.add(ventaId);
+      // Inicializar la nota temporal con la nota actual si existe
+      setNotasTemporales(prev => ({
+        ...prev,
+        [ventaId]: notaActual || ""
+      }));
+    }
+    setVentasConNotaAbierta(nuevoSet);
+  };
+
+  // Guardar o actualizar nota
+  const guardarNota = async (ventaId) => {
+    const notaTexto = notasTemporales[ventaId] || "";
+    
+    try {
+      const response = await authenticatedFetch(`${BACKEND_URL}/apiventas/actualizar-venta/${ventaId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ nota: notaTexto.trim() })
+      });
+      if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+      const data = await response.json();
+      
+      // Actualizar la venta en el estado
+      setVentas((prev) =>
+        prev.map((v) => (v._id === ventaId ? { ...v, nota: data.venta.nota || "" } : v))
+      );
+      
+      // Si la nota está vacía, cerrar el input
+      if (!notaTexto.trim()) {
+        const nuevoSet = new Set(ventasConNotaAbierta);
+        nuevoSet.delete(ventaId);
+        setVentasConNotaAbierta(nuevoSet);
+      } else {
+        // Cerrar el input después de guardar
+        const nuevoSet = new Set(ventasConNotaAbierta);
+        nuevoSet.delete(ventaId);
+        setVentasConNotaAbierta(nuevoSet);
+      }
+      
+      // Limpiar la nota temporal
+      setNotasTemporales(prev => {
+        const nuevo = { ...prev };
+        delete nuevo[ventaId];
+        return nuevo;
+      });
+    } catch (error) {
+      console.error("Error al guardar la nota:", error);
+    }
+  };
+
+  // Manejar cambio en el input de nota
+  const handleNotaChange = (ventaId, valor) => {
+    setNotasTemporales(prev => ({
+      ...prev,
+      [ventaId]: valor
+    }));
+  };
+
+  // Manejar Enter en el input de nota
+  const handleNotaKeyDown = (e, ventaId) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      guardarNota(ventaId);
     }
   };
 
@@ -362,49 +436,78 @@ function Apiventas() {
 
               <ul className={styles.lista}>
                 {ventasGrupo.map((venta) => (
-                  <li key={venta.numeroVenta || venta._id} className={styles.ventaItem}>
-                    {venta.imagen && (
-                      <img src={venta.imagen} alt={venta.nombre} className={styles.imagenProducto} />
-                    )}
-                    <div className={styles.ventaDetalle}>
-                      <p><strong>SKU:</strong> {venta.sku || 'N/A'}</p>
-                      <p><strong>Nombre:</strong> {venta.nombre}</p>
-                      {venta.esML && <span className={styles.etiquetaML}>ML</span>}
-                      <p><strong>Cantidad:</strong> {venta.cantidad}</p>
-                      {/* Mostrar atributos si existen (solo en ML) */}
-                      {venta.atributos && venta.atributos.length > 0 && (
-                        <div className={styles.atributos}>
-                          {venta.atributos.map((attr, idx) => (
-                            <p key={idx} className={styles.atributo}>
-                              {attr.nombre}: {attr.valor}
-                            </p>
-                          ))}
-                        </div>
+                  <li key={venta.numeroVenta || venta._id}>
+                    <div className={styles.ventaItem}>
+                      {venta.imagen && (
+                        <img src={venta.imagen} alt={venta.nombre} className={styles.imagenProducto} />
                       )}
-                      {venta.cantidad > 1 && (
-                        <span className={styles.alerta}>⚠ Ojo!</span>
-                      )}
-                      <p><strong>Cliente:</strong> {venta.cliente}</p>
-                      <p><strong>N° Venta:</strong> {venta.numeroVenta}</p>
-                      {venta.esML && venta.tipoEnvio && (
-                        <p><strong>Tipo de Envío:</strong> {venta.tipoEnvio}</p>
-                      )}
+                      <div className={styles.ventaDetalle}>
+                        <p><strong>SKU:</strong> {venta.sku || 'N/A'}</p>
+                        <p><strong>Nombre:</strong> {venta.nombre}</p>
+                        {venta.esML && <span className={styles.etiquetaML}>ML</span>}
+                        <p><strong>Cantidad:</strong> {venta.cantidad}</p>
+                        {/* Mostrar atributos si existen (solo en ML) */}
+                        {venta.atributos && venta.atributos.length > 0 && (
+                          <div className={styles.atributos}>
+                            {venta.atributos.map((attr, idx) => (
+                              <p key={idx} className={styles.atributo}>
+                                {attr.nombre}: {attr.valor}
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                        {venta.cantidad > 1 && (
+                          <span className={styles.alerta}>⚠ Ojo!</span>
+                        )}
+                        <p><strong>Cliente:</strong> {venta.cliente}</p>
+                        <p><strong>N° Venta:</strong> {venta.numeroVenta}</p>
+                        {venta.esML && venta.tipoEnvio && (
+                          <p><strong>Tipo de Envío:</strong> {venta.tipoEnvio}</p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => toggleNotaInput(venta._id, venta.nota)}
+                        className={styles.notaBtn}
+                        title="Agregar/Editar nota"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={() => marcarCompletada(venta._id, venta.completada)}
+                        className={`${styles.checkBtn} ${venta.completada ? styles.checkBtnChecked : ''}`}
+                      >
+                        {venta.completada ? "✔" : "X"}
+                      </button>
+                      <button
+                        onClick={() => marcarEntregada(venta._id, venta.entregada)}
+                        className={`${styles.checkBtn} ${venta.entregada ? styles.entregadoBtnChecked : ''}`}
+                      >
+                        {venta.entregada ? "📦" : "🚚"}
+                      </button>
+                      <button onClick={() => borrarVenta(venta._id)} className={styles.checkBtn}>
+                        Borrar
+                      </button>
                     </div>
-                    <button
-                      onClick={() => marcarCompletada(venta._id, venta.completada)}
-                      className={`${styles.checkBtn} ${venta.completada ? styles.checkBtnChecked : ''}`}
-                    >
-                      {venta.completada ? "✔" : "X"}
-                    </button>
-                    <button
-                      onClick={() => marcarEntregada(venta._id, venta.entregada)}
-                      className={`${styles.checkBtn} ${venta.entregada ? styles.entregadoBtnChecked : ''}`}
-                    >
-                      {venta.entregada ? "📦" : "🚚"}
-                    </button>
-                    <button onClick={() => borrarVenta(venta._id)} className={styles.checkBtn}>
-                      Borrar
-                    </button>
+                    {/* Mostrar nota guardada si existe y el input no está abierto */}
+                    {venta.nota && !ventasConNotaAbierta.has(venta._id) && (
+                      <div className={styles.notaGuardada}>
+                        <strong>Nota:</strong> {venta.nota}
+                      </div>
+                    )}
+                    {/* Input de nota que aparece cuando se presiona el botón de lápiz */}
+                    {ventasConNotaAbierta.has(venta._id) && (
+                      <div className={styles.notaInputContainer}>
+                        <input
+                          type="text"
+                          value={notasTemporales[venta._id] || ""}
+                          onChange={(e) => handleNotaChange(venta._id, e.target.value)}
+                          onKeyDown={(e) => handleNotaKeyDown(e, venta._id)}
+                          placeholder="Escribe una nota y presiona Enter..."
+                          className={styles.notaInput}
+                          autoFocus
+                        />
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
