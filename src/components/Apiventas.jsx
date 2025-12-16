@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import styles from './Apiventas.module.css';
 import MeliAuthButton from './MeliAuthButton';
+import jsPDF from 'jspdf';
 
 
 function Apiventas() {
@@ -241,6 +242,138 @@ function Apiventas() {
     }
   };
 
+  // Generar PDF de etiqueta para una venta
+  const generarEtiquetaPDF = (venta) => {
+    // Tamaño de la etiqueta: 10x15 cm (ancho x alto)
+    // En jsPDF: 1 cm = 28.346 puntos
+    const ancho = 10 * 28.346; // 283.46 puntos
+    const alto = 15 * 28.346;  // 425.19 puntos
+
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'pt',
+      format: [ancho, alto]
+    });
+
+    // Configuración de fuente y márgenes
+    const margin = 20;
+    let yPos = margin + 15;
+    const lineHeight = 18;
+    const fontSize = 10;
+    const fontSizeTitulo = 12;
+    const fontSizeGrande = 14;
+
+    // Título
+    doc.setFontSize(fontSizeGrande);
+    doc.setFont(undefined, 'bold');
+    doc.text('ETIQUETA DE VENTA', ancho / 2, yPos, { align: 'center' });
+    yPos += lineHeight + 10;
+
+    // Línea separadora
+    doc.setLineWidth(0.5);
+    doc.line(margin, yPos, ancho - margin, yPos);
+    yPos += lineHeight;
+
+    // Información de la venta
+    doc.setFontSize(fontSize);
+    doc.setFont(undefined, 'normal');
+
+    // Número de Venta
+    doc.setFont(undefined, 'bold');
+    doc.text('N° Venta:', margin, yPos);
+    doc.setFont(undefined, 'normal');
+    doc.text(venta.numeroVenta || 'N/A', margin + 80, yPos);
+    yPos += lineHeight;
+
+    // Cliente
+    doc.setFont(undefined, 'bold');
+    doc.text('Cliente:', margin, yPos);
+    doc.setFont(undefined, 'normal');
+    const clienteTexto = venta.cliente || 'N/A';
+    const clienteLines = doc.splitTextToSize(clienteTexto, ancho - margin * 2 - 80);
+    doc.text(clienteLines, margin + 80, yPos);
+    yPos += lineHeight * clienteLines.length;
+
+    // SKU
+    doc.setFont(undefined, 'bold');
+    doc.text('SKU:', margin, yPos);
+    doc.setFont(undefined, 'normal');
+    doc.text(venta.sku || 'N/A', margin + 80, yPos);
+    yPos += lineHeight;
+
+    // Nombre del producto
+    doc.setFont(undefined, 'bold');
+    doc.text('Producto:', margin, yPos);
+    doc.setFont(undefined, 'normal');
+    const nombreTexto = venta.nombre || 'N/A';
+    const nombreLines = doc.splitTextToSize(nombreTexto, ancho - margin * 2 - 80);
+    doc.text(nombreLines, margin + 80, yPos);
+    yPos += lineHeight * nombreLines.length;
+
+    // Cantidad
+    doc.setFont(undefined, 'bold');
+    doc.text('Cantidad:', margin, yPos);
+    doc.setFont(undefined, 'normal');
+    doc.text(String(venta.cantidad || 1), margin + 80, yPos);
+    yPos += lineHeight;
+
+    // Atributos (si existen)
+    if (venta.atributos && venta.atributos.length > 0) {
+      doc.setFont(undefined, 'bold');
+      doc.text('Atributos:', margin, yPos);
+      yPos += lineHeight;
+      doc.setFont(undefined, 'normal');
+      venta.atributos.forEach((attr) => {
+        const attrTexto = `${attr.nombre}: ${attr.valor}`;
+        const attrLines = doc.splitTextToSize(attrTexto, ancho - margin * 2 - 20);
+        doc.text(attrLines, margin + 10, yPos);
+        yPos += lineHeight * attrLines.length;
+      });
+    }
+
+    // Punto de Despacho
+    doc.setFont(undefined, 'bold');
+    doc.text('Punto Despacho:', margin, yPos);
+    doc.setFont(undefined, 'normal');
+    const puntoTexto = venta.puntoDespacho || 'N/A';
+    const puntoLines = doc.splitTextToSize(puntoTexto, ancho - margin * 2 - 80);
+    doc.text(puntoLines, margin + 80, yPos);
+    yPos += lineHeight * puntoLines.length;
+
+    // Tipo de Envío (si es ML)
+    if (venta.esML && venta.tipoEnvio) {
+      doc.setFont(undefined, 'bold');
+      doc.text('Tipo Envío:', margin, yPos);
+      doc.setFont(undefined, 'normal');
+      doc.text(venta.tipoEnvio, margin + 80, yPos);
+      yPos += lineHeight;
+    }
+
+    // Nota (si existe)
+    if (venta.nota && venta.nota.trim()) {
+      yPos += lineHeight;
+      doc.setFont(undefined, 'bold');
+      doc.text('Nota:', margin, yPos);
+      yPos += lineHeight;
+      doc.setFont(undefined, 'normal');
+      const notaTexto = venta.nota;
+      const notaLines = doc.splitTextToSize(notaTexto, ancho - margin * 2 - 20);
+      doc.text(notaLines, margin + 10, yPos);
+      yPos += lineHeight * notaLines.length;
+    }
+
+    // Fecha
+    yPos += lineHeight;
+    doc.setFontSize(fontSize - 2);
+    doc.setFont(undefined, 'italic');
+    const fecha = new Date().toLocaleDateString('es-AR');
+    doc.text(`Fecha: ${fecha}`, margin, alto - margin);
+
+    // Guardar el PDF
+    const nombreArchivo = `Etiqueta_${venta.numeroVenta || venta._id}.pdf`;
+    doc.save(nombreArchivo);
+  };
+
   // Borrar venta
   const borrarVenta = async (id) => {
     try {
@@ -472,6 +605,16 @@ function Apiventas() {
                       >
                         ✏️
                       </button>
+                      {/* Botón de etiqueta solo para ventas que NO sean "Punto de Despacho" ni "Flex" */}
+                      {venta.puntoDespacho !== "Punto de Despacho" && venta.puntoDespacho !== "Flex" && (
+                        <button
+                          onClick={() => generarEtiquetaPDF(venta)}
+                          className={styles.etiquetaBtn}
+                          title="Generar etiqueta PDF"
+                        >
+                          🏷️
+                        </button>
+                      )}
                       <button
                         onClick={() => marcarCompletada(venta._id, venta.completada)}
                         className={`${styles.checkBtn} ${venta.completada ? styles.checkBtnChecked : ''}`}
