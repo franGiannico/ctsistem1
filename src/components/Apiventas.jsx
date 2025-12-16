@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import styles from './Apiventas.module.css';
 import MeliAuthButton from './MeliAuthButton';
 import jsPDF from 'jspdf';
+// Importar el logo desde assets
+import logoImage from '../assets/logo.png';
 
 
 function Apiventas() {
@@ -243,7 +245,7 @@ function Apiventas() {
   };
 
   // Generar PDF de etiqueta para una venta
-  const generarEtiquetaPDF = (venta) => {
+  const generarEtiquetaPDF = async (venta) => {
     // Tamaño de la etiqueta: 10x15 cm (ancho x alto)
     // En jsPDF: 1 cm = 28.346 puntos
     const ancho = 10 * 28.346; // 283.46 puntos
@@ -262,6 +264,43 @@ function Apiventas() {
     const fontSize = 10;
     const fontSizeTitulo = 12;
     const fontSizeGrande = 14;
+
+    // Agregar logo en la parte superior (si existe)
+    if (logoImage) {
+      try {
+        // Cargar el logo y convertirlo a base64
+        const response = await fetch(logoImage);
+        const blob = await response.blob();
+        const base64data = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+
+        // Obtener dimensiones de la imagen
+        const img = new Image();
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = base64data;
+        });
+
+        // Tamaño del logo: máximo 40 puntos de alto, manteniendo proporción
+        const logoHeight = 40;
+        const logoWidth = (img.width / img.height) * logoHeight;
+        
+        // Centrar el logo horizontalmente
+        const logoX = (ancho - logoWidth) / 2;
+        const logoY = margin;
+        
+        doc.addImage(base64data, 'PNG', logoX, logoY, logoWidth, logoHeight);
+        yPos = margin + logoHeight + 10; // Espacio después del logo
+      } catch (error) {
+        console.warn('No se pudo cargar el logo. El PDF se generará sin logo:', error);
+        // Continuar sin logo
+      }
+    }
 
     // Título
     doc.setFontSize(fontSizeGrande);
@@ -608,7 +647,7 @@ function Apiventas() {
                       {/* Botón de etiqueta solo para ventas que NO sean "Punto de Despacho" ni "Flex" */}
                       {venta.puntoDespacho !== "Punto de Despacho" && venta.puntoDespacho !== "Flex" && (
                         <button
-                          onClick={() => generarEtiquetaPDF(venta)}
+                          onClick={async () => await generarEtiquetaPDF(venta)}
                           className={styles.etiquetaBtn}
                           title="Generar etiqueta PDF"
                         >
