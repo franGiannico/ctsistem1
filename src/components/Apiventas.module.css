@@ -435,16 +435,16 @@
 .notaGuardada {
     width: 100%;
     padding: 8px 10px;
-    background-color: #e8f5e9;
-    border-left: 3px solid #4caf50;
+    background-color: #f5f5f5;
+    border-left: 3px solid #666;
     margin-top: 5px;
     font-size: 0.9rem;
-    color: #2e7d32;
+    color: #555;
     border-radius: 4px;
 }
 
 .notaGuardada strong {
-    color: #1b5e20;
+    color: #444;
     margin-right: 5px;
 }
 
