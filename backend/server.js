@@ -8,6 +8,8 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const path = require("path");
 const app = express();
+const authRoutes = require("./routes/auth");
+
 
 // Función para sanitizar logs
 const sanitizeLog = (data) => {
@@ -37,28 +39,28 @@ const MAX_REQUESTS_PER_WINDOW = 100; // 100 requests por ventana
 const rateLimitMiddleware = (req, res, next) => {
   const clientIP = req.ip || req.connection.remoteAddress;
   const now = Date.now();
-  
+
   if (!requestCounts.has(clientIP)) {
     requestCounts.set(clientIP, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
   } else {
     const clientData = requestCounts.get(clientIP);
-    
+
     if (now > clientData.resetTime) {
       // Reset window
       clientData.count = 1;
       clientData.resetTime = now + RATE_LIMIT_WINDOW;
     } else {
       clientData.count++;
-      
+
       if (clientData.count > MAX_REQUESTS_PER_WINDOW) {
-        return res.status(429).json({ 
+        return res.status(429).json({
           error: 'Demasiadas solicitudes. Intenta más tarde.',
           resetTime: new Date(clientData.resetTime)
         });
       }
     }
   }
-  
+
   next();
 };
 
@@ -96,14 +98,14 @@ const authMiddleware = (req, res, next) => {
   const expectedToken = process.env.API_SECRET_TOKEN || 'default-secret-token';
 
   if (!authHeader) {
-    return res.status(401).json({ 
+    return res.status(401).json({
       error: 'Acceso no autorizado. Token requerido.',
       hint: 'Incluir header: Authorization: tu-token-secreto'
     });
   }
 
   if (authHeader !== expectedToken) {
-    return res.status(401).json({ 
+    return res.status(401).json({
       error: 'Acceso no autorizado. Token inválido.',
       hint: 'Verificar token en variables de entorno'
     });
@@ -131,10 +133,13 @@ mongoose.connect(mongoURI)
   .catch(err => console.error("❌ Error conectando a MongoDB:", err));
 
 // 📁 Definición de rutas principales
+app.use("/auth", authRoutes);
 app.use("/apiventas", require("./routes/apiventas"));
 app.use("/apiingresos", require("./routes/apiingresos"));
 app.use("/apitareas", require("./routes/apitareas"));
 app.use("/meli", meliRoutes); // ✅ Ruta para autenticación Mercado Libre
+
+
 
 // 🔍 Ruta de prueba
 app.get("/", (req, res) => {
