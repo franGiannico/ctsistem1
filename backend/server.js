@@ -157,6 +157,7 @@ app.use("/apiventas", require("./routes/apiventas"));
 app.use("/apiingresos", require("./routes/apiingresos"));
 app.use("/apitareas", require("./routes/apitareas"));
 app.use("/meli", meliRoutes); // ✅ Ruta para autenticación Mercado Libre
+app.use("/tiendanube", require("./routes/tiendanube")); // ✅ Ruta para Tiendanube
 
 
 

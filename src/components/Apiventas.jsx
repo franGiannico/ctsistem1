@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import styles from './Apiventas.module.css';
 import MeliAuthButton from './MeliAuthButton';
+import TiendanubeAuthButton from './TiendanubeAuthButton';
 import jsPDF from 'jspdf';
 // Importar el logo desde assets
 import logoImage from '../assets/logo.png';
@@ -496,6 +497,23 @@ function Apiventas() {
     }
   };
 
+  // Sincronizar ventas Tiendanube
+  const sincronizarTiendanube = async () => {
+    setCargando(true);
+    try {
+      const response = await authenticatedFetch(`${BACKEND_URL}/tiendanube/sincronizar-ventas`);
+      const data = await response.json();
+      console.log('Resultado Sync TN:', data);
+
+      // Esperar brevemente y recargar
+      setTimeout(cargarVentasDesdeServidor, 2000);
+    } catch (error) {
+      console.error("Error al sincronizar ventas Tiendanube:", error);
+    } finally {
+      setCargando(false);
+    }
+  };
+
   // Verificar estado de sincronización
   const verificarEstadoSincronizacion = async () => {
     console.log("🔄 Iniciando verificación de estado de sincronización...");
@@ -627,6 +645,20 @@ function Apiventas() {
             >
               {cargando ? 'Sincronizando...' : 'Sincronizar ventas Mercado Libre'}
             </button>
+
+            <TiendanubeAuthButton
+              className={`${styles.meliConnectBtn} ${styles.actionButton}`}
+              wrapperClassName={styles.actionItem}
+            />
+
+            <button
+              onClick={sincronizarTiendanube}
+              disabled={cargando}
+              className={`${styles.meliSyncBtn} ${styles.actionButton}`}
+              style={{ background: 'linear-gradient(135deg, #2D325E, #4A5294)', color: 'white' }}
+            >
+              {cargando ? 'Sincronizando...' : 'Sincronizar Tiendanube'}
+            </button>
           </div>
 
 
@@ -682,9 +714,9 @@ function Apiventas() {
                             <img src={venta.imagen} alt={venta.nombre} className={styles.imagenProducto} />
                           )}
                           <div className={styles.ventaDetalle}>
-                            <p><strong>SKU:</strong> {venta.sku || 'N/A'}</p>
                             <p><strong>Nombre:</strong> {venta.nombre}</p>
                             {venta.esML && <span className={styles.etiquetaML}>ML</span>}
+                            {venta.esTiendanube && <span className={styles.etiquetaTN}>TN</span>}
                             <p><strong>Cantidad:</strong> {venta.cantidad}</p>
                             {/* Mostrar atributos si existen (solo en ML) */}
                             {venta.atributos && venta.atributos.length > 0 && (
