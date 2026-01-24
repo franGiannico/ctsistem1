@@ -3,26 +3,10 @@ const router = express.Router();
 const mongoose = require("mongoose");
 
 
-// Esquema de la base de datos
-const VentaSchema = new mongoose.Schema({
-  sku: String,
-  nombre: String,
-  cantidad: Number,
-  numeroVenta: { type: String, unique: true },
-  packId: String,
-  cliente: String,
-  puntoDespacho: String,
-  completada: { type: Boolean, default: false },
-  entregada: { type: Boolean, default: false },
-  imagen: String,
-  esML: { type: Boolean, default: false },
-  variationId: String,
-  atributos: [Object],
-  tipoEnvio: String,
-  nota: String,
-});
-
-const Venta = mongoose.model("Venta", VentaSchema, "ventas");
+const express = require("express");
+const router = express.Router();
+const mongoose = require("mongoose");
+const Venta = require("../models/Venta"); // ✅ Importar modelo compartido
 
 // Esquema de la base de datos para la Hora Límite General
 const HoraLimiteGeneralSchema = new mongoose.Schema({
@@ -46,35 +30,35 @@ router.get("/cargar-ventas", async (req, res) => {
 // Obtener la hora límite general
 router.get("/obtener-hora-limite", async (req, res) => {
   try {
-      const config = await HoraLimiteGeneralModel.findById("general");
-      const horaLimiteGeneral = config ? config.horaLimiteGeneral : "";
-      res.json({ horaLimiteGeneral });
+    const config = await HoraLimiteGeneralModel.findById("general");
+    const horaLimiteGeneral = config ? config.horaLimiteGeneral : "";
+    res.json({ horaLimiteGeneral });
   } catch (error) {
-      console.error("Error al obtener la hora límite:", error);
-      res.status(500).json({ error: "Error al obtener la hora límite" });
+    console.error("Error al obtener la hora límite:", error);
+    res.status(500).json({ error: "Error al obtener la hora límite" });
   }
 });
 
 // Ruta para actualizar la hora límite
 router.post("/actualizar-hora-limite", async (req, res) => {
   try {
-      const { horaLimite } = req.body;
-      console.log("Hora límite recibida:", horaLimite);
+    const { horaLimite } = req.body;
+    console.log("Hora límite recibida:", horaLimite);
 
-      let config = await HoraLimiteGeneralModel.findById('general');
+    let config = await HoraLimiteGeneralModel.findById('general');
 
-      if (config) {
-          config.horaLimiteGeneral = horaLimite;
-          await config.save();
-          res.json({ message: "Hora límite actualizada con éxito", horaLimite: config.horaLimiteGeneral });
-      } else {
-          const nuevaConfig = new HoraLimiteGeneralModel({ _id: 'general', horaLimiteGeneral: horaLimite });
-          await nuevaConfig.save();
-          res.json({ message: "Hora límite guardada con éxito", horaLimite: nuevaConfig.horaLimiteGeneral });
-      }
+    if (config) {
+      config.horaLimiteGeneral = horaLimite;
+      await config.save();
+      res.json({ message: "Hora límite actualizada con éxito", horaLimite: config.horaLimiteGeneral });
+    } else {
+      const nuevaConfig = new HoraLimiteGeneralModel({ _id: 'general', horaLimiteGeneral: horaLimite });
+      await nuevaConfig.save();
+      res.json({ message: "Hora límite guardada con éxito", horaLimite: nuevaConfig.horaLimiteGeneral });
+    }
   } catch (error) {
-      console.error("Error al actualizar la hora límite:", error);
-      res.status(500).json({ error: "Error al actualizar la hora límite" });
+    console.error("Error al actualizar la hora límite:", error);
+    res.status(500).json({ error: "Error al actualizar la hora límite" });
   }
 });
 
@@ -150,7 +134,7 @@ router.patch("/actualizar-venta/:id", async (req, res) => {
 router.delete("/borrar-venta/:id", async (req, res) => {
   try {
     const ventaEliminada = await Venta.findByIdAndDelete(req.params.id);
-    
+
     if (!ventaEliminada) {
       return res.status(404).json({ error: "Venta no encontrada" });
     }

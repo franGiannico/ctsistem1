@@ -357,26 +357,8 @@ async function procesarSincronizacion() {
 
 
 
-    // Importar modelo de ventas manuales (ya existente)
-    const VentaSchema = new mongoose.Schema({
-      sku: String,
-      nombre: String,
-      cantidad: Number,
-      numeroVenta: { type: String, unique: true },
-      packId: String,
-      cliente: String,
-      puntoDespacho: String,
-      completada: Boolean,
-      entregada: Boolean,
-      imagen: String,
-      esML: { type: Boolean, default: false },
-      variationId: String,
-      atributos: [Object],
-      tipoEnvio: String,
-      nota: String, // 🔑 Nuevo campo para notas
-    });
-
-    const Venta = mongoose.models.Venta || mongoose.model('Venta', VentaSchema);
+    // Importar modelo de ventas unificado
+    const Venta = require("../models/Venta");
 
     // 🆕 Función auxiliar para mapear tags de ML a tus puntos de despacho
     function mapTagsToPuntoDespacho(tags = []) {

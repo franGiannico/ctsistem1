@@ -24,32 +24,8 @@ const TiendanubeTokenSchema = new mongoose.Schema({
 
 const TiendanubeToken = mongoose.models.TiendanubeToken || mongoose.model('TiendanubeToken', TiendanubeTokenSchema);
 
-// Modelo Venta (Referencia)
-const Venta = mongoose.models.Venta; // Asumiendo que ya está compilado en otros archivos o usar require si es necesario.
-// Mejor definimos el esquema si no está globalmente accesible, o importamos.
-// Por consistencia con meli.js, reusamos la definición si Venta ya está cargado en mongoose.
-// Ojo: Si meli.js es quien lo define, puede que aquí no esté disponible si no se ha ejecutado.
-// Definiremos VentaSchema aquí también para asegurar.
-const VentaSchema = new mongoose.Schema({
-    sku: String,
-    nombre: String,
-    cantidad: Number,
-    numeroVenta: { type: String, unique: true },
-    packId: String,
-    cliente: String,
-    puntoDespacho: String,
-    completada: Boolean,
-    entregada: Boolean,
-    imagen: String,
-    esML: { type: Boolean, default: false },
-    esTiendanube: { type: Boolean, default: false }, // Nuevo flag
-    variationId: String,
-    atributos: [Object],
-    tipoEnvio: String,
-    nota: String,
-});
-// Usar modelo existente o crear nuevo
-const VentaModel = mongoose.models.Venta || mongoose.model('Venta', VentaSchema);
+// Modelo Venta (Referencia unificada)
+const VentaModel = require("../models/Venta");
 
 
 // 🔐 Auth: Redirigir a Tiendanube
