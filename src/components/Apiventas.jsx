@@ -22,7 +22,7 @@ function Apiventas() {
       },
       ...options
     };
-    
+
     try {
       const response = await fetch(url, defaultOptions);
       if (!response.ok) {
@@ -52,6 +52,35 @@ function Apiventas() {
   const [ventasConNotaAbierta, setVentasConNotaAbierta] = useState(new Set()); // IDs de ventas con input de nota abierto
   const [notasTemporales, setNotasTemporales] = useState({}); // Notas temporales mientras se editan
 
+  // 🆕 Estado para controlar qué categorías están expandidas (muestran completadas)
+  const [categoriasExpandidas, setCategoriasExpandidas] = useState(new Set());
+  const [mostrarTodas, setMostrarTodas] = useState(false);
+
+  // Toggle para una categoría individual
+  const toggleCategoria = (puntoDespacho) => {
+    const nuevoSet = new Set(categoriasExpandidas);
+    if (nuevoSet.has(puntoDespacho)) {
+      nuevoSet.delete(puntoDespacho);
+    } else {
+      nuevoSet.add(puntoDespacho);
+    }
+    setCategoriasExpandidas(nuevoSet);
+  };
+
+  // Toggle global para mostrar/ocultar todas
+  const toggleMostrarTodas = () => {
+    if (mostrarTodas) {
+      // Si estaba mostrando todas, colapsar todo (limpiar set)
+      setCategoriasExpandidas(new Set());
+      setMostrarTodas(false);
+    } else {
+      // Si estaba oculto, expandir todas las categorías que existen
+      const todasLasCategorias = new Set(ventas.map(v => v.puntoDespacho));
+      setCategoriasExpandidas(todasLasCategorias);
+      setMostrarTodas(true);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'listado') {
       cargarVentasDesdeServidor();
@@ -65,7 +94,7 @@ function Apiventas() {
       const response = await authenticatedFetch(`${BACKEND_URL}/apiventas/cargar-ventas`);
       const data = await response.json();
       setVentas(data);
-      
+
       // Log para verificar imágenes
       const ventasConImagen = data.filter(v => v.imagen && v.imagen.trim() !== '');
       console.log(`📊 Total ventas: ${data.length}, Con imagen: ${ventasConImagen.length}`);
@@ -117,11 +146,11 @@ function Apiventas() {
   // Guardar venta manual
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const nuevaVenta = { 
-      ...formData, 
-      completada: false, 
-      entregada: false, 
-      imagen: null, 
+    const nuevaVenta = {
+      ...formData,
+      completada: false,
+      entregada: false,
+      imagen: null,
       esML: false   // 👈 fuerza a que quede como manual
     };
 
@@ -191,7 +220,7 @@ function Apiventas() {
   // Guardar o actualizar nota
   const guardarNota = async (ventaId) => {
     const notaTexto = notasTemporales[ventaId] || "";
-    
+
     try {
       const response = await authenticatedFetch(`${BACKEND_URL}/apiventas/actualizar-venta/${ventaId}`, {
         method: "PATCH",
@@ -199,12 +228,12 @@ function Apiventas() {
       });
       if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
       const data = await response.json();
-      
+
       // Actualizar la venta en el estado
       setVentas((prev) =>
         prev.map((v) => (v._id === ventaId ? { ...v, nota: data.venta.nota || "" } : v))
       );
-      
+
       // Si la nota está vacía, cerrar el input
       if (!notaTexto.trim()) {
         const nuevoSet = new Set(ventasConNotaAbierta);
@@ -216,7 +245,7 @@ function Apiventas() {
         nuevoSet.delete(ventaId);
         setVentasConNotaAbierta(nuevoSet);
       }
-      
+
       // Limpiar la nota temporal
       setNotasTemporales(prev => {
         const nuevo = { ...prev };
@@ -289,11 +318,11 @@ function Apiventas() {
         // Tamaño del logo: máximo 40 puntos de alto, manteniendo proporción
         const logoHeight = 40;
         const logoWidth = (img.width / img.height) * logoHeight;
-        
+
         // Centrar el logo horizontalmente
         const logoX = (ancho - logoWidth) / 2;
         const logoY = margin;
-        
+
         doc.addImage(base64data, 'PNG', logoX, logoY, logoWidth, logoHeight);
         yPos = margin + logoHeight + 10; // Espacio después del logo
       } catch (error) {
@@ -600,101 +629,140 @@ function Apiventas() {
             </button>
           </div>
 
-          {Object.entries(agruparVentasPorPunto()).map(([puntoDespacho, ventasGrupo]) => (
-            <div key={puntoDespacho}>
-              <h3 className={styles.puntoTitulo}>
-                {puntoDespacho} <span className={styles.contadorPunto}>({ventasGrupo.length})</span>
-              </h3>
 
-              <ul className={styles.lista}>
-                {ventasGrupo.map((venta) => (
-                  <li key={venta.numeroVenta || venta._id}>
-                    <div className={styles.ventaItem}>
-                      {venta.imagen && (
-                        <img src={venta.imagen} alt={venta.nombre} className={styles.imagenProducto} />
+          {/* Botón flotante para mostrar/ocultar todas */}
+          <div className={styles.stickyHeader}>
+            <button
+              onClick={toggleMostrarTodas}
+              className={styles.globalToggleBtn}
+            >
+              {mostrarTodas ? "Restaurar vista" : "Mostrar todas"}
+            </button>
+          </div>
+
+          <div className={styles.listadoContainer}>
+            {Object.entries(agruparVentasPorPunto()).map(([puntoDespacho, ventasGrupo]) => {
+              // Filtrar ventas por estado
+              const pendientes = ventasGrupo.filter(v => !v.completada);
+              const completadas = ventasGrupo.filter(v => v.completada);
+
+              // Determinar si la categoría está expandida
+              const esExpandida = categoriasExpandidas.has(puntoDespacho);
+              // Si hay ventas completadas ocultas, mostrar flecha izquierda (◀). Si está expandido, abajo (▼).
+              const hayOcultas = completadas.length > 0 && !esExpandida;
+
+              // Ventas a mostrar: siempre las pendientes, y las completadas solo si está expandido
+              const ventasAMostrar = esExpandida ? ventasGrupo : pendientes;
+
+              return (
+                <div key={puntoDespacho}>
+                  <h3 className={styles.puntoTitulo}>
+                    <div
+                      className={styles.toggleIconWrapper}
+                      onClick={() => toggleCategoria(puntoDespacho)}
+                      title={esExpandida ? "Ocultar completadas" : "Mostrar completadas"}
+                    >
+                      {/* Solo mostrar toggle si hay completadas para ocultar/mostrar */}
+                      {completadas.length > 0 && (
+                        <span className={styles.toggleIcon}>
+                          {esExpandida ? "▼" : "◀"}
+                        </span>
                       )}
-                      <div className={styles.ventaDetalle}>
-                        <p><strong>SKU:</strong> {venta.sku || 'N/A'}</p>
-                        <p><strong>Nombre:</strong> {venta.nombre}</p>
-                        {venta.esML && <span className={styles.etiquetaML}>ML</span>}
-                        <p><strong>Cantidad:</strong> {venta.cantidad}</p>
-                        {/* Mostrar atributos si existen (solo en ML) */}
-                        {venta.atributos && venta.atributos.length > 0 && (
-                          <div className={styles.atributos}>
-                            {venta.atributos.map((attr, idx) => (
-                              <p key={idx} className={styles.atributo}>
-                                {attr.nombre}: {attr.valor}
-                              </p>
-                            ))}
+                    </div>
+                    {puntoDespacho} <span className={styles.contadorPunto}>({pendientes.length} / {ventasGrupo.length})</span>
+                  </h3>
+
+                  <ul className={styles.lista}>
+                    {ventasAMostrar.map((venta) => (
+                      <li key={venta.numeroVenta || venta._id}>
+                        <div className={`${styles.ventaItem} ${venta.completada ? styles.ventaItemCompletada : ''}`}>
+                          {venta.imagen && (
+                            <img src={venta.imagen} alt={venta.nombre} className={styles.imagenProducto} />
+                          )}
+                          <div className={styles.ventaDetalle}>
+                            <p><strong>SKU:</strong> {venta.sku || 'N/A'}</p>
+                            <p><strong>Nombre:</strong> {venta.nombre}</p>
+                            {venta.esML && <span className={styles.etiquetaML}>ML</span>}
+                            <p><strong>Cantidad:</strong> {venta.cantidad}</p>
+                            {/* Mostrar atributos si existen (solo en ML) */}
+                            {venta.atributos && venta.atributos.length > 0 && (
+                              <div className={styles.atributos}>
+                                {venta.atributos.map((attr, idx) => (
+                                  <p key={idx} className={styles.atributo}>
+                                    {attr.nombre}: {attr.valor}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
+                            {venta.cantidad > 1 && (
+                              <span className={styles.alerta}>⚠ Ojo!</span>
+                            )}
+                            <p><strong>Cliente:</strong> {venta.cliente}</p>
+                            <p><strong>N° Venta:</strong> {venta.numeroVenta}</p>
+                            {venta.esML && venta.tipoEnvio && (
+                              <p><strong>Tipo de Envío:</strong> {venta.tipoEnvio}</p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => toggleNotaInput(venta._id, venta.nota)}
+                            className={styles.notaBtn}
+                            title="Agregar/Editar nota"
+                          >
+                            ✏️
+                          </button>
+                          {/* Botón de etiqueta solo para ventas que NO sean "Punto de Despacho" ni "Flex" */}
+                          {venta.puntoDespacho !== "Punto de Despacho" && venta.puntoDespacho !== "Flex" && (
+                            <button
+                              onClick={async () => await generarEtiquetaPDF(venta)}
+                              className={styles.etiquetaBtn}
+                              title="Generar etiqueta PDF"
+                            >
+                              🏷️
+                            </button>
+                          )}
+                          <button
+                            onClick={() => marcarCompletada(venta._id, venta.completada)}
+                            className={`${styles.checkBtn} ${venta.completada ? styles.checkBtnChecked : ''}`}
+                          >
+                            {venta.completada ? "✔" : "X"}
+                          </button>
+                          <button
+                            onClick={() => marcarEntregada(venta._id, venta.entregada)}
+                            className={`${styles.checkBtn} ${venta.entregada ? styles.entregadoBtnChecked : ''}`}
+                          >
+                            {venta.entregada ? "📦" : "🚚"}
+                          </button>
+                          <button onClick={() => borrarVenta(venta._id)} className={styles.checkBtn}>
+                            Borrar
+                          </button>
+                        </div>
+                        {/* Mostrar nota guardada si existe y el input no está abierto */}
+                        {venta.nota && !ventasConNotaAbierta.has(venta._id) && (
+                          <div className={styles.notaGuardada}>
+                            <strong>Nota:</strong> {venta.nota}
                           </div>
                         )}
-                        {venta.cantidad > 1 && (
-                          <span className={styles.alerta}>⚠ Ojo!</span>
+                        {/* Input de nota que aparece cuando se presiona el botón de lápiz */}
+                        {ventasConNotaAbierta.has(venta._id) && (
+                          <div className={styles.notaInputContainer}>
+                            <input
+                              type="text"
+                              value={notasTemporales[venta._id] || ""}
+                              onChange={(e) => handleNotaChange(venta._id, e.target.value)}
+                              onKeyDown={(e) => handleNotaKeyDown(e, venta._id)}
+                              placeholder="Escribe una nota y presiona Enter..."
+                              className={styles.notaInput}
+                              autoFocus
+                            />
+                          </div>
                         )}
-                        <p><strong>Cliente:</strong> {venta.cliente}</p>
-                        <p><strong>N° Venta:</strong> {venta.numeroVenta}</p>
-                        {venta.esML && venta.tipoEnvio && (
-                          <p><strong>Tipo de Envío:</strong> {venta.tipoEnvio}</p>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => toggleNotaInput(venta._id, venta.nota)}
-                        className={styles.notaBtn}
-                        title="Agregar/Editar nota"
-                      >
-                        ✏️
-                      </button>
-                      {/* Botón de etiqueta solo para ventas que NO sean "Punto de Despacho" ni "Flex" */}
-                      {venta.puntoDespacho !== "Punto de Despacho" && venta.puntoDespacho !== "Flex" && (
-                        <button
-                          onClick={async () => await generarEtiquetaPDF(venta)}
-                          className={styles.etiquetaBtn}
-                          title="Generar etiqueta PDF"
-                        >
-                          🏷️
-                        </button>
-                      )}
-                      <button
-                        onClick={() => marcarCompletada(venta._id, venta.completada)}
-                        className={`${styles.checkBtn} ${venta.completada ? styles.checkBtnChecked : ''}`}
-                      >
-                        {venta.completada ? "✔" : "X"}
-                      </button>
-                      <button
-                        onClick={() => marcarEntregada(venta._id, venta.entregada)}
-                        className={`${styles.checkBtn} ${venta.entregada ? styles.entregadoBtnChecked : ''}`}
-                      >
-                        {venta.entregada ? "📦" : "🚚"}
-                      </button>
-                      <button onClick={() => borrarVenta(venta._id)} className={styles.checkBtn}>
-                        Borrar
-                      </button>
-                    </div>
-                    {/* Mostrar nota guardada si existe y el input no está abierto */}
-                    {venta.nota && !ventasConNotaAbierta.has(venta._id) && (
-                      <div className={styles.notaGuardada}>
-                        <strong>Nota:</strong> {venta.nota}
-                      </div>
-                    )}
-                    {/* Input de nota que aparece cuando se presiona el botón de lápiz */}
-                    {ventasConNotaAbierta.has(venta._id) && (
-                      <div className={styles.notaInputContainer}>
-                        <input
-                          type="text"
-                          value={notasTemporales[venta._id] || ""}
-                          onChange={(e) => handleNotaChange(venta._id, e.target.value)}
-                          onKeyDown={(e) => handleNotaKeyDown(e, venta._id)}
-                          placeholder="Escribe una nota y presiona Enter..."
-                          className={styles.notaInput}
-                          autoFocus
-                        />
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
         </>
       )}
     </div>
