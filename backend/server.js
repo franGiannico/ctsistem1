@@ -8,6 +8,7 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const path = require("path");
 const app = express();
+const jwt = require("jsonwebtoken");
 const authRoutes = require("./routes/auth");
 
 
@@ -104,13 +105,31 @@ const authMiddleware = (req, res, next) => {
     });
   }
 
-  if (authHeader !== expectedToken) {
-    return res.status(401).json({
-      error: 'Acceso no autorizado. Token inválido.',
-      hint: 'Verificar token en variables de entorno'
-    });
+  // 1. Validar Token Estático (Legacy/Internal)
+  if (authHeader === expectedToken) {
+    return next();
   }
-  next();
+
+  // 2. Validar JWT (Bearer Token)
+  if (authHeader.startsWith("Bearer ")) {
+    const token = authHeader.split(" ")[1];
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = decoded; // Adjuntar datos del usuario al request
+      return next();
+    } catch (err) {
+      return res.status(401).json({
+        error: 'Token inválido o expirado.',
+        details: err.message
+      });
+    }
+  }
+
+  // Si no coincide con ninguno
+  return res.status(401).json({
+    error: 'Acceso no autorizado. Credenciales inválidas.',
+    hint: 'Se requiere Header Authorization: <token_estatico> o Bearer <jwt>'
+  });
 };
 
 // Aplicar rate limiting y autenticación a todas las rutas API

@@ -2,7 +2,7 @@
 
 const USUARIO_ADMIN = {
     username: "admin",
-    password: "cambia_esta_password_segura998876897" // después la hasheamos
+    password: "cambia_esta_password_segura" // después la hasheamos
 };
 
 module.exports = {
