@@ -3,9 +3,6 @@ const router = express.Router();
 const mongoose = require("mongoose");
 
 
-const express = require("express");
-const router = express.Router();
-const mongoose = require("mongoose");
 const Venta = require("../models/Venta"); // ✅ Importar modelo compartido
 
 // Esquema de la base de datos para la Hora Límite General
