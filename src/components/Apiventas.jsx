@@ -657,6 +657,9 @@ function Apiventas() {
               return (
                 <div key={puntoDespacho}>
                   <h3 className={styles.puntoTitulo}>
+                    <span>
+                      {puntoDespacho} <span className={styles.contadorPunto}>({pendientes.length} / {ventasGrupo.length})</span>
+                    </span>
                     <div
                       className={styles.toggleIconWrapper}
                       onClick={() => toggleCategoria(puntoDespacho)}
@@ -669,7 +672,6 @@ function Apiventas() {
                         </span>
                       )}
                     </div>
-                    {puntoDespacho} <span className={styles.contadorPunto}>({pendientes.length} / {ventasGrupo.length})</span>
                   </h3>
 
                   <ul className={styles.lista}>
