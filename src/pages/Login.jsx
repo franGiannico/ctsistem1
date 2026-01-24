@@ -16,11 +16,12 @@ const Login = () => {
         setLoading(true);
 
         try {
-            // Determine API URL: Relative path in production, localhost in development
-            // import.meta.env.PROD is true when built for production
-            const API_URL = import.meta.env.PROD
-                ? ''
-                : (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000');
+            // Determine API URL:
+            // 1. If VITE_BACKEND_URL is set (e.g. in .env or Netlify config), use it.
+            // 2. If running locally (dev), use localhost.
+            // 3. Fallback to Heroku URL for production if env var is missing (CRITICAL for Netlify)
+            const API_URL = import.meta.env.VITE_BACKEND_URL ||
+                (import.meta.env.DEV ? 'http://localhost:5000' : 'https://ctsistem1-e68664e8ae46.herokuapp.com');
 
             console.log("Intentando login en:", `${API_URL}/auth/login`);
 
