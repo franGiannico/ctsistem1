@@ -339,13 +339,14 @@ async function procesarSincronizacion() {
 
         console.log(`📦 Respuesta Notas para ${orderId}:`, JSON.stringify(data));
 
-        // data es un array de notas. Concatenamos el contenido.
-        if (data && data.length > 0) {
-          const notasDetectadas = data.map(n => n.note).join(" | ");
+        // data es un array de objetos (uno por cada orden solicitada).
+        // Estructura: [{ "order_id": ..., "results": [ { "note": "..." }, ... ] }]
+        if (data && data.length > 0 && data[0].results) {
+          const notasDetectadas = data[0].results.map(n => n.note).join(" | ");
           console.log(`✅ Notas encontradas: ${notasDetectadas}`);
           return notasDetectadas;
         }
-        console.log(`⚠️ Array de notas vacío para ${orderId}`);
+        console.log(`⚠️ Array de notas vacío o sin resultados para ${orderId}`);
         return "";
       } catch (error) {
         // Es común que no haya notas o de 404 si no existen, no es crítico
