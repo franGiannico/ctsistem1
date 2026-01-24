@@ -1,8 +1,8 @@
 // config/auth.js
 
 const USUARIO_ADMIN = {
-    username: "admin",
-    password: "cambia_esta_password_segura" // después la hasheamos
+    username: process.env.ADMIN_USERNAME || "admin",
+    password: process.env.ADMIN_PASSWORD || "cambia_esta_password_segura"
 };
 
 module.exports = {
