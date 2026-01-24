@@ -68,7 +68,7 @@ const rateLimitMiddleware = (req, res, next) => {
 // ✅ Importa las rutas personalizadas
 const meliRoutes = require('./routes/meli');
 
-app.use(express.static(path.join(__dirname, 'dist')));
+app.use(express.static(path.join(__dirname, '../dist')));
 
 // 🔐 Middleware de CORS
 app.use(cors({
@@ -167,9 +167,9 @@ app.get("/", (req, res) => {
 
 // 🌐 Producción: servir archivos del frontend desde /dist (por si hacés build de React local)
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'dist')));
+  app.use(express.static(path.join(__dirname, '../dist')));
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    res.sendFile(path.join(__dirname, '../dist', 'index.html'));
   });
 }
 

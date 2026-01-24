@@ -16,13 +16,13 @@ const Login = () => {
         setLoading(true);
 
         try {
-            // Usamos la URL del backend desde el .env o default a localhost exportada por Vite
-            // Nota: En Vite las variables de entorno deben empezar con VITE_ para ser visibles en el cliente
-            // Asumiremos que el backend está en la misma URL relativa si hay proxy, o hardcodeamos para dev por ahora si no hay proxy configurado.
-            // Dado que no vi configuración de proxy en vite.config.js, usaré la URL relativa asumiendo que el usuario configurará proxy o CORS.
-            // Update: server.js tiene CORS confugurado para localhost:5173.
+            // Determine API URL: Relative path in production, localhost in development
+            // import.meta.env.PROD is true when built for production
+            const API_URL = import.meta.env.PROD
+                ? ''
+                : (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000');
 
-            const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+            console.log("Intentando login en:", `${API_URL}/auth/login`);
 
             const response = await fetch(`${API_URL}/auth/login`, {
                 method: 'POST',
@@ -32,7 +32,18 @@ const Login = () => {
                 body: JSON.stringify({ username, password }),
             });
 
-            const data = await response.json();
+            // Handle non-JSON responses (e.g., 404, 500 HTML pages)
+            const contentType = response.headers.get("content-type");
+            let data;
+
+            if (contentType && contentType.includes("application/json")) {
+                data = await response.json();
+            } else {
+                // If the response is not JSON (likely HTML error page), we read it as text to debug
+                const text = await response.text();
+                console.error("Respuesta inesperada del servidor (no es JSON):", text);
+                throw new Error(`Error del servidor: Recibimos HTML en lugar de JSON. (Status: ${response.status})`);
+            }
 
             if (!response.ok) {
                 throw new Error(data.error || 'Error al iniciar sesión');
@@ -44,7 +55,8 @@ const Login = () => {
             // Redirigir al inicio
             navigate('/');
         } catch (err) {
-            setError(err.message);
+            console.error("Login Error:", err);
+            setError(err.message || "Error de conexión con el servidor");
         } finally {
             setLoading(false);
         }
