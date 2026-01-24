@@ -331,19 +331,25 @@ async function procesarSincronizacion() {
     // Función auxiliar para obtener notas de la orden
     async function obtenerNotasOrden(orderId, accessToken, axios) {
       try {
+        console.log(`🕵️ Buscando notas para orden ${orderId}...`);
         const { data } = await axios.get(
           `https://api.mercadolibre.com/orders/${orderId}/notes`,
           { headers: { Authorization: `Bearer ${accessToken}` } }
         );
 
+        console.log(`📦 Respuesta Notas para ${orderId}:`, JSON.stringify(data));
+
         // data es un array de notas. Concatenamos el contenido.
         if (data && data.length > 0) {
-          return data.map(n => n.note).join(" | ");
+          const notasDetectadas = data.map(n => n.note).join(" | ");
+          console.log(`✅ Notas encontradas: ${notasDetectadas}`);
+          return notasDetectadas;
         }
+        console.log(`⚠️ Array de notas vacío para ${orderId}`);
         return "";
       } catch (error) {
         // Es común que no haya notas o de 404 si no existen, no es crítico
-        // console.log(`ℹ️ Sin notas para orden ${orderId} o error:`, error.message);
+        console.error(`❌ Error buscando notas orden ${orderId}:`, error.response?.data || error.message);
         return "";
       }
     }
@@ -543,9 +549,12 @@ async function procesarSincronizacion() {
       // 👇 Obtener notas SOLO si es 'A coordinar' (o para todas si prefieres)
       // El usuario pidió específicamente para las ventas "a acordar".
       let notaOrden = "";
+      console.log(`🧐 Verificando orden ${numeroVenta}: PuntoDespacho='${puntoDespacho}'`);
+
       if (puntoDespacho === "A coordinar") {
+        console.log(`🚀 Intentando obtener notas para ${numeroVenta}`);
         notaOrden = await obtenerNotasOrden(orden.id, access_token, axios);
-        if (notaOrden) console.log(`📝 Nota encontrada para venta ${numeroVenta}: ${notaOrden}`);
+        if (notaOrden) console.log(`📝 Nota FINAL encontrada para venta ${numeroVenta}: ${notaOrden}`);
       }
 
       // 👇 guardamos la venta en Mongo preservando estados existentes
