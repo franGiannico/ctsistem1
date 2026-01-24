@@ -68,6 +68,7 @@ router.get('/callback', async (req, res) => {
             client_id: TIENDANUBE_CLIENT_ID,
             client_secret: TIENDANUBE_CLIENT_SECRET,
             grant_type: 'authorization_code',
+            redirect_uri: REDIRECT_URI, // 👈 Importante incluirlo si se usó en el paso anterior
             code
         });
 
