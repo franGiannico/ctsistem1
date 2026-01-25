@@ -690,7 +690,7 @@ function Apiventas() {
                 <div key={puntoDespacho}>
                   <h3 className={styles.puntoTitulo}>
                     <span>
-                      {puntoDespacho} <span className={styles.contadorPunto}>({pendientes.length} / {ventasGrupo.length})</span>
+                      {puntoDespacho} <span className={styles.contadorPunto}>({completadas.length} / {ventasGrupo.length})</span>
                     </span>
                     <div
                       className={styles.toggleIconWrapper}
