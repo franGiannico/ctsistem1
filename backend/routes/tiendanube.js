@@ -117,10 +117,9 @@ router.get('/sincronizar-ventas', async (req, res) => {
         await VentaModel.deleteMany({ esTiendanube: true });
 
         for (const order of orders) {
-            // Filtrar solo pagadas si es necesario (status 'open' suele incluir pendientes de pago en TN?)
-            // status: 'open' significa "Lista para procesar" (normalmente pago confirmado).
-            // payment_status: 'paid'
+            // Filtrar solo pagadas y NO enviadas/entregadas
             if (order.payment_status !== 'paid') continue;
+            if (order.shipping_status === 'shipped' || order.shipping_status === 'delivered') continue; // 👈 Oculta enviadas/entregadas
 
             const numeroVenta = `TN-${order.id}`;
             const cliente = order.customer ? `${order.customer.name}` : order.billing_name || 'Desconocido';
