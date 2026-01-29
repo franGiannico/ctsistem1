@@ -476,10 +476,9 @@ async function procesarSincronizacion() {
         );
       }
 
-      const sku = item.item.seller_sku || "Sin SKU";
-      //  || // si lo cargaste manualmente en la publicación
-      // (atributos.find(attr => attr.nombre === "SELLER_SKU")?.valor) || 
-      // "Sin SKU";
+      const sku = item.item.seller_sku ||
+        (atributos.find(attr => attr.nombre === "SELLER_SKU")?.valor) ||
+        "Sin SKU";
 
       const variation = atributos.length > 0
         ? atributos.map(attr => `${attr.nombre}: ${attr.valor}`).join(" - ")

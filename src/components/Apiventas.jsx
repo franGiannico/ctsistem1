@@ -715,6 +715,7 @@ function Apiventas() {
                           )}
                           <div className={styles.ventaDetalle}>
                             <p><strong>Nombre:</strong> {venta.nombre}</p>
+                            <p><strong>SKU:</strong> {venta.sku || "Sin SKU"}</p>
                             {venta.esML && <span className={styles.etiquetaML}>ML</span>}
                             {venta.esTiendanube && <span className={styles.etiquetaTN}>TN</span>}
                             <p><strong>Cantidad:</strong> {venta.cantidad}</p>
