@@ -90,10 +90,9 @@ app.use(express.json());
 
 // 🔐 Middleware de autenticación básica
 const authMiddleware = (req, res, next) => {
-  // Permitir acceso público solo a la ruta raíz y debug
-  if (req.path === '/' || req.path === '/health' || req.path.startsWith('/debug/')) {
-    return next();
-  }
+ if (req.path === '/' || req.path === '/health' || req.path.startsWith('/debug/') || req.path === '/callback') {
+  return next();
+}
 
   const authHeader = req.headers.authorization;
   const expectedToken = process.env.API_SECRET_TOKEN || 'default-secret-token';
