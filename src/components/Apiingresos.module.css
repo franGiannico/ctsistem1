@@ -1,133 +1,242 @@
-/* 🏗️ Estilos generales */
+/* Apiingresos.module.css */
+
 .container {
-    background-color: #f8f9fa; /* Fondo gris claro */
-    padding: 20px;
-    border-radius: 8px;
-    max-width: 900px;
-    margin: 20px auto;
-    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  font-family: 'Segoe UI', sans-serif;
+  color: #1a1a2e;
 }
 
-/* 🎨 Estilos para los títulos */
 .title {
-    font-size: 1.5rem;
-    font-weight: bold;
-    text-align: center;
-    color: #333; /* Color oscuro */
-    margin-bottom: 10px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+  color: #1a1a2e;
 }
 
-/* 📋 Formulario de ingreso */
-.form {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 15px;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+.subtitle {
+  font-size: 0.95rem;
+  color: #555;
+  margin-bottom: 1.8rem;
 }
 
-.form input {
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
+/* Upload */
+.uploadZone {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+  flex-wrap: wrap;
 }
 
-.addButton {
-    background-color: #007bff;
-    color: white;
-    padding: 10px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
+.fileInput {
+  display: none;
 }
 
-.addButton:hover {
-    background-color: #0056b3;
+.fileLabel {
+  display: inline-block;
+  padding: 0.6rem 1.2rem;
+  background: #f0f4ff;
+  border: 2px dashed #4a6cf7;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #4a6cf7;
+  font-weight: 600;
+  transition: background 0.2s;
 }
 
-/* 📦 Lista de artículos */
-.itemsList {
-    margin-top: 20px;
-    background: white;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+.fileLabel:hover {
+  background: #dce6ff;
 }
 
-.item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px;
-    border-bottom: 1px solid #ddd;
-    color: #333;
+.filasContador {
+  font-size: 0.85rem;
+  color: #777;
 }
 
-.item:last-child {
-    border-bottom: none;
+/* Botones */
+.acciones {
+  display: flex;
+  gap: 0.8rem;
+  margin-bottom: 1.2rem;
+  flex-wrap: wrap;
 }
 
-/* 🗑️ Botón para eliminar */
-.clearButton {
-    background-color: #dc3545;
-    color: white;
-    padding: 8px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
+.btnSincronizar {
+  padding: 0.65rem 1.5rem;
+  background: #4a6cf7;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
 }
 
-.clearButton:hover {
-    background-color: #a71d2a;
+.btnSincronizar:hover:not(:disabled) {
+  background: #3558e8;
 }
 
-/* ✅ Estilos para pantallas más pequeñas */
-@media (max-width: 768px) {
-    .container {
-        width: 95%;
-        padding: 15px;
-    }
-
-    .form {
-        gap: 8px;
-    }
-
-    .addButton,
-    .clearButton {
-        font-size: 0.9rem;
-    }
-
-    .itemsList {
-        padding: 10px;
-    }
-
-    .item {
-        flex-direction: column;
-        align-items: flex-start;
-    }
+.btnSincronizar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
-/* 🎨 Estilos del botón de check */
-.checkedButton {
-    background-color: #f0f0f0;
-    color: black;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    padding: 5px 10px;
-    cursor: pointer;
+.btnLimpiar {
+  padding: 0.65rem 1.2rem;
+  background: #f5f5f5;
+  color: #555;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s;
 }
 
-.checkedButtonActive {
-    background-color: #28a745;
-    color: white;
-    border: none;
+.btnLimpiar:hover:not(:disabled) {
+  background: #ebebeb;
 }
 
-/* 📌 Botón de "Eliminar Publicados" centrado al final */
-.clearContainer {
-    display: flex;
-    justify-content: center;
-    margin-top: 20px;
+.btnLimpiar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Resumen */
+.resumen {
+  display: flex;
+  gap: 1.2rem;
+  align-items: center;
+  padding: 0.8rem 1.2rem;
+  background: #f8f9ff;
+  border-radius: 8px;
+  margin-bottom: 1.2rem;
+  flex-wrap: wrap;
+  border: 1px solid #e0e6ff;
+}
+
+.resumenOk {
+  color: #1a9e5c;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.resumenError {
+  color: #d94040;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.resumenTotal {
+  color: #777;
+  font-size: 0.9rem;
+  margin-left: auto;
+}
+
+/* Barra de progreso */
+.progressBar {
+  position: relative;
+  height: 28px;
+  background: #e8eeff;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 1.2rem;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #4a6cf7, #7b9cff);
+  border-radius: 8px;
+  transition: width 0.3s ease;
+}
+
+.progressText {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #2a3a8a;
+}
+
+/* Tabla */
+.tablaWrapper {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid #e0e6ff;
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.tabla thead tr {
+  background: #f0f4ff;
+}
+
+.tabla th {
+  padding: 0.65rem 1rem;
+  text-align: left;
+  font-weight: 700;
+  color: #3a4a8a;
+  border-bottom: 2px solid #d0daff;
+  white-space: nowrap;
+}
+
+.tabla td {
+  padding: 0.55rem 1rem;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: middle;
+}
+
+.tabla tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.rowOk {
+  background: #f0fff7;
+}
+
+.rowError {
+  background: #fff5f5;
+}
+
+.tdEstado {
+  text-align: center;
+  font-size: 1rem;
+  width: 60px;
+}
+
+.tdSku {
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: #2a3a8a;
+  white-space: nowrap;
+}
+
+.tdNombre {
+  color: #333;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tdStock {
+  text-align: center;
+  font-weight: 600;
+  color: #1a1a2e;
+  width: 70px;
+}
+
+.tdMensaje {
+  color: #d94040;
+  font-size: 0.82rem;
+  max-width: 200px;
 }

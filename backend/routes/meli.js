@@ -1009,4 +1009,128 @@ router.get('/debug/billing/:user_id', async (req, res) => {
   }
 });
 
+// Ruta: POST /meli/actualizar-stock
+// Body: { sku: "ABC123", cantidad: 15 }
+router.post('/actualizar-stock', async (req, res) => {
+  const { sku, cantidad } = req.body;
+
+  if (!sku || cantidad === undefined || cantidad === null) {
+    return res.status(400).json({ error: 'Se requieren los campos "sku" y "cantidad".' });
+  }
+
+  if (typeof cantidad !== 'number' || cantidad < 0 || !Number.isInteger(cantidad)) {
+    return res.status(400).json({ error: '"cantidad" debe ser un número entero mayor o igual a 0.' });
+  }
+
+  try {
+    // 1. Obtener y verificar token
+    let tokenDoc = await MeliToken.findOne();
+    if (!tokenDoc || !tokenDoc.access_token) {
+      return res.status(401).json({ error: 'No autenticado con Mercado Libre.' });
+    }
+
+    const now = Date.now();
+    const tokenCreatedAt = new Date(tokenDoc.created_at).getTime();
+    const expiresInMs = tokenDoc.expires_in * 1000;
+    const bufferTimeMs = 5 * 60 * 1000;
+
+    if (now > tokenCreatedAt + expiresInMs - bufferTimeMs) {
+      console.log('🔄 Token expirado, refrescando...');
+      try {
+        tokenDoc.access_token = await refreshMeliToken(tokenDoc);
+      } catch (refreshError) {
+        return res.status(401).json({ error: 'Token expirado y no se pudo refrescar.' });
+      }
+    }
+
+    const { access_token, user_id } = tokenDoc;
+
+    // 2. Buscar item_id por seller_sku
+    console.log(`🔍 Buscando item para SKU: ${sku}`);
+    const searchResponse = await axios.get(
+      `https://api.mercadolibre.com/users/${user_id}/items/search`,
+      {
+        params: { seller_sku: sku },
+        headers: { Authorization: `Bearer ${access_token}` }
+      }
+    );
+
+    const itemIds = searchResponse.data.results;
+    if (!itemIds || itemIds.length === 0) {
+      return res.status(404).json({ error: `No se encontró ninguna publicación para el SKU: ${sku}` });
+    }
+
+    const item_id = itemIds[0];
+    console.log(`✅ Item encontrado: ${item_id}`);
+
+    // 3. Obtener las variaciones del item para encontrar la variation_id
+    const itemResponse = await axios.get(
+      `https://api.mercadolibre.com/items/${item_id}`,
+      { headers: { Authorization: `Bearer ${access_token}` } }
+    );
+
+    const variations = itemResponse.data.variations || [];
+
+    // Buscar la variación que tiene el seller_sku que nos interesa
+    const variacion = variations.find(v =>
+      v.attributes?.some(attr =>
+        attr.id === 'SELLER_SKU' && attr.value_name === sku
+      )
+    );
+
+    if (!variacion) {
+      // Si no tiene variaciones, actualizar el item directamente
+      if (variations.length === 0) {
+        console.log(`📦 Publicación sin variaciones, actualizando item directamente...`);
+        await axios.put(
+          `https://api.mercadolibre.com/items/${item_id}`,
+          { available_quantity: cantidad },
+          { headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' } }
+        );
+
+        console.log(`✅ Stock actualizado: ${item_id} → ${cantidad} unidades`);
+        return res.json({
+          success: true,
+          item_id,
+          variation_id: null,
+          sku,
+          cantidad,
+          mensaje: `Stock actualizado correctamente a ${cantidad} unidades.`
+        });
+      }
+
+      return res.status(404).json({
+        error: `No se encontró la variación con SKU "${sku}" dentro del item ${item_id}.`
+      });
+    }
+
+    const variation_id = variacion.id;
+    console.log(`✅ Variación encontrada: ${variation_id}`);
+
+    // 4. Actualizar el stock de la variación
+    await axios.put(
+      `https://api.mercadolibre.com/items/${item_id}/variations/${variation_id}`,
+      { available_quantity: cantidad },
+      { headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' } }
+    );
+
+    console.log(`✅ Stock actualizado: ${item_id} / variación ${variation_id} → ${cantidad} unidades`);
+    return res.json({
+      success: true,
+      item_id,
+      variation_id,
+      sku,
+      cantidad,
+      mensaje: `Stock actualizado correctamente a ${cantidad} unidades.`
+    });
+
+  } catch (error) {
+    console.error('❌ Error al actualizar stock:', error.response?.data || error.message);
+    return res.status(500).json({
+      error: 'Error al actualizar el stock en Mercado Libre.',
+      detalle: error.response?.data || error.message
+    });
+  }
+});
+
 module.exports = router;

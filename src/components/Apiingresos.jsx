@@ -1,211 +1,279 @@
 // src/components/Apiingresos.jsx
+// Nueva funcionalidad: Sincronización de stock desde Excel a Mercado Libre
 
-import React, { useState, useEffect, useRef } from "react";
-import styles from './Apiingresos.module.css';
+import React, { useState, useRef } from "react";
+import * as XLSX from "xlsx";
+import styles from "./Apiingresos.module.css";
 
 const ApiIngresos = () => {
-    // URL base de tu backend, obtenida de las variables de entorno de Vite
-    // ¡Esta línea es CRUCIAL y debe estar presente!
-    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-    const API_TOKEN = import.meta.env.VITE_API_TOKEN || 'ctsistem-token-2024-seguro-123';
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+  const API_TOKEN =
+    import.meta.env.VITE_API_TOKEN || "ctsistem-token-2024-seguro-123";
 
-    // Función helper para requests autenticados
-    const authenticatedFetch = async (url, options = {}) => {
-        const defaultOptions = {
+  const [filas, setFilas] = useState([]); // { sku, stock, nombre, estado }
+  const [procesando, setProcesando] = useState(false);
+  const [resumen, setResumen] = useState(null); // { ok, errores, total }
+  const [archivoNombre, setArchivoNombre] = useState("");
+  const inputRef = useRef(null);
+
+  // Lee el Excel y extrae las columnas SKU y Stock
+  const handleArchivo = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setArchivoNombre(file.name);
+    setResumen(null);
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const workbook = XLSX.read(evt.target.result, { type: "binary" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+      // Buscar columnas SKU y Stock (case-insensitive, ignorar "Stock Critico")
+      if (data.length === 0) return;
+
+      const headers = Object.keys(data[0]);
+      const colSKU = headers.find((h) => h.trim().toLowerCase() === "sku");
+      const colStock = headers.find(
+        (h) =>
+          h.trim().toLowerCase() === "stock" &&
+          !h.toLowerCase().includes("critico") &&
+          !h.toLowerCase().includes("crítico")
+      );
+      const colNombre = headers.find(
+        (h) =>
+          h.trim().toLowerCase() === "nombre" ||
+          h.trim().toLowerCase() === "articulo" ||
+          h.trim().toLowerCase() === "artículo"
+      );
+
+      if (!colSKU || !colStock) {
+        alert(
+          "No se encontraron las columnas SKU y/o Stock en el archivo. Verificá el formato."
+        );
+        return;
+      }
+
+      const filasParsed = data
+        .filter((row) => row[colSKU] && row[colSKU].toString().trim() !== "")
+        .map((row) => ({
+          sku: row[colSKU].toString().trim(),
+          stock: parseInt(row[colStock]) || 0,
+          nombre: colNombre ? row[colNombre] : "",
+          estado: "pendiente", // pendiente | ok | error | omitido
+          mensaje: "",
+        }));
+
+      setFilas(filasParsed);
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  // Envía cada SKU al endpoint uno por uno
+  const handleSincronizar = async () => {
+    if (filas.length === 0) return;
+    setProcesando(true);
+    setResumen(null);
+
+    let ok = 0;
+    let errores = 0;
+
+    const filasActualizadas = [...filas];
+
+    for (let i = 0; i < filasActualizadas.length; i++) {
+      const fila = filasActualizadas[i];
+
+      try {
+        const response = await fetch(
+          `${BACKEND_URL}/meli/actualizar-stock`,
+          {
+            method: "POST",
             headers: {
-                'Authorization': API_TOKEN,
-                'Content-Type': 'application/json',
-                ...options.headers
+              Authorization: API_TOKEN,
+              "Content-Type": "application/json",
             },
-            ...options
+            body: JSON.stringify({ sku: fila.sku, cantidad: fila.stock }),
+          }
+        );
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          filasActualizadas[i] = { ...fila, estado: "ok", mensaje: "" };
+          ok++;
+        } else {
+          filasActualizadas[i] = {
+            ...fila,
+            estado: "error",
+            mensaje: data.error || "Error desconocido",
+          };
+          errores++;
+        }
+      } catch (err) {
+        filasActualizadas[i] = {
+          ...fila,
+          estado: "error",
+          mensaje: "Error de conexión",
         };
-        
-        try {
-            const response = await fetch(url, defaultOptions);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            return response;
-        } catch (error) {
-            console.error('Error en request autenticado:', error);
-            throw error;
-        }
-    };
+        errores++;
+      }
 
-    const [items, setItems] = useState([]);
-    const [formData, setFormData] = useState({
-        codigoBarras: "",
-        sku: "",
-        articulo: "",
-        cantidad: ""
-    });
+      // Actualizar tabla en tiempo real
+      setFilas([...filasActualizadas]);
 
-    // Referencias para los inputs
-    const codigoBarrasRef = useRef(null);
-    const skuRef = useRef(null);
-    const cantidadRef = useRef(null);
+      // Pequeña pausa para no saturar la API de ML
+      await new Promise((r) => setTimeout(r, 300));
+    }
 
-    useEffect(() => {
-        loadItems();
-    }, []);
+    setResumen({ ok, errores, total: filasActualizadas.length });
+    setProcesando(false);
+  };
 
-    const loadItems = async () => {
-        try {
-            // Usar la variable BACKEND_URL
-            const response = await authenticatedFetch(`${BACKEND_URL}/apiingresos/get-items`);
-            const data = await response.json();
-            setItems(data);
-        } catch (error) {
-            console.error("Error al cargar la lista de artículos:", error);
-        }
-    };
+  const handleLimpiar = () => {
+    setFilas([]);
+    setResumen(null);
+    setArchivoNombre("");
+    if (inputRef.current) inputRef.current.value = "";
+  };
 
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
+  const estadoIcono = (estado) => {
+    switch (estado) {
+      case "ok":
+        return "✅";
+      case "error":
+        return "❌";
+      case "procesando":
+        return "⏳";
+      default:
+        return "⬜";
+    }
+  };
 
-    const autocompletarProducto = async () => {
-        const { codigoBarras } = formData;
-        if (!codigoBarras) return;
+  const pendientes = filas.filter((f) => f.estado === "pendiente").length;
+  const listos = filas.filter((f) => f.estado === "ok").length;
+  const conError = filas.filter((f) => f.estado === "error").length;
 
-        try {
-            // Usar la variable BACKEND_URL
-            const response = await authenticatedFetch(`${BACKEND_URL}/apiingresos/buscar-producto/${codigoBarras}`);
-            if (!response.ok) throw new Error("Producto no encontrado");
+  return (
+    <div className={styles.container}>
+      <h2 className={styles.title}>Sincronización de Stock → Mercado Libre</h2>
+      <p className={styles.subtitle}>
+        Cargá el reporte de stock en Excel y actualizá todas las publicaciones
+        de ML automáticamente.
+      </p>
 
-            const producto = await response.json();
-            setFormData(prev => ({
-                ...prev,
-                sku: producto.sku,
-                articulo: producto.descripcion
-            }));
+      {/* Zona de carga */}
+      <div className={styles.uploadZone}>
+        <input
+          ref={inputRef}
+          type="file"
+          accept=".xlsx,.xls"
+          onChange={handleArchivo}
+          className={styles.fileInput}
+          id="fileInput"
+          disabled={procesando}
+        />
+        <label htmlFor="fileInput" className={styles.fileLabel}>
+          📂 {archivoNombre ? archivoNombre : "Seleccionar archivo Excel"}
+        </label>
 
-            // Si se encontró el producto, mover el foco a "Cantidad"
-            setTimeout(() => {
-                cantidadRef.current?.focus();
-                cantidadRef.current?.click(); // Intenta abrir el teclado en la tablet
-            }, 50);
-        } catch (error) {
-            console.error("Error al buscar el producto:", error);
-            setFormData(prev => ({ ...prev, sku: "", articulo: "" }));
+        {filas.length > 0 && !procesando && (
+          <span className={styles.filasContador}>
+            {filas.length} productos cargados
+          </span>
+        )}
+      </div>
 
-            // Si no se encuentra, mover a SKU
-            setTimeout(() => skuRef.current?.focus(), 50);
-        }
-    };
-
-    const handleKeyDown = (e) => {
-        if (e.key === "Enter") {
-            e.preventDefault(); // Evita que el formulario se envíe
-            autocompletarProducto();
-        }
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        const { codigoBarras, sku, articulo, cantidad } = formData;
-        if (!codigoBarras || !sku || !articulo || !cantidad) {
-            // NOTA: window.alert() no es compatible con el entorno de Canvas.
-            // Deberías reemplazar esto con un modal de alerta personalizado en tu UI.
-            alert("Por favor, completa todos los campos.");
-            return;
-        }
-
-        const nuevoArticulo = { codigoBarras, sku, articulo, cantidad: parseInt(cantidad), checked: false };
-
-        try {
-            // Usar la variable BACKEND_URL
-            await authenticatedFetch(`${BACKEND_URL}/apiingresos/add-item`, {
-                method: "POST",
-                body: JSON.stringify(nuevoArticulo)
-            });
-            loadItems();
-            setFormData({ codigoBarras: "", sku: "", articulo: "", cantidad: "" });
-
-            // Regresar el foco al input de código de barras
-            setTimeout(() => codigoBarrasRef.current?.focus(), 50);
-
-        } catch (error) {
-            console.error("Error al agregar el artículo:", error);
-        }
-    };
-
-    const toggleChecked = async (id, checked) => {
-        try {
-            // Usar la variable BACKEND_URL
-            await authenticatedFetch(`${BACKEND_URL}/apiingresos/update-item/${id}`, {
-                method: "PATCH",
-                body: JSON.stringify({ checked: !checked }) // Alternar estado
-            });
-            loadItems(); // Recargar lista después de actualizar
-        } catch (error) {
-            console.error("Error al actualizar estado de artículo:", error);
-        }
-    };
-
-    const clearCheckedItems = async () => {
-        // NOTA: window.confirm() no es compatible con el entorno de Canvas.
-        // Deberías reemplazar esto con un modal de confirmación personalizado en tu UI.
-        if (!window.confirm("¿Estás seguro de que quieres eliminar los artículos publicados?")) return;
-
-        try {
-            // Usar la variable BACKEND_URL
-            const response = await authenticatedFetch(`${BACKEND_URL}/apiingresos/clear-checked-items`, {
-                method: "DELETE"
-            });
-
-            const data = await response.json();
-            // NOTA: window.alert() no es compatible con el entorno de Canvas.
-            // Deberías reemplazar esto con un modal de alerta personalizado en tu UI.
-            alert(data.message); // Mostrar mensaje con el número de artículos eliminados
-            loadItems(); // Recargar la lista después de eliminar
-        } catch (error) {
-            console.error("Error al eliminar artículos publicados:", error);
-        }
-    };
-
-    return (
-        <div className={styles.container}>
-            <h2 className={styles.title}>Ingreso de Mercadería</h2>
-            <form onSubmit={handleSubmit} className={styles.form}>
-                <input
-                    ref={codigoBarrasRef}
-                    type="text"
-                    name="codigoBarras"
-                    value={formData.codigoBarras}
-                    onChange={handleChange}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Código de Barras"
-                />
-                <input ref={skuRef} type="text" name="sku" value={formData.sku} onChange={handleChange} placeholder="SKU" />
-                <input type="text" name="articulo" value={formData.articulo} onChange={handleChange} placeholder="Artículo" />
-                <input ref={cantidadRef} type="tel" name="cantidad" value={formData.cantidad} onChange={handleChange} placeholder="Cantidad" inputMode="numeric"/>
-                <button type="submit" className={styles.addButton}>Agregar</button>
-            </form>
-
-            <h3 className={styles.title}>Lista de Mercadería</h3>
-            <div className={styles.itemsList}>
-                {items.map(item => (
-                    <div key={item._id} className={styles.item}>
-                        <p>📦 {item.sku} - {item.articulo} ({item.cantidad} unidades)</p>
-                        <p>🔢 Código de Barras: {item.codigoBarras}</p>
-                        <button
-                            onClick={() => toggleChecked(item._id, item.checked)}
-                            className={item.checked ? styles.checkedButtonActive : styles.checkedButton}
-                        >
-                            {item.checked ? "✔" : "☐"}
-                        </button>
-                    </div>
-                ))}
-            </div>
-
-            <div className={styles.clearContainer}>
-                <button onClick={clearCheckedItems} className={styles.clearButton}>
-                    Eliminar Publicados
-                </button>
-            </div>
+      {/* Botones */}
+      {filas.length > 0 && (
+        <div className={styles.acciones}>
+          <button
+            onClick={handleSincronizar}
+            className={styles.btnSincronizar}
+            disabled={procesando}
+          >
+            {procesando ? "⏳ Sincronizando..." : "🚀 Sincronizar Stock en ML"}
+          </button>
+          <button
+            onClick={handleLimpiar}
+            className={styles.btnLimpiar}
+            disabled={procesando}
+          >
+            🗑 Limpiar
+          </button>
         </div>
-    );
+      )}
+
+      {/* Resumen final */}
+      {resumen && (
+        <div className={styles.resumen}>
+          <span className={styles.resumenOk}>✅ {resumen.ok} actualizados</span>
+          {resumen.errores > 0 && (
+            <span className={styles.resumenError}>
+              ❌ {resumen.errores} con error
+            </span>
+          )}
+          <span className={styles.resumenTotal}>
+            Total: {resumen.total} productos
+          </span>
+        </div>
+      )}
+
+      {/* Barra de progreso */}
+      {procesando && filas.length > 0 && (
+        <div className={styles.progressBar}>
+          <div
+            className={styles.progressFill}
+            style={{
+              width: `${((listos + conError) / filas.length) * 100}%`,
+            }}
+          />
+          <span className={styles.progressText}>
+            {listos + conError} / {filas.length}
+          </span>
+        </div>
+      )}
+
+      {/* Tabla de productos */}
+      {filas.length > 0 && (
+        <div className={styles.tablaWrapper}>
+          <table className={styles.tabla}>
+            <thead>
+              <tr>
+                <th>Estado</th>
+                <th>SKU</th>
+                <th>Nombre</th>
+                <th>Stock</th>
+                <th>Detalle</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filas.map((fila, i) => (
+                <tr
+                  key={i}
+                  className={
+                    fila.estado === "ok"
+                      ? styles.rowOk
+                      : fila.estado === "error"
+                      ? styles.rowError
+                      : ""
+                  }
+                >
+                  <td className={styles.tdEstado}>
+                    {estadoIcono(fila.estado)}
+                  </td>
+                  <td className={styles.tdSku}>{fila.sku}</td>
+                  <td className={styles.tdNombre}>{fila.nombre}</td>
+                  <td className={styles.tdStock}>{fila.stock}</td>
+                  <td className={styles.tdMensaje}>{fila.mensaje}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default ApiIngresos;
