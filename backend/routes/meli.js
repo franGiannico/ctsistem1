@@ -1070,6 +1070,8 @@ router.post('/actualizar-stock', async (req, res) => {
     );
 
     const variations = itemResponse.data.variations || [];
+    console.log(`📋 Variaciones encontradas: ${variations.length}`);
+    console.log(`📋 Atributos del item:`, JSON.stringify(itemResponse.data.attributes?.find(a => a.id === 'SELLER_SKU')));
 
     // Buscar la variación que tiene el seller_sku que nos interesa
     const variacion = variations.find(v =>
