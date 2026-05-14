@@ -1100,7 +1100,7 @@ router.post('/actualizar-stock', async (req, res) => {
         console.log(`📦 Publicación sin variaciones, actualizando item directamente...`);
         
       const body = { available_quantity: cantidad };
-      if (cantidad > 0) body.status = 'active';
+      if (cantidad > 0) body.quantity = cantidad;
 
       await axios.put(
         `https://api.mercadolibre.com/items/${item_id}`,
