@@ -1133,4 +1133,24 @@ router.post('/actualizar-stock', async (req, res) => {
   }
 });
 
+router.get('/debug/buscar-sku/:sku', async (req, res) => {
+  const { sku } = req.params;
+  try {
+    const tokenDoc = await MeliToken.findOne();
+    const { access_token, user_id } = tokenDoc;
+
+    const response = await axios.get(
+      `https://api.mercadolibre.com/users/${user_id}/items/search`,
+      {
+        params: { seller_sku: sku },
+        headers: { Authorization: `Bearer ${access_token}` }
+      }
+    );
+
+    res.json(response.data);
+  } catch (error) {
+    res.status(500).json(error.response?.data || error.message);
+  }
+});
+
 module.exports = router;
