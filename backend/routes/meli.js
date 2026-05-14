@@ -1098,11 +1098,15 @@ router.post('/actualizar-stock', async (req, res) => {
       // Si no tiene variaciones, actualizar el item directamente
       if (variations.length === 0) {
         console.log(`📦 Publicación sin variaciones, actualizando item directamente...`);
-        await axios.put(
-          `https://api.mercadolibre.com/items/${item_id}`,
-          { available_quantity: cantidad },
-          { headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' } }
-        );
+        
+      const body = { available_quantity: cantidad };
+      if (cantidad > 0) body.status = 'active';
+
+      await axios.put(
+        `https://api.mercadolibre.com/items/${item_id}`,
+        body,
+        { headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' } }
+      );
 
         console.log(`✅ Stock actualizado: ${item_id} → ${cantidad} unidades`);
         return res.json({
