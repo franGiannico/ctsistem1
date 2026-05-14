@@ -1060,7 +1060,7 @@ router.post('/actualizar-stock', async (req, res) => {
       return res.status(404).json({ error: `No se encontró ninguna publicación para el SKU: ${sku}` });
     }
 
-    const item_id = itemIds[0];
+    let item_id = itemIds[0];
     console.log(`✅ Item encontrado: ${item_id}`);
 
     // 3. Obtener las variaciones del item para encontrar la variation_id
@@ -1069,9 +1069,23 @@ router.post('/actualizar-stock', async (req, res) => {
       { headers: { Authorization: `Bearer ${access_token}` } }
     );
 
-    const variations = itemResponse.data.variations || [];
-    console.log(`📋 Variaciones encontradas: ${variations.length}`);
-    console.log(`📋 Atributos del item:`, JSON.stringify(itemResponse.data.attributes?.find(a => a.id === 'SELLER_SKU')));
+    // Si es publicación de catálogo, usar la clásica vinculada
+    if (itemResponse.data.catalog_listing === true) {
+      const relacionada = itemResponse.data.item_relations?.[0]?.id;
+      if (relacionada) {
+        console.log(`📋 Catálogo detectado. Usando publicación clásica: ${relacionada}`);
+        item_id = relacionada;
+      } else {
+        return res.status(400).json({ error: `El SKU "${sku}" es de catálogo y no tiene publicación clásica vinculada.` });
+      }
+    }
+
+    // Si se cambió a publicación clásica, obtener sus variaciones
+    const itemFinal = item_id !== itemIds[0]
+      ? (await axios.get(`https://api.mercadolibre.com/items/${item_id}`, { headers: { Authorization: `Bearer ${access_token}` } })).data
+      : itemResponse.data;
+
+    const variations = itemFinal.variations || [];
 
     // Buscar la variación que tiene el seller_sku que nos interesa
     const variacion = variations.find(v =>
