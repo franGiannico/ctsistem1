@@ -1178,4 +1178,20 @@ router.get('/debug/mis-items', async (req, res) => {
   }
 });
 
+router.get('/debug/item/:id', async (req, res) => {
+  try {
+    const tokenDoc = await MeliToken.findOne();
+    const { access_token } = tokenDoc;
+
+    const response = await axios.get(
+      `https://api.mercadolibre.com/items/${req.params.id}`,
+      { headers: { Authorization: `Bearer ${access_token}` } }
+    );
+
+    res.json(response.data);
+  } catch (error) {
+    res.status(500).json(error.response?.data || error.message);
+  }
+});
+
 module.exports = router;
