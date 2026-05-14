@@ -1153,4 +1153,29 @@ router.get('/debug/buscar-sku/:sku', async (req, res) => {
   }
 });
 
+router.get('/debug/mis-items', async (req, res) => {
+  try {
+    const tokenDoc = await MeliToken.findOne();
+    const { access_token, user_id } = tokenDoc;
+
+    // Trae los primeros 5 items del vendedor
+    const response = await axios.get(
+      `https://api.mercadolibre.com/users/${user_id}/items/search?limit=5`,
+      { headers: { Authorization: `Bearer ${access_token}` } }
+    );
+
+    const itemIds = response.data.results;
+
+    // Trae el detalle del primer item
+    const detalle = await axios.get(
+      `https://api.mercadolibre.com/items/${itemIds[0]}`,
+      { headers: { Authorization: `Bearer ${access_token}` } }
+    );
+
+    res.json(detalle.data);
+  } catch (error) {
+    res.status(500).json(error.response?.data || error.message);
+  }
+});
+
 module.exports = router;
