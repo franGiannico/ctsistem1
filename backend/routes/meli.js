@@ -1223,4 +1223,10 @@ router.post('/notificaciones', (req, res) => {
   res.sendStatus(200);
 });
 
+// Webhook de notificaciones Mercado Libre para la app vieja (si aún se usa)
+router.post('/notificaciones-old', (req, res) => {
+  console.log('📩 Notificación ML app vieja:', req.body);
+  res.sendStatus(200);
+});
+
 module.exports = router;
