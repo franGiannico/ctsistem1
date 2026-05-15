@@ -1101,7 +1101,7 @@ router.post('/actualizar-stock', async (req, res) => {
        
         
       console.log(`📤 Enviando PUT a: /items/${item_id} con body:`, { available_quantity: cantidad });
-      
+
       await axios.put(
         `https://api.mercadolibre.com/items/${item_id}`,
         { available_quantity: cantidad },
@@ -1212,6 +1212,15 @@ router.get('/debug/item/:id', async (req, res) => {
   } catch (error) {
     res.status(500).json(error.response?.data || error.message);
   }
+});
+
+// Webhook de notificaciones Mercado Libre
+router.post('/notificaciones', (req, res) => {
+  console.log('📩 Notificación de Mercado Libre recibida:');
+  console.log(req.body);
+
+  // ML espera status 200 rápido
+  res.sendStatus(200);
 });
 
 module.exports = router;
