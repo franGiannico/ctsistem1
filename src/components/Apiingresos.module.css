@@ -240,3 +240,14 @@
   font-size: 0.82rem;
   max-width: 200px;
 }
+
+.dragActivo {
+  border-color: #00a650;
+  background: #e9fff3;
+}
+
+.dropText {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #666;
+}

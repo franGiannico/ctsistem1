@@ -154,6 +154,42 @@ const ApiIngresos = () => {
   const listos = filas.filter((f) => f.estado === "ok").length;
   const conError = filas.filter((f) => f.estado === "error").length;
 
+  const [archivo, setArchivo] = useState(null);
+  const [dragActivo, setDragActivo] = useState(false);
+
+  const manejarArchivo = (file) => {
+    if (!file) return;
+
+    const extensionesValidas = [".xlsx", ".xls", ".csv"];
+    const esValido = extensionesValidas.some(ext =>
+      file.name.toLowerCase().endsWith(ext)
+    );
+
+    if (!esValido) {
+      alert("Seleccioná un archivo Excel o CSV válido.");
+      return;
+    }
+
+    setArchivo(file);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragActivo(false);
+
+    const file = e.dataTransfer.files[0];
+    manejarArchivo(file);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setDragActivo(true);
+  };
+
+  const handleDragLeave = () => {
+    setDragActivo(false);
+  };
+
   return (
     <div className={styles.container}>
       <h2 className={styles.title}>Sincronización de Stock → Mercado Libre</h2>
@@ -163,7 +199,12 @@ const ApiIngresos = () => {
       </p>
 
       {/* Zona de carga */}
-      <div className={styles.uploadZone}>
+      <div
+        className={`${styles.uploadZone} ${dragActivo ? styles.dragActivo : ""}`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
         <input
           ref={inputRef}
           type="file"
@@ -173,9 +214,14 @@ const ApiIngresos = () => {
           id="fileInput"
           disabled={procesando}
         />
+
         <label htmlFor="fileInput" className={styles.fileLabel}>
           📂 {archivoNombre ? archivoNombre : "Seleccionar archivo Excel"}
         </label>
+
+        <p className={styles.dropText}>
+          O arrastrá y soltá el archivo acá
+        </p>
 
         {filas.length > 0 && !procesando && (
           <span className={styles.filasContador}>
