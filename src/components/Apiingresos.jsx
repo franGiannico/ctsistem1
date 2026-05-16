@@ -154,39 +154,41 @@ const ApiIngresos = () => {
   const listos = filas.filter((f) => f.estado === "ok").length;
   const conError = filas.filter((f) => f.estado === "error").length;
 
-  const [archivo, setArchivo] = useState(null);
   const [dragActivo, setDragActivo] = useState(false);
-
-  const manejarArchivo = (file) => {
-    if (!file) return;
-
-    const extensionesValidas = [".xlsx", ".xls", ".csv"];
-    const esValido = extensionesValidas.some(ext =>
-      file.name.toLowerCase().endsWith(ext)
-    );
-
-    if (!esValido) {
-      alert("Seleccioná un archivo Excel o CSV válido.");
-      return;
-    }
-
-    setArchivo(file);
-  };
 
   const handleDrop = (e) => {
     e.preventDefault();
     setDragActivo(false);
 
-    const file = e.dataTransfer.files[0];
-    manejarArchivo(file);
+    if (procesando) return;
+
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+
+    const extensionesValidas = [".xlsx", ".xls"];
+    const esValido = extensionesValidas.some((ext) =>
+      file.name.toLowerCase().endsWith(ext)
+    );
+
+    if (!esValido) {
+      alert("Seleccioná un archivo Excel válido.");
+      return;
+    }
+
+    handleArchivo({
+      target: {
+        files: [file],
+      },
+    });
   };
 
   const handleDragOver = (e) => {
     e.preventDefault();
-    setDragActivo(true);
+    if (!procesando) setDragActivo(true);
   };
 
-  const handleDragLeave = () => {
+  const handleDragLeave = (e) => {
+    e.preventDefault();
     setDragActivo(false);
   };
 
