@@ -557,19 +557,22 @@ function Apiventas() {
 
   //Función para chequear ventas con el código QR
 
-  const buscarVentaPorCodigo = (codigoEscaneado) => {
-  const codigo = String(codigoEscaneado).trim();
+    const buscarVentaPorCodigo = (codigoEscaneado) => {
+      const codigo = String(codigoEscaneado).trim();
 
       return ventas.find((venta) => {
         const numeroVenta = String(venta.numeroVenta || "");
         const packId = String(venta.packId || "");
+        const tracking = String(venta.codigoSeguimiento || "");
 
-        const partesNumeroVenta = numeroVenta.split("-");
+        // Extraer solo números del tracking
+        const trackingSoloNumeros = tracking.replace(/\D/g, "");
 
         return (
           numeroVenta === codigo ||
           packId === codigo ||
-          partesNumeroVenta.includes(codigo)
+          tracking === codigo ||
+          trackingSoloNumeros === codigo
         );
       });
     };

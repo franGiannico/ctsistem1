@@ -322,6 +322,7 @@ async function procesarSincronizacion() {
           status: data.status,
           substatus: data.substatus,
           historial: data.substatus_history
+          codigoSeguimiento: data.tracking_number || "",
         };
 
       } catch (error) {
@@ -553,6 +554,7 @@ async function procesarSincronizacion() {
         atributos,
         tipoEnvio: envio.tipoEnvio,
         nota: notaOrden // 🔑 Guardamos la nota
+        codigoSeguimiento: envio.codigoSeguimiento || "",
       });
 
       console.log(`💾 Guardando venta: Usando=${numeroVenta} (ID=${orden.id}, PackID=${packLog}) - ${nombreFinal} - ${cliente} - Estados: completada=${estadoExistente.completada}, entregada=${estadoExistente.entregada}`);

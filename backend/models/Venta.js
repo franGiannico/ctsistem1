@@ -17,6 +17,9 @@ const VentaSchema = new mongoose.Schema({
     atributos: [Object],
     tipoEnvio: String,
     nota: String,
+    codigoSeguimiento: {
+    type: String,
+    default: ""},
 });
 
 // Evitar recompilación del modelo si ya existe
