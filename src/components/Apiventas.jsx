@@ -558,24 +558,25 @@ function Apiventas() {
   //Función para chequear ventas con el código QR
 
     const buscarVentaPorCodigo = (codigoEscaneado) => {
-      const codigo = String(codigoEscaneado).trim();
+    const codigo = String(codigoEscaneado).trim();
 
-      return ventas.find((venta) => {
-        const numeroVenta = String(venta.numeroVenta || "");
-        const packId = String(venta.packId || "");
-        const tracking = String(venta.codigoSeguimiento || "");
+    return ventas.find((venta) => {
+      const numeroVenta = String(venta.numeroVenta || "");
+      const packId = String(venta.packId || "");
+      const tracking = String(venta.codigoSeguimiento || "");
 
-        // Extraer solo números del tracking
-        const trackingSoloNumeros = tracking.replace(/\D/g, "");
+      const partesNumeroVenta = numeroVenta.split("-");
+      const partesTracking = tracking.match(/\d+/g) || [];
 
-        return (
-          numeroVenta === codigo ||
-          packId === codigo ||
-          tracking === codigo ||
-          trackingSoloNumeros === codigo
-        );
-      });
-    };
+      return (
+        numeroVenta === codigo ||
+        packId === codigo ||
+        partesNumeroVenta.includes(codigo) ||
+        tracking === codigo ||
+        partesTracking.includes(codigo)
+      );
+    });
+  };
 
     const onScanSuccess = (decodedText) => {
       let codigo = decodedText;
