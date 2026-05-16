@@ -321,7 +321,7 @@ async function procesarSincronizacion() {
           tipoEnvio,
           status: data.status,
           substatus: data.substatus,
-          historial: data.substatus_history
+          historial: data.substatus_history,
           codigoSeguimiento: data.tracking_number || "",
         };
 
@@ -553,7 +553,7 @@ async function procesarSincronizacion() {
         variationId,
         atributos,
         tipoEnvio: envio.tipoEnvio,
-        nota: notaOrden // 🔑 Guardamos la nota
+        nota: notaOrden,
         codigoSeguimiento: envio.codigoSeguimiento || "",
       });
 
