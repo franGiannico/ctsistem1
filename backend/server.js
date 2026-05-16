@@ -90,7 +90,14 @@ app.use(express.json());
 
 // 🔐 Middleware de autenticación básica
 const authMiddleware = (req, res, next) => {
- if (req.path === '/' || req.path === '/health' || req.path.startsWith('/debug/') || req.path === '/callback') {
+ if (
+  req.path === '/' ||
+  req.path === '/health' ||
+  req.path.startsWith('/debug/') ||
+  req.path === '/callback' ||
+  req.path === '/notificaciones' ||
+  req.path === '/notificaciones-old'
+) {
   return next();
 }
 
