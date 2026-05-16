@@ -297,7 +297,7 @@ async function procesarSincronizacion() {
           `https://api.mercadolibre.com/shipments/${shipmentId}`,
           { headers: { Authorization: `Bearer ${accessToken}` } }
         );
-        
+
         console.log("📦 SHIPMENT COMPLETO:", JSON.stringify(data, null, 2));
 
         let tipoEnvio = "Desconocido";
@@ -1212,7 +1212,6 @@ router.get('/debug/item/:id', async (req, res) => {
 
 // Webhook de notificaciones Mercado Libre
 router.post('/notificaciones', (req, res) => {
-  console.log('📩 Notificación de Mercado Libre recibida:');
   console.log(req.body);
 
   // ML espera status 200 rápido
@@ -1221,7 +1220,6 @@ router.post('/notificaciones', (req, res) => {
 
 // Webhook de notificaciones Mercado Libre para la app vieja (si aún se usa)
 router.post('/notificaciones-old', (req, res) => {
-  console.log('📩 Notificación ML app vieja:', req.body);
   res.sendStatus(200);
 });
 
