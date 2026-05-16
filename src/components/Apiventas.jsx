@@ -575,10 +575,26 @@ function Apiventas() {
     };
 
     const onScanSuccess = (decodedText) => {
-      const ventaEncontrada = buscarVentaPorCodigo(decodedText);
+      let codigo = decodedText;
+
+      try {
+        // Si el QR viene en formato JSON
+        const parsed = JSON.parse(decodedText);
+
+        if (parsed.id) {
+          codigo = parsed.id;
+        }
+      } catch (e) {
+        // Si no es JSON, usar texto normal
+        codigo = decodedText;
+      }
+
+      console.log("Código leído:", codigo);
+
+      const ventaEncontrada = buscarVentaPorCodigo(codigo);
 
       if (!ventaEncontrada) {
-        alert(`No se encontró ninguna venta con el código: ${decodedText}`);
+        alert(`No se encontró ninguna venta con el código: ${codigo}`);
         return;
       }
 

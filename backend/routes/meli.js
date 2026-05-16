@@ -297,6 +297,8 @@ async function procesarSincronizacion() {
           `https://api.mercadolibre.com/shipments/${shipmentId}`,
           { headers: { Authorization: `Bearer ${accessToken}` } }
         );
+        
+        console.log("📦 SHIPMENT COMPLETO:", JSON.stringify(data, null, 2));
 
         let tipoEnvio = "Desconocido";
 
@@ -494,26 +496,20 @@ async function procesarSincronizacion() {
       // 👇 obtenemos info adicional de envío desde /shipments/:id
       const envio = await obtenerDatosEnvio(orden.shipping?.id, access_token, axios);
 
-      // Log removido por seguridad
-
-      // 🔍 Filtrar ventas ya entregadas (fulfilled: true)
+       // 🔍 Filtrar ventas ya entregadas (fulfilled: true)
       if (orden.fulfilled === true) {
-        // Log removido por seguridad
         continue; // Saltar esta orden
       }
 
       // 🔍 Debug: mostrar info de la orden
-      // Log removido por seguridad
 
       // 🔍 Filtrar solo ventas con status "ready_to_ship" (solo para órdenes CON envío)
       if (orden.shipping?.id && envio.status !== "ready_to_ship") {
-        // Log removido por seguridad
         continue; // Saltar esta orden
       }
 
       // ✅ Las órdenes SIN shipment (A coordinar) se incluyen automáticamente
       if (!orden.shipping?.id) {
-        // Log removido por seguridad
       }
 
       // 🚫 Filtrar ventas de tipo "Full" - no nos interesan por el momento (solo si tienen shipment)
