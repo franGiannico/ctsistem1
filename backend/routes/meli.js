@@ -1212,7 +1212,6 @@ router.get('/debug/item/:id', async (req, res) => {
 
 // Webhook de notificaciones Mercado Libre
 router.post('/notificaciones', (req, res) => {
-  console.log(req.body);
 
   // ML espera status 200 rápido
   res.sendStatus(200);
