@@ -5,13 +5,19 @@ import styles from './Apiventas.module.css';
 import MeliAuthButton from './MeliAuthButton';
 import TiendanubeAuthButton from './TiendanubeAuthButton';
 import jsPDF from 'jspdf';
-// Importar el logo desde assets
 import logoImage from '../assets/logo.png';
+import { Html5QrcodeScanner } from "html5-qrcode";
 
 
 function Apiventas() {
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
   const API_TOKEN = import.meta.env.VITE_API_TOKEN || 'ctsistem-token-2024-seguro-123';
+
+  const [ventaEscaneada, setVentaEscaneada] = useState(null);
+  const [mostrarConfirmacionEscaneo, setMostrarConfirmacionEscaneo] = useState(false);
+
+  const [mostrarScanner, setMostrarScanner] = useState(false);
+  const [scannerActivo, setScannerActivo] = useState(false);
 
   // Función helper para requests autenticados
   const authenticatedFetch = async (url, options = {}) => {
@@ -549,6 +555,88 @@ function Apiventas() {
   };
 
 
+  //Función para chequear ventas con el código QR
+
+  const buscarVentaPorCodigo = (codigoEscaneado) => {
+  const codigo = String(codigoEscaneado).trim();
+
+      return ventas.find((venta) => {
+        const numeroVenta = String(venta.numeroVenta || "");
+        const packId = String(venta.packId || "");
+
+        const partesNumeroVenta = numeroVenta.split("-");
+
+        return (
+          numeroVenta === codigo ||
+          packId === codigo ||
+          partesNumeroVenta.includes(codigo)
+        );
+      });
+    };
+
+    const onScanSuccess = (decodedText) => {
+      const ventaEncontrada = buscarVentaPorCodigo(decodedText);
+
+      if (!ventaEncontrada) {
+        alert(`No se encontró ninguna venta con el código: ${decodedText}`);
+        return;
+      }
+
+      setVentaEscaneada(ventaEncontrada);
+      setMostrarConfirmacionEscaneo(true);
+    };
+
+    const confirmarDespachoEscaneado = async (venta) => {
+      await actualizarVenta(venta._id, {
+        entregada: true,
+      });
+
+      setMostrarConfirmacionEscaneo(false);
+      setVentaEscaneada(null);
+
+      alert(`Venta ${venta.numeroVenta} despachada correctamente.`);
+    };
+
+    useEffect(() => {
+      if (!mostrarScanner) return;
+
+      const scanner = new Html5QrcodeScanner(
+        "reader",
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          rememberLastUsedCamera: true,
+        },
+        false
+      );
+
+      scanner.render(
+        (decodedText) => {
+          if (scannerActivo) return;
+
+          setScannerActivo(true);
+          onScanSuccess(decodedText);
+
+          scanner.clear().catch((error) => {
+            console.error("Error cerrando scanner:", error);
+          });
+
+          setMostrarScanner(false);
+
+          setTimeout(() => {
+            setScannerActivo(false);
+          }, 1000);
+        },
+        (error) => {
+          // No hacemos nada: esto se dispara muchas veces mientras busca QR
+        }
+      );
+
+      return () => {
+        scanner.clear().catch(() => {});
+      };
+    }, [mostrarScanner, scannerActivo]);
+
   return (
     <div className={styles.container}>
       <h2>Gestión de Ventas</h2>
@@ -632,7 +720,12 @@ function Apiventas() {
             <button onClick={borrarVentasCompletadas} className={`${styles.borrarCompletadas} ${styles.actionButton}`}>
               Borrar Ventas Completadas
             </button>
-
+            <button
+              onClick={() => setMostrarScanner(true)}
+              className={`${styles.meliSyncBtn} ${styles.actionButton}`}
+            >
+              Escanear paquetes
+            </button>
             <MeliAuthButton
               className={`${styles.meliConnectBtn} ${styles.actionButton}`}
               wrapperClassName={styles.actionItem}
@@ -799,6 +892,51 @@ function Apiventas() {
             })}
           </div>
         </>
+      )}
+      {mostrarScanner && (
+        <div className={styles.modalEscaneo}>
+          <div className={styles.modalContenidoEscaneo}>
+            <h3>Escanear paquete</h3>
+
+            <div id="reader" className={styles.readerQr}></div>
+
+            <button
+              onClick={() => setMostrarScanner(false)}
+            >
+              Cancelar escaneo
+            </button>
+          </div>
+        </div>
+      )}
+      {mostrarConfirmacionEscaneo && ventaEscaneada && (
+        <div className="modalEscaneo">
+          <div className="modalContenidoEscaneo">
+            <h3>Confirmar despacho</h3>
+
+            {ventaEscaneada.imagen && (
+              <img
+                src={ventaEscaneada.imagen}
+                alt={ventaEscaneada.nombre}
+                className="imagenEscaneo"
+              />
+            )}
+
+            <p><strong>Producto:</strong> {ventaEscaneada.nombre}</p>
+            <p><strong>Cantidad:</strong> {ventaEscaneada.cantidad}</p>
+            <p><strong>Cliente:</strong> {ventaEscaneada.cliente}</p>
+            <p><strong>Venta:</strong> {ventaEscaneada.numeroVenta}</p>
+
+            <button
+              onClick={() => confirmarDespachoEscaneado(ventaEscaneada)}
+            >
+              Confirmar despacho
+            </button>
+
+            <button onClick={() => setMostrarConfirmacionEscaneo(false)}>
+              Cancelar
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
