@@ -635,13 +635,16 @@ function Apiventas() {
           if (scannerActivo) return;
 
           setScannerActivo(true);
+          
           onScanSuccess(decodedText);
 
-          scanner.clear().catch((error) => {
-            console.error("Error cerrando scanner:", error);
-          });
+          setTimeout(() => {
+            scanner.clear().catch((error) => {
+              console.error("Error cerrando scanner:", error);
+            });
 
-          setMostrarScanner(false);
+            setMostrarScanner(false);
+          }, 300);
 
           setTimeout(() => {
             setScannerActivo(false);
