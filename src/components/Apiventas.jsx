@@ -613,6 +613,10 @@ function Apiventas() {
       setVentaEscaneada(null);
 
       alert(`Venta ${venta.numeroVenta} despachada correctamente.`);
+
+      setTimeout(() => {
+      setMostrarScanner(true);
+      }, 300);
     };
 
     useEffect(() => {
@@ -924,7 +928,7 @@ function Apiventas() {
             <button
               onClick={() => setMostrarScanner(false)}
             >
-              Cancelar escaneo
+              Finalizar escaneo
             </button>
           </div>
         </div>
