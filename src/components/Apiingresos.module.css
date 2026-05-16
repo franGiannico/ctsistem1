@@ -23,11 +23,26 @@
 
 /* Upload */
 .uploadZone {
+  width: 100%;
+  max-width: 720px;
+  min-height: 170px;
+  border: 2px dashed #4a6cf7;
+  border-radius: 16px;
+  background: #f4f7ff;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  justify-content: center;
+  gap: 12px;
   margin-bottom: 1.2rem;
-  flex-wrap: wrap;
+  padding: 28px;
+  transition: all 0.2s ease;
+}
+
+.dragActivo {
+  border-color: #00a650;
+  background: #e9fff3;
+  transform: scale(1.01);
 }
 
 .fileInput {
@@ -36,19 +51,26 @@
 
 .fileLabel {
   display: inline-block;
-  padding: 0.6rem 1.2rem;
-  background: #f0f4ff;
-  border: 2px dashed #4a6cf7;
-  border-radius: 8px;
+  padding: 0.9rem 1.5rem;
+  background: white;
+  border-radius: 10px;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 1rem;
   color: #4a6cf7;
-  font-weight: 600;
-  transition: background 0.2s;
+  font-weight: 700;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
 .fileLabel:hover {
-  background: #dce6ff;
+  transform: translateY(-1px);
+  background: #ffffff;
+}
+
+.dropText {
+  margin: 0;
+  font-size: 15px;
+  color: #666;
 }
 
 .filasContador {
@@ -239,15 +261,4 @@
   color: #d94040;
   font-size: 0.82rem;
   max-width: 200px;
-}
-
-.dragActivo {
-  border-color: #00a650;
-  background: #e9fff3;
-}
-
-.dropText {
-  margin-top: 8px;
-  font-size: 14px;
-  color: #666;
 }
