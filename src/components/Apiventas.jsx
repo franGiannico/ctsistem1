@@ -1,5 +1,5 @@
 // src/components/Apiventas.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import styles from './Apiventas.module.css';
 import MeliAuthButton from './MeliAuthButton';
@@ -607,9 +607,7 @@ function Apiventas() {
     };
 
     const confirmarDespachoEscaneado = async (venta) => {
-      await actualizarVenta(venta._id, {
-        entregada: true,
-      });
+      await marcarEntregada(venta._id, venta.entregada);
 
       setMostrarConfirmacionEscaneo(false);
       setVentaEscaneada(null);
@@ -932,15 +930,13 @@ function Apiventas() {
         </div>
       )}
       {mostrarConfirmacionEscaneo && ventaEscaneada && (
-        <div className="modalEscaneo">
-          <div className="modalContenidoEscaneo">
-            <h3>Confirmar despacho</h3>
-
+      <div className={styles.modalEscaneo}>
+        <div className={styles.modalContenidoEscaneo}>
             {ventaEscaneada.imagen && (
               <img
                 src={ventaEscaneada.imagen}
                 alt={ventaEscaneada.nombre}
-                className="imagenEscaneo"
+                className={styles.imagenEscaneo}
               />
             )}
 
