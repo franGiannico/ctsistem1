@@ -612,3 +612,14 @@
   margin: 1rem auto;
   display: block;
 }
+
+.yaDespachado {
+  background: #ffe5e5;
+  color: #b00020;
+  border: 2px solid #b00020;
+  border-radius: 10px;
+  padding: 0.8rem;
+  font-weight: 800;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+}

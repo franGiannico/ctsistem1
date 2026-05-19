@@ -951,9 +951,15 @@ function Apiventas() {
 
             <button
               onClick={() => confirmarDespachoEscaneado(ventaEscaneada)}
+              disabled={ventaEscaneada.entregada}
             >
-              Confirmar despacho
-            </button>
+              {ventaEscaneada.entregada ? "Ya fue despachado" : "Confirmar despacho"}
+          </button>
+            {ventaEscaneada.entregada && (
+              <div className={styles.yaDespachado}>
+                YA DESPACHADO
+              </div>
+            )}
 
             <button onClick={() => setMostrarConfirmacionEscaneo(false)}>
               Cancelar
