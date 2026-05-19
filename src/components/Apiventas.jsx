@@ -471,14 +471,24 @@ function Apiventas() {
   };
 
   // Función para agrupar ventas por punto de despacho
-  const agruparVentasPorPunto = () => {
-    const grupos = {};
-    ventas.forEach((venta) => {
-      if (!grupos[venta.puntoDespacho]) grupos[venta.puntoDespacho] = [];
-      grupos[venta.puntoDespacho].push(venta);
-    });
-    return grupos;
-  };
+    const agruparVentasPorPunto = () => {
+      const grupos = {};
+
+      ventas.forEach((venta) => {
+        const categoria = venta.esTiendanube
+          ? "Ventas Tiendanube"
+          : venta.puntoDespacho || "Punto de Despacho";
+
+        if (!grupos[categoria]) grupos[categoria] = [];
+
+        grupos[categoria].push({
+          ...venta,
+          puntoDespacho: categoria
+        });
+      });
+
+      return grupos;
+    };
 
   // Sincronizar ventas Mercado Libre y reemplazar el listado completo
   const sincronizarVentasML = async () => {
@@ -864,7 +874,7 @@ function Apiventas() {
                             ✏️
                           </button>
                           {/* Botón de etiqueta solo para ventas que NO sean "Punto de Despacho" ni "Flex" */}
-                          {venta.puntoDespacho !== "Punto de Despacho" && venta.puntoDespacho !== "Flex" && (
+                          {!venta.esTiendanube && venta.puntoDespacho !== "Punto de Despacho" && venta.puntoDespacho !== "Flex" && (
                             <button
                               onClick={async () => await generarEtiquetaPDF(venta)}
                               className={styles.etiquetaBtn}
