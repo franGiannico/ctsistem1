@@ -16,6 +16,11 @@ const ApiIngresos = () => {
   const [archivoNombre, setArchivoNombre] = useState("");
   const inputRef = useRef(null);
 
+  //Función para calcular stock a publicar (restar 1 al stock real, mínimo 0)
+  const calcularStockAPublicar = (stockExcel) => {
+  const stock = Number(stockExcel) || 0;
+  return Math.max(stock - 1, 0);
+  };
   // Lee el Excel y extrae las columnas SKU y Stock
   const handleArchivo = (e) => {
     const file = e.target.files[0];
@@ -57,13 +62,18 @@ const ApiIngresos = () => {
 
       const filasParsed = data
         .filter((row) => row[colSKU] && row[colSKU].toString().trim() !== "")
-        .map((row) => ({
-          sku: row[colSKU].toString().trim(),
-          stock: parseInt(row[colStock]) || 0,
-          nombre: colNombre ? row[colNombre] : "",
-          estado: "pendiente", // pendiente | ok | error | omitido
-          mensaje: "",
-        }));
+        .map((row) => {
+          const stock = parseInt(row[colStock]) || 0;
+
+          return {
+            sku: row[colSKU].toString().trim(),
+            stock,
+            stockAPublicar: Math.max(stock - 1, 0),
+            nombre: colNombre ? row[colNombre] : "",
+            estado: "pendiente",
+            mensaje: "",
+          };
+        });
 
       setFilas(filasParsed);
     };
@@ -93,14 +103,14 @@ const ApiIngresos = () => {
               Authorization: API_TOKEN,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ sku: fila.sku, cantidad: fila.stock }),
+            body: JSON.stringify({ sku: fila.sku, cantidad: fila.stockAPublicar }),
           }
         );
 
         const data = await response.json();
 
         if (response.ok && data.success) {
-          filasActualizadas[i] = { ...fila, estado: "ok", mensaje: "" };
+          filasActualizadas[i] = { ...fila, estado: "ok", mensaje: data.mensaje,};
           ok++;
         } else {
           filasActualizadas[i] = {
@@ -292,6 +302,7 @@ const ApiIngresos = () => {
                 <th>SKU</th>
                 <th>Nombre</th>
                 <th>Stock</th>
+                <th>Stock a publicar</th>
                 <th>Detalle</th>
               </tr>
             </thead>
@@ -313,6 +324,7 @@ const ApiIngresos = () => {
                   <td className={styles.tdSku}>{fila.sku}</td>
                   <td className={styles.tdNombre}>{fila.nombre}</td>
                   <td className={styles.tdStock}>{fila.stock}</td>
+                  <td className={styles.tdStock}>{fila.stockAPublicar}</td>
                   <td className={styles.tdMensaje}>{fila.mensaje}</td>
                 </tr>
               ))}
