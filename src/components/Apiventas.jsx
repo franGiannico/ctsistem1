@@ -471,25 +471,31 @@ function Apiventas() {
   };
 
   // Función para agrupar ventas por punto de despacho
-    const agruparVentasPorPunto = () => {
-      const grupos = {};
+  const agruparVentasPorPunto = () => {
+    const grupos = {};
 
-      ventas.forEach((venta) => {
-        const categoria = venta.esTiendanube
-          ? "Ventas Tiendanube"
-          : venta.puntoDespacho || "Punto de Despacho";
+    ventas.forEach((venta) => {
+      const esVentaTiendanube =
+        venta.esTiendanube === true ||
+        venta.origen === "tiendanube" ||
+        venta.origen === "Tiendanube" ||
+        venta.plataforma === "tiendanube" ||
+        venta.fuente === "tiendanube";
 
-        if (!grupos[categoria]) grupos[categoria] = [];
+      const categoria = esVentaTiendanube
+        ? "Ventas Tiendanube"
+        : venta.puntoDespacho || "Punto de Despacho";
 
-        grupos[categoria].push({
-          ...venta,
-          puntoDespacho: categoria
-        });
+      if (!grupos[categoria]) grupos[categoria] = [];
+
+      grupos[categoria].push({
+        ...venta,
+        puntoDespacho: categoria
       });
+    });
 
-      return grupos;
-    };
-
+    return grupos;
+  };
   // Sincronizar ventas Mercado Libre y reemplazar el listado completo
   const sincronizarVentasML = async () => {
     setCargando(true);

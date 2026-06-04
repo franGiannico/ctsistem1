@@ -125,15 +125,10 @@ router.get('/sincronizar-ventas', async (req, res) => {
             const cliente = order.customer ? `${order.customer.name}` : order.billing_name || 'Desconocido';
 
             // Mapear Punto de Despacho
-            const shippingName = order.row_shipping_method || ""; // old field
-            // Or shipping_option field
             const shippingOption = order.shipping_option || "";
 
-            let puntoDespacho = "Punto de Despacho";
-            if (shippingOption.toLowerCase().includes("flex")) puntoDespacho = "Flex";
-            if (shippingOption.toLowerCase().includes("retiro") || shippingOption.toLowerCase().includes("sucursal")) puntoDespacho = "Punto de Despacho";
-            if (shippingOption.toLowerCase().includes("coordinar")) puntoDespacho = "A coordinar";
-            if (!shippingOption) puntoDespacho = "A coordinar";
+            // Categoría fija para que Tiendanube no se mezcle con ML/manuales
+            const puntoDespacho = "Ventas Tiendanube";
 
             // Productos
             for (const product of order.products) {
@@ -146,22 +141,19 @@ router.get('/sincronizar-ventas', async (req, res) => {
                 const estadoPrevio = estadosExistentes[numeroVenta] || { completada: false, entregada: false };
 
                 ventasAGuardar.push({
-                    numeroVenta: `${numeroVenta}-${product.id}`, // Unique ID per row
-                    // Pese a que VentaSchema.numeroVenta es unique, aquí podríamos tener colisión si una orden tiene varios productos.
-                    // Ajuste: El esquema actual usa numeroVenta como ID único de la fila en la tabla.
-                    // Opción: Usar TN-{orderID}-{productID} para ser únicos por línea.
-
-                    sku,
-                    nombre,
-                    cantidad,
-                    cliente,
-                    puntoDespacho,
-                    imagen,
-                    esTiendanube: true,
-                    nota: order.note || "",
-                    tipoEnvio: shippingOption,
-                    completada: estadoPrevio.completada,
-                    entregada: estadoPrevio.entregada
+                numeroVenta: `${numeroVenta}-${product.id}`,
+                sku,
+                nombre,
+                cantidad,
+                cliente,
+                puntoDespacho,
+                imagen,
+                esTiendanube: true,
+                origen: "tiendanube",
+                nota: order.note || "",
+                tipoEnvio: shippingOption,
+                completada: estadoPrevio.completada,
+                entregada: estadoPrevio.entregada
                 });
             }
         }
