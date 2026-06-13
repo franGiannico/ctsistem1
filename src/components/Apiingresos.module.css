@@ -262,3 +262,28 @@
   font-size: 0.82rem;
   max-width: 200px;
 }
+
+.inputStock {
+  width: 90px;
+  padding: 0.4rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.inputStock:focus {
+  outline: none;
+  border-color: #4a6cf7;
+  box-shadow: 0 0 0 2px rgba(74, 108, 247, 0.15);
+}
+
+.mensajeOk {
+  color: #00a650;
+  font-weight: 600;
+}
+
+.mensajeError {
+  color: #d93025;
+  font-weight: 600;
+}

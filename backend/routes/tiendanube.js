@@ -30,7 +30,7 @@ const VentaModel = require("../models/Venta");
 
 // 🔐 Auth: Redirigir a Tiendanube
 router.get('/auth', (req, res) => {
-    const authUrl = `https://www.tiendanube.com/apps/${TIENDANUBE_CLIENT_ID}/authorize?response_type=code&scope=read_orders,write_orders&redirect_uri=${REDIRECT_URI}`;
+    const authUrl = `https://www.tiendanube.com/apps/${TIENDANUBE_CLIENT_ID}/authorize?response_type=code&scope=read_orders,write_orders,read_products,write_products&redirect_uri=${REDIRECT_URI}`;
     res.json({ redirect: authUrl });
 });
 
@@ -174,6 +174,115 @@ router.get('/sincronizar-ventas', async (req, res) => {
 
 router.get('/estado-sincronizacion', (req, res) => {
     res.json({ sincronizando });
+});
+
+router.post('/actualizar-stock', async (req, res) => {
+  const { sku, cantidad } = req.body;
+
+  if (!sku || cantidad === undefined || cantidad === null) {
+    return res.status(400).json({
+      error: 'Se requieren los campos "sku" y "cantidad".'
+    });
+  }
+
+  if (typeof cantidad !== 'number' || cantidad < 0 || !Number.isInteger(cantidad)) {
+    return res.status(400).json({
+      error: '"cantidad" debe ser un número entero mayor o igual a 0.'
+    });
+  }
+
+  try {
+    const tokenDoc = await TiendanubeToken.findOne();
+
+    if (!tokenDoc || !tokenDoc.access_token) {
+      return res.status(401).json({
+        error: 'No autenticado con Tiendanube.'
+      });
+    }
+
+    const { access_token, user_id } = tokenDoc;
+
+    const productosResponse = await axios.get(
+      `https://api.tiendanube.com/v1/${user_id}/products`,
+      {
+        headers: {
+          Authentication: `bearer ${access_token}`,
+          'User-Agent': TIENDANUBE_USER_AGENT
+        },
+        params: {
+          sku,
+          per_page: 50
+        }
+      }
+    );
+
+    const productos = productosResponse.data || [];
+
+    let productoEncontrado = null;
+    let varianteEncontrada = null;
+
+    for (const producto of productos) {
+      const variantes = producto.variants || [];
+
+      const variante = variantes.find((v) => {
+        return String(v.sku || '').trim() === String(sku).trim();
+      });
+
+      if (variante) {
+        productoEncontrado = producto;
+        varianteEncontrada = variante;
+        break;
+      }
+    }
+
+    if (!productoEncontrado || !varianteEncontrada) {
+      return res.status(404).json({
+        error: `No se encontró el SKU "${sku}" en Tiendanube.`
+      });
+    }
+
+    await axios.patch(
+      `https://api.tiendanube.com/v1/${user_id}/products/stock-price`,
+      [
+        {
+          id: productoEncontrado.id,
+          variants: [
+            {
+              id: varianteEncontrada.id,
+              inventory_levels: [
+                {
+                  stock: cantidad
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      {
+        headers: {
+          Authentication: `bearer ${access_token}`,
+          'User-Agent': TIENDANUBE_USER_AGENT,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    return res.json({
+      success: true,
+      sku,
+      cantidad,
+      product_id: productoEncontrado.id,
+      variant_id: varianteEncontrada.id,
+      mensaje: `Stock Tiendanube actualizado correctamente a ${cantidad} unidades.`
+    });
+  } catch (error) {
+    console.error('❌ Error al actualizar stock en Tiendanube:', error.response?.data || error.message);
+
+    return res.status(500).json({
+      error: 'Error al actualizar el stock en Tiendanube.',
+      detalle: error.response?.data || error.message
+    });
+  }
 });
 
 module.exports = router;

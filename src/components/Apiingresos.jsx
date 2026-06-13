@@ -323,9 +323,34 @@ const ApiIngresos = () => {
                   </td>
                   <td className={styles.tdSku}>{fila.sku}</td>
                   <td className={styles.tdNombre}>{fila.nombre}</td>
-                  <td className={styles.tdStock}>{fila.stock}</td>
+                  <td className={styles.tdStock}>
+                    <input
+                      type="number"
+                      min="0"
+                      value={fila.stock}
+                      disabled={procesando}
+                      className={styles.inputStock}
+                      onChange={(e) => {
+                        const nuevasFilas = [...filas];
+                        nuevasFilas[i].stock = parseInt(e.target.value) || 0;
+                        nuevasFilas[i].estado = "pendiente";
+                        nuevasFilas[i].mensaje = "";
+                        setFilas(nuevasFilas);
+                      }}
+                    />
+                  </td>
                   <td className={styles.tdStock}>{fila.stockAPublicar}</td>
-                  <td className={styles.tdMensaje}>{fila.mensaje}</td>
+                  <td
+                    className={`${styles.tdMensaje} ${
+                        fila.estado === "ok"
+                          ? styles.mensajeOk
+                          : fila.estado === "error"
+                          ? styles.mensajeError
+                          : ""
+                      }`}
+                    >
+                      {fila.mensaje}
+                  </td>
                 </tr>
               ))}
             </tbody>
