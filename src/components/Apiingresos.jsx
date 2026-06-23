@@ -15,6 +15,8 @@ const ApiIngresos = () => {
   const [resumen, setResumen] = useState(null); // { ok, errores, total }
   const [archivoNombre, setArchivoNombre] = useState("");
   const inputRef = useRef(null);
+  const [sincronizarML, setSincronizarML] = useState(true);
+  const [sincronizarTN, setSincronizarTN] = useState(true);
 
   //Función para calcular stock a publicar (restar 1 al stock real, mínimo 0)
   const calcularStockAPublicar = (stockExcel) => {
@@ -72,6 +74,10 @@ const ApiIngresos = () => {
             nombre: colNombre ? row[colNombre] : "",
             estado: "pendiente",
             mensaje: "",
+            mlEstado: "pendiente",
+            mlMensaje: "",
+            tnEstado: "pendiente",
+            tnMensaje: "",
           };
         });
 
@@ -82,64 +88,154 @@ const ApiIngresos = () => {
 
   // Envía cada SKU al endpoint uno por uno
   const handleSincronizar = async () => {
-    if (filas.length === 0) return;
-    setProcesando(true);
-    setResumen(null);
+  if (filas.length === 0) return;
 
-    let ok = 0;
-    let errores = 0;
+  if (!sincronizarML && !sincronizarTN) {
+    alert("Seleccioná al menos una plataforma para sincronizar.");
+    return;
+  }
 
-    const filasActualizadas = [...filas];
+  setProcesando(true);
+  setResumen(null);
 
-    for (let i = 0; i < filasActualizadas.length; i++) {
-      const fila = filasActualizadas[i];
+  let ok = 0;
+  let errores = 0;
 
+  const filasActualizadas = [...filas];
+
+  for (let i = 0; i < filasActualizadas.length; i++) {
+    const fila = filasActualizadas[i];
+
+    let mlOk = !sincronizarML;
+    let tnOk = !sincronizarTN;
+
+    let nuevaFila = {
+      ...fila,
+      estado: "procesando",
+      mensaje: "Sincronizando...",
+      mlEstado: sincronizarML ? "procesando" : "omitido",
+      mlMensaje: sincronizarML ? "Sincronizando ML..." : "Omitido",
+      tnEstado: sincronizarTN ? "procesando" : "omitido",
+      tnMensaje: sincronizarTN ? "Sincronizando TN..." : "Omitido",
+    };
+
+    filasActualizadas[i] = nuevaFila;
+    setFilas([...filasActualizadas]);
+
+    if (sincronizarML) {
       try {
-        const response = await fetch(
-          `${BACKEND_URL}/meli/actualizar-stock`,
+        const responseML = await fetch(`${BACKEND_URL}/meli/actualizar-stock`, {
+          method: "POST",
+          headers: {
+            Authorization: API_TOKEN,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            sku: fila.sku,
+            cantidad: fila.stockAPublicar,
+          }),
+        });
+
+        const dataML = await responseML.json();
+
+        if (responseML.ok && dataML.success) {
+          mlOk = true;
+          nuevaFila = {
+            ...nuevaFila,
+            mlEstado: "ok",
+            mlMensaje: dataML.mensaje || "ML actualizado correctamente",
+          };
+        } else {
+          mlOk = false;
+          nuevaFila = {
+            ...nuevaFila,
+            mlEstado: "error",
+            mlMensaje: dataML.error || "Error ML desconocido",
+          };
+        }
+      } catch (err) {
+        mlOk = false;
+        nuevaFila = {
+          ...nuevaFila,
+          mlEstado: "error",
+          mlMensaje: "Error de conexión ML",
+        };
+      }
+
+      filasActualizadas[i] = nuevaFila;
+      setFilas([...filasActualizadas]);
+    }
+
+    if (sincronizarTN) {
+      try {
+        const responseTN = await fetch(
+          `${BACKEND_URL}/tiendanube/actualizar-stock`,
           {
             method: "POST",
             headers: {
               Authorization: API_TOKEN,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ sku: fila.sku, cantidad: fila.stockAPublicar }),
+            body: JSON.stringify({
+              sku: fila.sku,
+              cantidad: fila.stockAPublicar,
+            }),
           }
         );
 
-        const data = await response.json();
+        const dataTN = await responseTN.json();
 
-        if (response.ok && data.success) {
-          filasActualizadas[i] = { ...fila, estado: "ok", mensaje: data.mensaje,};
-          ok++;
-        } else {
-          filasActualizadas[i] = {
-            ...fila,
-            estado: "error",
-            mensaje: data.error || "Error desconocido",
+        if (responseTN.ok && dataTN.success) {
+          tnOk = true;
+          nuevaFila = {
+            ...nuevaFila,
+            tnEstado: "ok",
+            tnMensaje: dataTN.mensaje || "TN actualizado correctamente",
           };
-          errores++;
+        } else {
+          tnOk = false;
+          nuevaFila = {
+            ...nuevaFila,
+            tnEstado: "error",
+            tnMensaje: dataTN.error || "Error TN desconocido",
+          };
         }
       } catch (err) {
-        filasActualizadas[i] = {
-          ...fila,
-          estado: "error",
-          mensaje: "Error de conexión",
+        tnOk = false;
+        nuevaFila = {
+          ...nuevaFila,
+          tnEstado: "error",
+          tnMensaje: "Error de conexión TN",
         };
-        errores++;
       }
 
-      // Actualizar tabla en tiempo real
+      filasActualizadas[i] = nuevaFila;
       setFilas([...filasActualizadas]);
-
-      // Pequeña pausa para no saturar la API de ML
-      await new Promise((r) => setTimeout(r, 300));
     }
 
-    setResumen({ ok, errores, total: filasActualizadas.length });
-    setProcesando(false);
-  };
+    const filaOk = mlOk && tnOk;
 
+    filasActualizadas[i] = {
+      ...nuevaFila,
+      estado: filaOk ? "ok" : "error",
+      mensaje: filaOk
+        ? "Sincronización completada"
+        : "Revisar resultado ML/TN",
+    };
+
+    if (filaOk) ok++;
+    else errores++;
+
+    setFilas([...filasActualizadas]);
+
+    await new Promise((r) => setTimeout(r, 300));
+  }
+
+  setResumen({ ok, errores, total: filasActualizadas.length });
+  setProcesando(false);
+};
+
+       
   const handleLimpiar = () => {
     setFilas([]);
     setResumen(null);
@@ -209,6 +305,26 @@ const ApiIngresos = () => {
         Cargá el reporte de stock en Excel y actualizá todas las publicaciones
         de ML automáticamente.
       </p>
+      {/* Opciones de sincronización */}
+      <div className={styles.opcionesSync}>
+        <label className={styles.switchLabel}>
+          <input
+            type="checkbox"
+            checked={sincronizarML}
+            onChange={(e) => setSincronizarML(e.target.checked)}
+          />
+          Sincronizar stock ML
+        </label>
+
+        <label className={styles.switchLabel}>
+          <input
+            type="checkbox"
+            checked={sincronizarTN}
+            onChange={(e) => setSincronizarTN(e.target.checked)}
+          />
+          Sincronizar stock TN
+        </label>
+      </div>
 
       {/* Zona de carga */}
       <div
@@ -242,6 +358,8 @@ const ApiIngresos = () => {
         )}
       </div>
 
+     
+
       {/* Botones */}
       {filas.length > 0 && (
         <div className={styles.acciones}>
@@ -250,7 +368,7 @@ const ApiIngresos = () => {
             className={styles.btnSincronizar}
             disabled={procesando}
           >
-            {procesando ? "⏳ Sincronizando..." : "🚀 Sincronizar Stock en ML"}
+            {procesando ? "⏳ Sincronizando..." : "🚀 Sincronizar Stock"}
           </button>
           <button
             onClick={handleLimpiar}
@@ -303,6 +421,8 @@ const ApiIngresos = () => {
                 <th>Nombre</th>
                 <th>Stock</th>
                 <th>Stock a publicar</th>
+                <th>ML</th>
+                <th>TN</th>
                 <th>Detalle</th>
               </tr>
             </thead>
@@ -340,16 +460,41 @@ const ApiIngresos = () => {
                     />
                   </td>
                   <td className={styles.tdStock}>{fila.stockAPublicar}</td>
+
                   <td
                     className={`${styles.tdMensaje} ${
-                        fila.estado === "ok"
-                          ? styles.mensajeOk
-                          : fila.estado === "error"
-                          ? styles.mensajeError
-                          : ""
-                      }`}
-                    >
-                      {fila.mensaje}
+                      fila.mlEstado === "ok"
+                        ? styles.mensajeOk
+                        : fila.mlEstado === "error"
+                        ? styles.mensajeError
+                        : ""
+                    }`}
+                  >
+                    {estadoIcono(fila.mlEstado)} {fila.mlMensaje}
+                  </td>
+
+                  <td
+                    className={`${styles.tdMensaje} ${
+                      fila.tnEstado === "ok"
+                        ? styles.mensajeOk
+                        : fila.tnEstado === "error"
+                        ? styles.mensajeError
+                        : ""
+                    }`}
+                  >
+                    {estadoIcono(fila.tnEstado)} {fila.tnMensaje}
+                  </td>
+
+                  <td
+                    className={`${styles.tdMensaje} ${
+                      fila.estado === "ok"
+                        ? styles.mensajeOk
+                        : fila.estado === "error"
+                        ? styles.mensajeError
+                        : ""
+                    }`}
+                  >
+                    {fila.mensaje}
                   </td>
                 </tr>
               ))}
