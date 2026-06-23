@@ -31,7 +31,12 @@ const VentaModel = require("../models/Venta");
 // 🔐 Auth: Redirigir a Tiendanube
 router.get('/auth', (req, res) => {
     const authUrl = `https://www.tiendanube.com/apps/${TIENDANUBE_CLIENT_ID}/authorize?response_type=code&scope=read_orders,write_orders,read_products,write_products&redirect_uri=${REDIRECT_URI}`;
-    res.json({ redirect: authUrl });
+    console.log("🧪 TIENDANUBE AUTH NUEVO:", authUrl);
+
+    res.json({
+      version: "tn-auth-v2-products",
+      redirect: authUrl
+    });
 });
 
 // 🔁 Auth: Callback
