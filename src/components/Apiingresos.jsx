@@ -423,7 +423,6 @@ const ApiIngresos = () => {
                 <th>Stock a publicar</th>
                 <th>ML</th>
                 <th>TN</th>
-                <th>Detalle</th>
               </tr>
             </thead>
             <tbody>
@@ -487,18 +486,6 @@ const ApiIngresos = () => {
                     }`}
                   >
                     {estadoIcono(fila.tnEstado)} {fila.tnMensaje}
-                  </td>
-
-                  <td
-                    className={`${styles.tdMensaje} ${
-                      fila.estado === "ok"
-                        ? styles.mensajeOk
-                        : fila.estado === "error"
-                        ? styles.mensajeError
-                        : ""
-                    }`}
-                  >
-                    {fila.mensaje}
                   </td>
                 </tr>
               ))}
