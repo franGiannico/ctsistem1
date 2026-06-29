@@ -207,38 +207,54 @@ router.post('/actualizar-stock', async (req, res) => {
 
     const { access_token, user_id } = tokenDoc;
 
-    const productosResponse = await axios.get(
-      `https://api.tiendanube.com/v1/${user_id}/products`,
-      {
-        headers: {
-          Authentication: `bearer ${access_token}`,
-          'User-Agent': TIENDANUBE_USER_AGENT
-        },
-        params: {
-          sku,
-          per_page: 50
-        }
-      }
-    );
+   console.log(`🔍 [TN] Buscando SKU: ${sku}`);
 
-    const productos = productosResponse.data || [];
+let productoEncontrado = null;
+let varianteEncontrada = null;
+let page = 1;
+const perPage = 50;
+const skuBuscado = String(sku).trim().toLowerCase();
 
-    let productoEncontrado = null;
-    let varianteEncontrada = null;
-
-    for (const producto of productos) {
-      const variantes = producto.variants || [];
-
-      const variante = variantes.find((v) => {
-        return String(v.sku || '').trim() === String(sku).trim();
-      });
-
-      if (variante) {
-        productoEncontrado = producto;
-        varianteEncontrada = variante;
-        break;
+while (!varianteEncontrada && page <= 20) {
+  const productosResponse = await axios.get(
+    `https://api.tiendanube.com/v1/${user_id}/products`,
+    {
+      headers: {
+        Authentication: `bearer ${access_token}`,
+        'User-Agent': TIENDANUBE_USER_AGENT
+      },
+      params: {
+        page,
+        per_page: perPage
       }
     }
+  );
+
+  const productos = productosResponse.data || [];
+
+  console.log(`📦 [TN] Página ${page}: ${productos.length} productos`);
+
+  for (const producto of productos) {
+    const variantes = producto.variants || [];
+
+    const variante = variantes.find((v) => {
+      const skuVariante = String(v.sku || '').trim().toLowerCase();
+      return skuVariante === skuBuscado;
+    });
+
+    if (variante) {
+      productoEncontrado = producto;
+      varianteEncontrada = variante;
+      console.log(
+        `✅ [TN] SKU encontrado: ${sku} | Producto ${producto.id} | Variante ${variante.id}`
+      );
+      break;
+    }
+  }
+
+  if (productos.length < perPage) break;
+  page++;
+}
 
     if (!productoEncontrado || !varianteEncontrada) {
       return res.status(404).json({
