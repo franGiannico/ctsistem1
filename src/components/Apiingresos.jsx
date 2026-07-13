@@ -54,10 +54,13 @@ const ApiIngresos = () => {
           h.trim().toLowerCase() === "articulo" ||
           h.trim().toLowerCase() === "artículo"
       );
+      const colPrecio = headers.find(
+        (h) => h.trim().toLowerCase() === "precio"
+      );
 
-      if (!colSKU || !colStock) {
+      if (!colSKU || !colStock || !colPrecio) {
         alert(
-          "No se encontraron las columnas SKU y/o Stock en el archivo. Verificá el formato."
+           "No se encontraron las columnas SKU, Stock y/o Precio en el archivo. Verificá el formato."
         );
         return;
       }
@@ -66,11 +69,13 @@ const ApiIngresos = () => {
         .filter((row) => row[colSKU] && row[colSKU].toString().trim() !== "")
         .map((row) => {
           const stock = parseInt(row[colStock]) || 0;
+          const precioBase = Number(row[colPrecio]) || 0;
 
           return {
             sku: row[colSKU].toString().trim(),
             stock,
             stockAPublicar: Math.max(stock - 1, 0),
+            precioBase,
             nombre: colNombre ? row[colNombre] : "",
             estado: "pendiente",
             mensaje: "",
@@ -177,9 +182,10 @@ const ApiIngresos = () => {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              sku: fila.sku,
-              cantidad: fila.stockAPublicar,
-            }),
+            sku: fila.sku,
+            cantidad: fila.stockAPublicar,
+            precioBase: fila.precioBase,
+          }),
           }
         );
 
@@ -421,6 +427,7 @@ const ApiIngresos = () => {
                 <th>Nombre</th>
                 <th>Stock</th>
                 <th>Stock a publicar</th>
+                <th>Precio base</th>
                 <th>ML</th>
                 <th>TN</th>
               </tr>
@@ -463,7 +470,13 @@ const ApiIngresos = () => {
                       }}
                     />
                   </td>
-
+                  <td className={styles.tdPrecio}>
+                    {Number(fila.precioBase || 0).toLocaleString("es-AR", {
+                      style: "currency",
+                      currency: "ARS",
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
                   <td
                     className={`${styles.tdMensaje} ${
                       fila.mlEstado === "ok"

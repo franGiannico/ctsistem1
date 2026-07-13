@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const axios = require('axios');
 const router = express.Router();
 require('dotenv').config();
+const CONFIG_CUOTAS = require("../config/tiendanubeCuotas");
 
 const {
     TIENDANUBE_CLIENT_ID,
@@ -27,6 +28,67 @@ const TiendanubeToken = mongoose.models.TiendanubeToken || mongoose.model('Tiend
 // Modelo Venta (Referencia unificada)
 const VentaModel = require("../models/Venta");
 
+const IVA = 1.21;
+
+// Costos fijos validados con una venta real.
+const COSTO_COBRO_MP = 0.0079 * IVA; // 0,79% + IVA = 0,9559%
+const CPT_TIENDANUBE = 0.01;         // 1%
+const IMPUESTO_DEBITOS = 0.006;      // 0,60%
+const AUMENTO_PRECIO_LISTA = 0.20;   // Lista 20% mayor al promocional
+
+const obtenerPlanPorPrecio = (precioBase) => {
+  const precio = Number(precioBase);
+
+  if (!Number.isFinite(precio) || precio <= 0) {
+    throw new Error('"precioBase" debe ser un número mayor que 0.');
+  }
+
+  const plan = CONFIG_CUOTAS.find(
+    (configuracion) => precio >= configuracion.minimo
+  );
+
+  if (!plan) {
+    throw new Error("No se encontró una configuración de cuotas válida.");
+  }
+
+  return plan;
+};
+
+const calcularPreciosTiendanube = (precioBase) => {
+  const precioNetoDeseado = Number(precioBase);
+  const plan = obtenerPlanPorPrecio(precioNetoDeseado);
+
+  const costoFinanciacionConIVA = plan.financiacion * IVA;
+
+  const costoTotal =
+    COSTO_COBRO_MP +
+    CPT_TIENDANUBE +
+    IMPUESTO_DEBITOS +
+    costoFinanciacionConIVA;
+
+  if (costoTotal >= 1) {
+    throw new Error("El costo total calculado es inválido.");
+  }
+
+  // Precio de venta para que, después de todos los descuentos,
+  // quede neto el precioBase.
+  const precioPromocional = Math.ceil(
+    precioNetoDeseado / (1 - costoTotal)
+  );
+
+  // Regla comercial: precio de lista 20% por encima del promocional.
+  const precioLista = Math.ceil(
+    precioPromocional * (1 + AUMENTO_PRECIO_LISTA)
+  );
+
+  return {
+    cuotas: plan.cuotas,
+    financiacion: plan.financiacion,
+    costoTotal,
+    precioPromocional,
+    precioLista,
+  };
+};
 
 // 🔐 Auth: Redirigir a Tiendanube
 router.get('/auth', (req, res) => {
@@ -181,8 +243,10 @@ router.get('/estado-sincronizacion', (req, res) => {
     res.json({ sincronizando });
 });
 
+
+
 router.post('/actualizar-stock', async (req, res) => {
-  const { sku, cantidad } = req.body;
+  const { sku, cantidad, precioBase } = req.body;
 
   if (!sku || cantidad === undefined || cantidad === null) {
     return res.status(400).json({
@@ -195,6 +259,18 @@ router.post('/actualizar-stock', async (req, res) => {
       error: '"cantidad" debe ser un número entero mayor o igual a 0.'
     });
   }
+
+  if (
+  precioBase !== undefined &&
+  precioBase !== null &&
+  (typeof precioBase !== "number" ||
+    !Number.isFinite(precioBase) ||
+    precioBase <= 0)
+) {
+  return res.status(400).json({
+    error: '"precioBase" debe ser un número mayor que 0.'
+  });
+}
 
   try {
     const tokenDoc = await TiendanubeToken.findOne();
@@ -262,21 +338,43 @@ while (!varianteEncontrada && page <= 20) {
       });
     }
 
+    let preciosCalculados = null;
+
+if (precioBase !== undefined && precioBase !== null) {
+  preciosCalculados = calcularPreciosTiendanube(precioBase);
+
+  console.log(`💰 [TN] Precios calculados para ${sku}:`, {
+    precioBase,
+    cuotas: preciosCalculados.cuotas,
+    costoTotalPorcentaje: Number(
+      (preciosCalculados.costoTotal * 100).toFixed(4)
+    ),
+    precioPromocional: preciosCalculados.precioPromocional,
+    precioLista: preciosCalculados.precioLista,
+  });
+}
+
+   const datosVariante = {
+  id: varianteEncontrada.id,
+  inventory_levels: [
+    {
+      stock: cantidad
+    }
+  ]
+};
+
+if (preciosCalculados) {
+  datosVariante.price = preciosCalculados.precioLista;
+  datosVariante.promotional_price =
+    preciosCalculados.precioPromocional;
+}
+
     await axios.patch(
       `https://api.tiendanube.com/v1/${user_id}/products/stock-price`,
       [
         {
           id: productoEncontrado.id,
-          variants: [
-            {
-              id: varianteEncontrada.id,
-              inventory_levels: [
-                {
-                  stock: cantidad
-                }
-              ]
-            }
-          ]
+          variants: [datosVariante]
         }
       ],
       {
@@ -289,13 +387,30 @@ while (!varianteEncontrada && page <= 20) {
     );
 
     return res.json({
-      success: true,
-      sku,
-      cantidad,
-      product_id: productoEncontrado.id,
-      variant_id: varianteEncontrada.id,
-      mensaje: `Stock Tiendanube actualizado correctamente a ${cantidad} unidades.`
-    });
+    success: true,
+    sku,
+    cantidad,
+    product_id: productoEncontrado.id,
+    variant_id: varianteEncontrada.id,
+
+    precios: preciosCalculados
+      ? {
+          precioBase,
+          cuotas: preciosCalculados.cuotas,
+          costoTotalPorcentaje: Number(
+            (preciosCalculados.costoTotal * 100).toFixed(4)
+          ),
+          precioPromocional: preciosCalculados.precioPromocional,
+          precioLista: preciosCalculados.precioLista,
+        }
+      : null,
+
+    mensaje: preciosCalculados
+      ? `Stock y precios actualizados. Promocional: $${preciosCalculados.precioPromocional.toLocaleString(
+          "es-AR"
+        )} | Lista: $${preciosCalculados.precioLista.toLocaleString("es-AR")}`
+      : `Stock Tiendanube actualizado correctamente a ${cantidad} unidades.`
+  });
   } catch (error) {
     console.error('❌ Error al actualizar stock en Tiendanube:', error.response?.data || error.message);
 
