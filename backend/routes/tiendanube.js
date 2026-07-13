@@ -521,6 +521,7 @@ router.post("/actualizar-stock-masivo", async (req, res) => {
      */
     const resultados = [];
     const actualizacionesPorProducto = new Map();
+    const preciosPorProducto = new Map();
 
     for (const productoEntrada of productos) {
       const sku = String(productoEntrada.sku).trim();
@@ -562,12 +563,21 @@ router.post("/actualizar-stock-masivo", async (req, res) => {
           nivelInventarioActual.location_id;
       }
 
-      const varianteActualizada = {
-        id: encontrada.variantId,
-        price: precios.precioLista,
-        promotional_price: precios.precioPromocional,
-        inventory_levels: [inventoryLevel],
-      };
+    // Este objeto va al endpoint masivo /products/stock-price.
+    // Ese endpoint solamente admite precio normal y stock.
+    const varianteStockPrecio = {
+      id: encontrada.variantId,
+      price: precios.precioLista,
+      inventory_levels: [inventoryLevel],
+    };
+
+    // Este objeto va al endpoint de variantes,
+    // que sí admite promotional_price.
+    const variantePrecios = {
+      id: encontrada.variantId,
+      price: precios.precioLista,
+      promotional_price: precios.precioPromocional,
+    };
 
       if (!actualizacionesPorProducto.has(encontrada.productId)) {
         actualizacionesPorProducto.set(encontrada.productId, {
@@ -577,8 +587,16 @@ router.post("/actualizar-stock-masivo", async (req, res) => {
       }
 
       actualizacionesPorProducto
+      .get(encontrada.productId)
+      .variants.push(varianteStockPrecio);
+
+      if (!preciosPorProducto.has(encontrada.productId)) {
+        preciosPorProducto.set(encontrada.productId, []);
+      }
+
+      preciosPorProducto
         .get(encontrada.productId)
-        .variants.push(varianteActualizada);
+        .push(variantePrecios);
 
       resultados.push({
         sku,
@@ -639,6 +657,34 @@ router.post("/actualizar-stock-masivo", async (req, res) => {
       await axios.patch(
         `https://api.tiendanube.com/v1/${user_id}/products/stock-price`,
         lotes[i],
+        {
+          headers: {
+            Authentication: `bearer ${access_token}`,
+            "User-Agent": TIENDANUBE_USER_AGENT,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
+    /*
+    * 5. Actualizar precios promocionales.
+    * /products/stock-price no admite promotional_price,
+    * así que usamos el endpoint de variantes de cada producto.
+    */
+    const gruposPrecios = Array.from(preciosPorProducto.entries());
+
+    for (let i = 0; i < gruposPrecios.length; i++) {
+      const [productId, variantes] = gruposPrecios[i];
+
+      console.log(
+        `💰 [TN MASIVO] Actualizando promocionales ` +
+        `${i + 1}/${gruposPrecios.length} | Producto ${productId}`
+      );
+
+      await axios.patch(
+        `https://api.tiendanube.com/v1/${user_id}/products/${productId}/variants`,
+        variantes,
         {
           headers: {
             Authentication: `bearer ${access_token}`,
