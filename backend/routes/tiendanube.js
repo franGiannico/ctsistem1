@@ -386,6 +386,8 @@ if (preciosCalculados) {
       }
     );
 
+
+
     return res.json({
     success: true,
     sku,
@@ -417,6 +419,268 @@ if (preciosCalculados) {
     return res.status(500).json({
       error: 'Error al actualizar el stock en Tiendanube.',
       detalle: error.response?.data || error.message
+    });
+  }
+});
+
+router.post("/actualizar-stock-masivo", async (req, res) => {
+  const { productos } = req.body;
+
+  if (!Array.isArray(productos) || productos.length === 0) {
+    return res.status(400).json({
+      error: 'Se requiere un array "productos" con al menos un elemento.',
+    });
+  }
+
+  const productosInvalidos = productos.filter((producto) => {
+    return (
+      !producto.sku ||
+      typeof producto.cantidad !== "number" ||
+      !Number.isInteger(producto.cantidad) ||
+      producto.cantidad < 0 ||
+      typeof producto.precioBase !== "number" ||
+      !Number.isFinite(producto.precioBase) ||
+      producto.precioBase <= 0
+    );
+  });
+
+  if (productosInvalidos.length > 0) {
+    return res.status(400).json({
+      error: "Hay productos con SKU, cantidad o precioBase inválidos.",
+      productosInvalidos: productosInvalidos.map((producto) => producto.sku),
+    });
+  }
+
+  try {
+    const tokenDoc = await TiendanubeToken.findOne();
+
+    if (!tokenDoc?.access_token) {
+      return res.status(401).json({
+        error: "No autenticado con Tiendanube.",
+      });
+    }
+
+    const { access_token, user_id } = tokenDoc;
+
+    /*
+     * 1. Descargar el catálogo una sola vez.
+     */
+    const mapaVariantes = new Map();
+
+    let page = 1;
+    const perPage = 50;
+
+    while (page <= 100) {
+      const response = await axios.get(
+        `https://api.tiendanube.com/v1/${user_id}/products`,
+        {
+          headers: {
+            Authentication: `bearer ${access_token}`,
+            "User-Agent": TIENDANUBE_USER_AGENT,
+          },
+          params: {
+            page,
+            per_page: perPage,
+          },
+        }
+      );
+
+      const catalogo = response.data || [];
+
+      console.log(
+        `📦 [TN MASIVO] Página ${page}: ${catalogo.length} productos`
+      );
+
+      for (const producto of catalogo) {
+        for (const variante of producto.variants || []) {
+          const skuNormalizado = String(variante.sku || "")
+            .trim()
+            .toLowerCase();
+
+          if (!skuNormalizado) continue;
+
+          mapaVariantes.set(skuNormalizado, {
+            productId: producto.id,
+            variantId: variante.id,
+            inventoryLevels: variante.inventory_levels || [],
+          });
+        }
+      }
+
+      if (catalogo.length < perPage) break;
+
+      page++;
+    }
+
+    console.log(
+      `✅ [TN MASIVO] ${mapaVariantes.size} variantes indexadas por SKU`
+    );
+
+    /*
+     * 2. Preparar resultados y actualizaciones.
+     */
+    const resultados = [];
+    const actualizacionesPorProducto = new Map();
+
+    for (const productoEntrada of productos) {
+      const sku = String(productoEntrada.sku).trim();
+      const skuNormalizado = sku.toLowerCase();
+
+      const encontrada = mapaVariantes.get(skuNormalizado);
+
+      if (!encontrada) {
+        resultados.push({
+          sku,
+          success: false,
+          error: `No se encontró el SKU "${sku}" en Tiendanube.`,
+        });
+
+        continue;
+      }
+
+      const precios = calcularPreciosTiendanube(
+        productoEntrada.precioBase
+      );
+
+      /*
+       * Conservamos el identificador de ubicación si Tiendanube lo devuelve.
+       * Esto es importante para tiendas con inventario por sucursal.
+       */
+      const nivelInventarioActual =
+        encontrada.inventoryLevels?.[0] || {};
+
+      const inventoryLevel = {
+        stock: productoEntrada.cantidad,
+      };
+
+      if (nivelInventarioActual.id !== undefined) {
+        inventoryLevel.id = nivelInventarioActual.id;
+      }
+
+      if (nivelInventarioActual.location_id !== undefined) {
+        inventoryLevel.location_id =
+          nivelInventarioActual.location_id;
+      }
+
+      const varianteActualizada = {
+        id: encontrada.variantId,
+        price: precios.precioLista,
+        promotional_price: precios.precioPromocional,
+        inventory_levels: [inventoryLevel],
+      };
+
+      if (!actualizacionesPorProducto.has(encontrada.productId)) {
+        actualizacionesPorProducto.set(encontrada.productId, {
+          id: encontrada.productId,
+          variants: [],
+        });
+      }
+
+      actualizacionesPorProducto
+        .get(encontrada.productId)
+        .variants.push(varianteActualizada);
+
+      resultados.push({
+        sku,
+        success: true,
+        pendienteDeEnvio: true,
+        cantidad: productoEntrada.cantidad,
+        precios: {
+          precioBase: productoEntrada.precioBase,
+          cuotas: precios.cuotas,
+          costoTotalPorcentaje: Number(
+            (precios.costoTotal * 100).toFixed(4)
+          ),
+          precioPromocional: precios.precioPromocional,
+          precioLista: precios.precioLista,
+        },
+      });
+    }
+
+    /*
+     * 3. El endpoint admite hasta 50 variantes por request.
+     * Como el cuerpo agrupa variantes por producto, armamos lotes
+     * contando la cantidad total de variantes.
+     */
+    const grupos = Array.from(actualizacionesPorProducto.values());
+
+    const lotes = [];
+    let loteActual = [];
+    let variantesEnLote = 0;
+
+    for (const grupo of grupos) {
+      const cantidadVariantes = grupo.variants.length;
+
+      if (
+        loteActual.length > 0 &&
+        variantesEnLote + cantidadVariantes > 50
+      ) {
+        lotes.push(loteActual);
+        loteActual = [];
+        variantesEnLote = 0;
+      }
+
+      loteActual.push(grupo);
+      variantesEnLote += cantidadVariantes;
+    }
+
+    if (loteActual.length > 0) {
+      lotes.push(loteActual);
+    }
+
+    /*
+     * 4. Enviar los lotes a Tiendanube.
+     */
+    for (let i = 0; i < lotes.length; i++) {
+      console.log(
+        `🚀 [TN MASIVO] Enviando lote ${i + 1}/${lotes.length}`
+      );
+
+      await axios.patch(
+        `https://api.tiendanube.com/v1/${user_id}/products/stock-price`,
+        lotes[i],
+        {
+          headers: {
+            Authentication: `bearer ${access_token}`,
+            "User-Agent": TIENDANUBE_USER_AGENT,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
+    const exitosos = resultados.filter(
+      (resultado) => resultado.success
+    ).length;
+
+    const errores = resultados.length - exitosos;
+
+    return res.json({
+      success: errores === 0,
+      total: resultados.length,
+      exitosos,
+      errores,
+      lotesEnviados: lotes.length,
+      resultados: resultados.map(({ pendienteDeEnvio, ...resultado }) => ({
+        ...resultado,
+        mensaje: resultado.success
+          ? `Stock y precios actualizados. Promocional: $${resultado.precios.precioPromocional.toLocaleString(
+              "es-AR"
+            )} | Lista: $${resultado.precios.precioLista.toLocaleString(
+              "es-AR"
+            )}`
+          : undefined,
+      })),
+    });
+  } catch (error) {
+    console.error(
+      "❌ Error en actualización masiva Tiendanube:",
+      error.response?.data || error.message
+    );
+
+    return res.status(500).json({
+      error: "Error al actualizar productos en Tiendanube.",
+      detalle: error.response?.data || error.message,
     });
   }
 });

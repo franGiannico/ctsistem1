@@ -91,8 +91,8 @@ const ApiIngresos = () => {
     reader.readAsBinaryString(file);
   };
 
-  // Envía cada SKU al endpoint uno por uno
-  const handleSincronizar = async () => {
+ // Sincroniza ML individualmente y Tiendanube en una sola operación masiva
+const handleSincronizar = async () => {
   if (filas.length === 0) return;
 
   if (!sincronizarML && !sincronizarTN) {
@@ -103,78 +103,37 @@ const ApiIngresos = () => {
   setProcesando(true);
   setResumen(null);
 
-  let ok = 0;
-  let errores = 0;
+  let filasActualizadas = filas.map((fila) => ({
+    ...fila,
+    estado: "procesando",
+    mensaje: "Sincronizando...",
+    mlEstado: sincronizarML ? "procesando" : "omitido",
+    mlMensaje: sincronizarML ? "Esperando sincronización..." : "Omitido",
+    tnEstado: sincronizarTN ? "procesando" : "omitido",
+    tnMensaje: sincronizarTN ? "Esperando sincronización..." : "Omitido",
+  }));
 
-  const filasActualizadas = [...filas];
+  setFilas([...filasActualizadas]);
 
-  for (let i = 0; i < filasActualizadas.length; i++) {
-    const fila = filasActualizadas[i];
+  /*
+   * 1. MERCADO LIBRE
+   * Se mantiene la actualización individual por SKU.
+   */
+  if (sincronizarML) {
+    for (let i = 0; i < filasActualizadas.length; i++) {
+      const fila = filasActualizadas[i];
 
-    let mlOk = !sincronizarML;
-    let tnOk = !sincronizarTN;
+      filasActualizadas[i] = {
+        ...fila,
+        mlEstado: "procesando",
+        mlMensaje: "Sincronizando ML...",
+      };
 
-    let nuevaFila = {
-      ...fila,
-      estado: "procesando",
-      mensaje: "Sincronizando...",
-      mlEstado: sincronizarML ? "procesando" : "omitido",
-      mlMensaje: sincronizarML ? "Sincronizando ML..." : "Omitido",
-      tnEstado: sincronizarTN ? "procesando" : "omitido",
-      tnMensaje: sincronizarTN ? "Sincronizando TN..." : "Omitido",
-    };
-
-    filasActualizadas[i] = nuevaFila;
-    setFilas([...filasActualizadas]);
-
-    if (sincronizarML) {
-      try {
-        const responseML = await fetch(`${BACKEND_URL}/meli/actualizar-stock`, {
-          method: "POST",
-          headers: {
-            Authorization: API_TOKEN,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            sku: fila.sku,
-            cantidad: fila.stockAPublicar,
-          }),
-        });
-
-        const dataML = await responseML.json();
-
-        if (responseML.ok && dataML.success) {
-          mlOk = true;
-          nuevaFila = {
-            ...nuevaFila,
-            mlEstado: "ok",
-            mlMensaje: dataML.mensaje || "ML actualizado correctamente",
-          };
-        } else {
-          mlOk = false;
-          nuevaFila = {
-            ...nuevaFila,
-            mlEstado: "error",
-            mlMensaje: dataML.error || "Error ML desconocido",
-          };
-        }
-      } catch (err) {
-        mlOk = false;
-        nuevaFila = {
-          ...nuevaFila,
-          mlEstado: "error",
-          mlMensaje: "Error de conexión ML",
-        };
-      }
-
-      filasActualizadas[i] = nuevaFila;
       setFilas([...filasActualizadas]);
-    }
 
-    if (sincronizarTN) {
       try {
-        const responseTN = await fetch(
-          `${BACKEND_URL}/tiendanube/actualizar-stock`,
+        const responseML = await fetch(
+          `${BACKEND_URL}/meli/actualizar-stock`,
           {
             method: "POST",
             headers: {
@@ -182,65 +141,177 @@ const ApiIngresos = () => {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-            sku: fila.sku,
-            cantidad: fila.stockAPublicar,
-            precioBase: fila.precioBase,
-          }),
+              sku: fila.sku,
+              cantidad: fila.stockAPublicar,
+            }),
           }
         );
 
-        const dataTN = await responseTN.json();
+        const dataML = await responseML.json();
 
-        if (responseTN.ok && dataTN.success) {
-          tnOk = true;
-          nuevaFila = {
-            ...nuevaFila,
-            tnEstado: "ok",
-            tnMensaje: dataTN.mensaje || "TN actualizado correctamente",
+        if (responseML.ok && dataML.success) {
+          filasActualizadas[i] = {
+            ...filasActualizadas[i],
+            mlEstado: "ok",
+            mlMensaje:
+              dataML.mensaje || "Stock actualizado correctamente en ML",
           };
         } else {
-          tnOk = false;
-          nuevaFila = {
-            ...nuevaFila,
-            tnEstado: "error",
-            tnMensaje: dataTN.error || "Error TN desconocido",
+          filasActualizadas[i] = {
+            ...filasActualizadas[i],
+            mlEstado: "error",
+            mlMensaje: dataML.error || "Error desconocido en ML",
           };
         }
-      } catch (err) {
-        tnOk = false;
-        nuevaFila = {
-          ...nuevaFila,
-          tnEstado: "error",
-          tnMensaje: "Error de conexión TN",
+      } catch (error) {
+        filasActualizadas[i] = {
+          ...filasActualizadas[i],
+          mlEstado: "error",
+          mlMensaje: "Error de conexión con ML",
         };
       }
 
-      filasActualizadas[i] = nuevaFila;
       setFilas([...filasActualizadas]);
+
+      // Pausa para no saturar la API de Mercado Libre
+      await new Promise((resolve) => setTimeout(resolve, 300));
     }
+  }
 
-    const filaOk = mlOk && tnOk;
-
-    filasActualizadas[i] = {
-      ...nuevaFila,
-      estado: filaOk ? "ok" : "error",
-      mensaje: filaOk
-        ? "Sincronización completada"
-        : "Revisar resultado ML/TN",
-    };
-
-    if (filaOk) ok++;
-    else errores++;
+  /*
+   * 2. TIENDANUBE
+   * Envía todos los productos en una sola llamada.
+   */
+  if (sincronizarTN) {
+    filasActualizadas = filasActualizadas.map((fila) => ({
+      ...fila,
+      tnEstado: "procesando",
+      tnMensaje: "Sincronizando catálogo en Tiendanube...",
+    }));
 
     setFilas([...filasActualizadas]);
 
-    await new Promise((r) => setTimeout(r, 300));
+    try {
+      const responseTN = await fetch(
+        `${BACKEND_URL}/tiendanube/actualizar-stock-masivo`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: API_TOKEN,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            productos: filasActualizadas.map((fila) => ({
+              sku: fila.sku,
+              cantidad: fila.stockAPublicar,
+              precioBase: fila.precioBase,
+            })),
+          }),
+        }
+      );
+
+      const dataTN = await responseTN.json();
+
+      if (responseTN.ok && Array.isArray(dataTN.resultados)) {
+        const resultadosPorSku = new Map(
+          dataTN.resultados.map((resultado) => [
+            String(resultado.sku).trim().toLowerCase(),
+            resultado,
+          ])
+        );
+
+        filasActualizadas = filasActualizadas.map((fila) => {
+          const skuNormalizado = String(fila.sku)
+            .trim()
+            .toLowerCase();
+
+          const resultadoTN = resultadosPorSku.get(skuNormalizado);
+
+          if (!resultadoTN) {
+            return {
+              ...fila,
+              tnEstado: "error",
+              tnMensaje: "Tiendanube no devolvió un resultado para este SKU",
+            };
+          }
+
+          if (resultadoTN.success) {
+            return {
+              ...fila,
+              tnEstado: "ok",
+              tnMensaje:
+                resultadoTN.mensaje ||
+                "Stock y precios actualizados en Tiendanube",
+            };
+          }
+
+          return {
+            ...fila,
+            tnEstado: "error",
+            tnMensaje:
+              resultadoTN.error || "Error desconocido en Tiendanube",
+          };
+        });
+      } else {
+        const mensajeError =
+          dataTN.error || "Error en la sincronización masiva de Tiendanube";
+
+        filasActualizadas = filasActualizadas.map((fila) => ({
+          ...fila,
+          tnEstado: "error",
+          tnMensaje: mensajeError,
+        }));
+      }
+    } catch (error) {
+      filasActualizadas = filasActualizadas.map((fila) => ({
+        ...fila,
+        tnEstado: "error",
+        tnMensaje: "Error de conexión con Tiendanube",
+      }));
+    }
+
+    setFilas([...filasActualizadas]);
   }
 
-  setResumen({ ok, errores, total: filasActualizadas.length });
+  /*
+   * 3. RESULTADO GENERAL POR FILA
+   */
+  filasActualizadas = filasActualizadas.map((fila) => {
+    const mlCorrecto =
+      !sincronizarML || fila.mlEstado === "ok";
+
+    const tnCorrecto =
+      !sincronizarTN || fila.tnEstado === "ok";
+
+    const filaCorrecta = mlCorrecto && tnCorrecto;
+
+    return {
+      ...fila,
+      estado: filaCorrecta ? "ok" : "error",
+      mensaje: filaCorrecta
+        ? "Sincronización completada"
+        : "Revisar el resultado de ML y/o TN",
+    };
+  });
+
+  const ok = filasActualizadas.filter(
+    (fila) => fila.estado === "ok"
+  ).length;
+
+  const errores = filasActualizadas.filter(
+    (fila) => fila.estado === "error"
+  ).length;
+
+  setFilas([...filasActualizadas]);
+
+  setResumen({
+    ok,
+    errores,
+    total: filasActualizadas.length,
+  });
+
   setProcesando(false);
 };
-
        
   const handleLimpiar = () => {
     setFilas([]);
