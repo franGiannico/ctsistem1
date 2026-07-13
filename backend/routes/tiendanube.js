@@ -90,6 +90,103 @@ const calcularPreciosTiendanube = (precioBase) => {
   };
 };
 
+const CACHE_CATALOGO_TN_MS = 5 * 60 * 1000;
+
+let cacheCatalogoTN = {
+  userId: null,
+  creadoEn: 0,
+  mapaVariantes: null,
+};
+
+const obtenerMapaVariantesTN = async ({
+  access_token,
+  user_id,
+  forzarRecarga = false,
+}) => {
+  const ahora = Date.now();
+
+  const cacheValido =
+    !forzarRecarga &&
+    cacheCatalogoTN.mapaVariantes &&
+    cacheCatalogoTN.userId === String(user_id) &&
+    ahora - cacheCatalogoTN.creadoEn < CACHE_CATALOGO_TN_MS;
+
+  if (cacheValido) {
+    console.log(
+      `⚡ [TN MASIVO] Usando catálogo en caché: ` +
+      `${cacheCatalogoTN.mapaVariantes.size} variantes`
+    );
+
+    return cacheCatalogoTN.mapaVariantes;
+  }
+
+  const mapaVariantes = new Map();
+
+  let page = 1;
+  const perPage = 50;
+
+  while (page <= 100) {
+    const response = await axios.get(
+      `https://api.tiendanube.com/v1/${user_id}/products`,
+      {
+        headers: {
+          Authentication: `bearer ${access_token}`,
+          "User-Agent": TIENDANUBE_USER_AGENT,
+        },
+        params: {
+          page,
+          per_page: perPage,
+        },
+      }
+    );
+
+    const catalogo = response.data || [];
+
+    console.log(
+      `📦 [TN MASIVO] Página ${page}: ${catalogo.length} productos`
+    );
+
+    for (const producto of catalogo) {
+      for (const variante of producto.variants || []) {
+        const skuNormalizado = String(variante.sku || "")
+          .trim()
+          .toLowerCase();
+
+        if (!skuNormalizado) continue;
+
+        if (mapaVariantes.has(skuNormalizado)) {
+          console.warn(
+            `⚠️ [TN MASIVO] SKU duplicado en Tiendanube: ${variante.sku}`
+          );
+        }
+
+        mapaVariantes.set(skuNormalizado, {
+          productId: producto.id,
+          variantId: variante.id,
+          inventoryLevels: variante.inventory_levels || [],
+        });
+      }
+    }
+
+    if (catalogo.length < perPage) break;
+
+    page++;
+  }
+
+  cacheCatalogoTN = {
+    userId: String(user_id),
+    creadoEn: Date.now(),
+    mapaVariantes,
+  };
+
+  console.log(
+    `✅ [TN MASIVO] ${mapaVariantes.size} variantes indexadas por SKU`
+  );
+
+  return mapaVariantes;
+};
+
+
 // 🔐 Auth: Redirigir a Tiendanube
 router.get('/auth', (req, res) => {
     const authUrl = `https://www.tiendanube.com/apps/${TIENDANUBE_CLIENT_ID}/authorize?response_type=code&scope=read_orders,write_orders,read_products,write_products&redirect_uri=${REDIRECT_URI}`;
@@ -432,24 +529,40 @@ router.post("/actualizar-stock-masivo", async (req, res) => {
     });
   }
 
-  const productosInvalidos = productos.filter((producto) => {
+  const productoEsValido = (producto) => {
     return (
-      !producto.sku ||
-      typeof producto.cantidad !== "number" ||
-      !Number.isInteger(producto.cantidad) ||
-      producto.cantidad < 0 ||
-      typeof producto.precioBase !== "number" ||
-      !Number.isFinite(producto.precioBase) ||
-      producto.precioBase <= 0
+      producto &&
+      String(producto.sku || "").trim() !== "" &&
+      typeof producto.cantidad === "number" &&
+      Number.isInteger(producto.cantidad) &&
+      producto.cantidad >= 0 &&
+      typeof producto.precioBase === "number" &&
+      Number.isFinite(producto.precioBase) &&
+      producto.precioBase > 0
     );
-  });
+  };
 
-  if (productosInvalidos.length > 0) {
+  const productosValidos = productos.filter(productoEsValido);
+  const productosInvalidos = productos.filter(
+    (producto) => !productoEsValido(producto)
+  );
+
+  if (productosValidos.length === 0) {
     return res.status(400).json({
-      error: "Hay productos con SKU, cantidad o precioBase inválidos.",
-      productosInvalidos: productosInvalidos.map((producto) => producto.sku),
+      error: "Ningún producto tiene SKU, cantidad y precioBase válidos.",
+      productosInvalidos: productosInvalidos.map((producto) => ({
+        sku: producto?.sku || "Sin SKU",
+        cantidad: producto?.cantidad,
+        precioBase: producto?.precioBase,
+      })),
     });
   }
+
+  console.log(
+    `📋 [TN MASIVO] Recibidos: ${productos.length} | ` +
+    `Válidos: ${productosValidos.length} | ` +
+    `Inválidos: ${productosInvalidos.length}`
+  );
 
   try {
     const tokenDoc = await TiendanubeToken.findOne();
@@ -462,71 +575,31 @@ router.post("/actualizar-stock-masivo", async (req, res) => {
 
     const { access_token, user_id } = tokenDoc;
 
-    /*
-     * 1. Descargar el catálogo una sola vez.
-     */
-    const mapaVariantes = new Map();
+   /*
+    * 1. Obtener catálogo de Tiendanube.
+    * La primera llamada lo descarga; las siguientes usan caché.
+    */
+    const mapaVariantes = await obtenerMapaVariantesTN({
+      access_token,
+      user_id,
+    });
 
-    let page = 1;
-    const perPage = 50;
-
-    while (page <= 100) {
-      const response = await axios.get(
-        `https://api.tiendanube.com/v1/${user_id}/products`,
-        {
-          headers: {
-            Authentication: `bearer ${access_token}`,
-            "User-Agent": TIENDANUBE_USER_AGENT,
-          },
-          params: {
-            page,
-            per_page: perPage,
-          },
-        }
-      );
-
-      const catalogo = response.data || [];
-
-      console.log(
-        `📦 [TN MASIVO] Página ${page}: ${catalogo.length} productos`
-      );
-
-      for (const producto of catalogo) {
-        for (const variante of producto.variants || []) {
-          const skuNormalizado = String(variante.sku || "")
-            .trim()
-            .toLowerCase();
-
-          if (!skuNormalizado) continue;
-
-          mapaVariantes.set(skuNormalizado, {
-            productId: producto.id,
-            variantId: variante.id,
-            inventoryLevels: variante.inventory_levels || [],
-          });
-        }
-      }
-
-      if (catalogo.length < perPage) break;
-
-      page++;
-    }
-
-    console.log(
-      `✅ [TN MASIVO] ${mapaVariantes.size} variantes indexadas por SKU`
-    );
 
     /*
      * 2. Preparar resultados y actualizaciones.
      */
-    const resultados = [];
+      const resultados = productosInvalidos.map((producto) => ({
+      sku: String(producto?.sku || "Sin SKU").trim(),
+      success: false,
+      error: "SKU, stock o precio base inválido.",
+    }));
+
     const actualizacionesPorProducto = new Map();
     const preciosPorProducto = new Map();
 
-    for (const productoEntrada of productos) {
+    for (const productoEntrada of productosValidos) {
       const sku = String(productoEntrada.sku).trim();
       const skuNormalizado = sku.toLowerCase();
-
       const encontrada = mapaVariantes.get(skuNormalizado);
 
       if (!encontrada) {
