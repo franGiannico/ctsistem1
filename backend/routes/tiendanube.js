@@ -4,6 +4,9 @@ const axios = require('axios');
 const router = express.Router();
 require('dotenv').config();
 const CONFIG_CUOTAS = require("../config/tiendanubeCuotas");
+const SincronizacionTiendanube = require(
+  "../models/SincronizacionTiendanube"
+);
 
 const {
     TIENDANUBE_CLIENT_ID,
@@ -800,6 +803,80 @@ router.post("/actualizar-stock-masivo", async (req, res) => {
     return res.status(500).json({
       error: "Error al actualizar productos en Tiendanube.",
       detalle: error.response?.data || error.message,
+    });
+  }
+});
+
+router.post("/iniciar-sincronizacion", async (req, res) => {
+  const { productos } = req.body;
+
+  if (!Array.isArray(productos) || productos.length === 0) {
+    return res.status(400).json({
+      error: 'Se requiere un array "productos" con al menos un elemento.',
+    });
+  }
+
+  try {
+    const job = await SincronizacionTiendanube.create({
+      estado: "pendiente",
+      productos,
+      total: productos.length,
+      procesados: 0,
+      exitosos: 0,
+      errores: 0,
+      resultados: [],
+    });
+
+    return res.status(202).json({
+      success: true,
+      jobId: job._id,
+      mensaje: `Sincronización iniciada para ${productos.length} productos.`,
+    });
+  } catch (error) {
+    console.error(
+      "❌ Error creando sincronización Tiendanube:",
+      error.message
+    );
+
+    return res.status(500).json({
+      error: "No se pudo iniciar la sincronización.",
+    });
+  }
+});
+
+router.get("/estado-sincronizacion/:jobId", async (req, res) => {
+  try {
+    const job = await SincronizacionTiendanube.findById(
+      req.params.jobId
+    ).select("-productos");
+
+    if (!job) {
+      return res.status(404).json({
+        error: "No se encontró la sincronización.",
+      });
+    }
+
+    const porcentaje =
+      job.total > 0
+        ? Number(((job.procesados / job.total) * 100).toFixed(2))
+        : 0;
+
+    return res.json({
+      jobId: job._id,
+      estado: job.estado,
+      total: job.total,
+      procesados: job.procesados,
+      exitosos: job.exitosos,
+      errores: job.errores,
+      porcentaje,
+      resultados: job.resultados,
+      mensajeError: job.mensajeError,
+      fechaInicio: job.fechaInicio,
+      fechaFinalizacion: job.fechaFinalizacion,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: "No se pudo consultar la sincronización.",
     });
   }
 });

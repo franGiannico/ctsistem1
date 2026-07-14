@@ -17,6 +17,7 @@ const ApiIngresos = () => {
   const inputRef = useRef(null);
   const [sincronizarML, setSincronizarML] = useState(true);
   const [sincronizarTN, setSincronizarTN] = useState(true);
+  const [progresoTN, setProgresoTN] = useState(null);
 
   //Función para calcular stock a publicar (restar 1 al stock real, mínimo 0)
   const calcularStockAPublicar = (stockExcel) => {
@@ -90,6 +91,9 @@ const ApiIngresos = () => {
     };
     reader.readAsBinaryString(file);
   };
+
+  const esperar = (milisegundos) =>
+  new Promise((resolve) => setTimeout(resolve, milisegundos));
 
  // Sincroniza ML individualmente y Tiendanube en una sola operación masiva
 const handleSincronizar = async () => {
@@ -180,98 +184,198 @@ const handleSincronizar = async () => {
 
   /*
    * 2. TIENDANUBE
-   * Envía todos los productos en una sola llamada.
+   * Trabajo asíncrono masivo: se envía todo el lote y luego se consulta el progreso.
+   * El backend se encarga de crear el trabajo en MongoDB y procesarlo en segundo plano.
    */
   if (sincronizarTN) {
-    filasActualizadas = filasActualizadas.map((fila) => ({
-      ...fila,
-      tnEstado: "procesando",
-      tnMensaje: "Sincronizando catálogo en Tiendanube...",
-    }));
+  filasActualizadas = filasActualizadas.map((fila) => ({
+    ...fila,
+    tnEstado: "procesando",
+    tnMensaje: "Iniciando sincronización...",
+  }));
 
-    setFilas([...filasActualizadas]);
+  setFilas([...filasActualizadas]);
+  setProgresoTN({
+    estado: "iniciando",
+    procesados: 0,
+    total: filasActualizadas.length,
+    porcentaje: 0,
+  });
 
-    try {
-      const responseTN = await fetch(
-        `${BACKEND_URL}/tiendanube/actualizar-stock-masivo`,
+  try {
+    /*
+     * 1. Crear el trabajo en MongoDB.
+     * El backend responde inmediatamente con el jobId.
+     */
+    const responseInicio = await fetch(
+      `${BACKEND_URL}/tiendanube/iniciar-sincronizacion`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: API_TOKEN,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          productos: filasActualizadas.map((fila) => ({
+            sku: fila.sku,
+            cantidad: fila.stockAPublicar,
+            precioBase: fila.precioBase,
+          })),
+        }),
+      }
+    );
+
+    const dataInicio = await responseInicio.json();
+
+    if (!responseInicio.ok || !dataInicio.success || !dataInicio.jobId) {
+      throw new Error(
+        dataInicio.error || "No se pudo iniciar la sincronización de Tiendanube"
+      );
+    }
+
+    const jobId = dataInicio.jobId;
+    let trabajoFinalizado = false;
+    let datosFinales = null;
+
+    /*
+     * 2. Consultar el progreso cada 3 segundos.
+     */
+    while (!trabajoFinalizado) {
+      await esperar(3000);
+
+      const responseEstado = await fetch(
+        `${BACKEND_URL}/tiendanube/estado-sincronizacion/${jobId}`,
         {
-          method: "POST",
+          method: "GET",
           headers: {
             Authorization: API_TOKEN,
-            "Content-Type": "application/json",
+            Accept: "application/json",
           },
-          body: JSON.stringify({
-            productos: filasActualizadas.map((fila) => ({
-              sku: fila.sku,
-              cantidad: fila.stockAPublicar,
-              precioBase: fila.precioBase,
-            })),
-          }),
         }
       );
 
-      const dataTN = await responseTN.json();
+      const dataEstado = await responseEstado.json();
 
-      if (responseTN.ok && Array.isArray(dataTN.resultados)) {
-        const resultadosPorSku = new Map(
-          dataTN.resultados.map((resultado) => [
-            String(resultado.sku).trim().toLowerCase(),
-            resultado,
-          ])
+      if (!responseEstado.ok) {
+        throw new Error(
+          dataEstado.error || "No se pudo consultar el progreso de Tiendanube"
         );
-
-        filasActualizadas = filasActualizadas.map((fila) => {
-          const skuNormalizado = String(fila.sku)
-            .trim()
-            .toLowerCase();
-
-          const resultadoTN = resultadosPorSku.get(skuNormalizado);
-
-          if (!resultadoTN) {
-            return {
-              ...fila,
-              tnEstado: "error",
-              tnMensaje: "Tiendanube no devolvió un resultado para este SKU",
-            };
-          }
-
-          if (resultadoTN.success) {
-            return {
-              ...fila,
-              tnEstado: "ok",
-              tnMensaje:
-                resultadoTN.mensaje ||
-                "Stock y precios actualizados en Tiendanube",
-            };
-          }
-
-          return {
-            ...fila,
-            tnEstado: "error",
-            tnMensaje:
-              resultadoTN.error || "Error desconocido en Tiendanube",
-          };
-        });
-      } else {
-        const mensajeError =
-          dataTN.error || "Error en la sincronización masiva de Tiendanube";
-
-        filasActualizadas = filasActualizadas.map((fila) => ({
-          ...fila,
-          tnEstado: "error",
-          tnMensaje: mensajeError,
-        }));
       }
-    } catch (error) {
+
+      setProgresoTN({
+        estado: dataEstado.estado,
+        procesados: dataEstado.procesados,
+        total: dataEstado.total,
+        porcentaje: dataEstado.porcentaje,
+        exitosos: dataEstado.exitosos,
+        errores: dataEstado.errores,
+      });
+
+      /*
+       * Para no modificar 1.200 filas cada tres segundos,
+       * mostramos el progreso general en todas mientras procesa.
+       */
       filasActualizadas = filasActualizadas.map((fila) => ({
         ...fila,
-        tnEstado: "error",
-        tnMensaje: "Error de conexión con Tiendanube",
+        tnEstado: "procesando",
+        tnMensaje:
+          `Procesando ${dataEstado.procesados} de ${dataEstado.total} ` +
+          `(${dataEstado.porcentaje}%)`,
       }));
+
+      setFilas([...filasActualizadas]);
+
+      if (dataEstado.estado === "finalizado") {
+        trabajoFinalizado = true;
+        datosFinales = dataEstado;
+      }
+
+      if (dataEstado.estado === "error") {
+        throw new Error(
+          dataEstado.mensajeError ||
+            "La sincronización de Tiendanube terminó con error"
+        );
+      }
     }
+
+    /*
+     * 3. Distribuir los resultados finales por SKU.
+     */
+    const resultadosPorSku = new Map(
+      (datosFinales.resultados || []).map((resultado) => [
+        String(resultado.sku || "").trim().toLowerCase(),
+        resultado,
+      ])
+    );
+
+    filasActualizadas = filasActualizadas.map((fila) => {
+      const skuNormalizado = String(fila.sku)
+        .trim()
+        .toLowerCase();
+
+      const resultadoTN = resultadosPorSku.get(skuNormalizado);
+
+      if (!resultadoTN) {
+        return {
+          ...fila,
+          tnEstado: "error",
+          tnMensaje: "Tiendanube no devolvió resultado para este SKU",
+        };
+      }
+
+      if (resultadoTN.success) {
+        const mensajePrecio =
+          resultadoTN.precioPromocional && resultadoTN.precioLista
+            ? `Promo: $${Number(
+                resultadoTN.precioPromocional
+              ).toLocaleString("es-AR")} | Lista: $${Number(
+                resultadoTN.precioLista
+              ).toLocaleString("es-AR")}`
+            : resultadoTN.mensaje || "Actualizado correctamente";
+
+        return {
+          ...fila,
+          tnEstado: "ok",
+          tnMensaje: mensajePrecio,
+        };
+      }
+
+      return {
+        ...fila,
+        tnEstado: "error",
+        tnMensaje:
+          resultadoTN.error || "Error desconocido en Tiendanube",
+      };
+    });
+
+    setProgresoTN({
+      estado: "finalizado",
+      procesados: datosFinales.procesados,
+      total: datosFinales.total,
+      porcentaje: 100,
+      exitosos: datosFinales.exitosos,
+      errores: datosFinales.errores,
+    });
+
+    setFilas([...filasActualizadas]);
+  } catch (error) {
+    console.error("Error sincronizando Tiendanube:", error);
+
+    filasActualizadas = filasActualizadas.map((fila) => ({
+      ...fila,
+      tnEstado: "error",
+      tnMensaje:
+        error.message || "Error al ejecutar la sincronización de Tiendanube",
+    }));
+
+    setProgresoTN({
+      estado: "error",
+      mensajeError: error.message,
+    });
 
     setFilas([...filasActualizadas]);
   }
+}
 
   /*
    * 3. RESULTADO GENERAL POR FILA
@@ -486,7 +590,18 @@ const handleSincronizar = async () => {
           </span>
         </div>
       )}
-
+      {progresoTN && sincronizarTN && (
+        <div className={styles.progresoTN}>
+          <strong>Tiendanube:</strong>{" "}
+          {progresoTN.estado === "finalizado"
+            ? `✅ Finalizado — ${progresoTN.exitosos} correctos, ${progresoTN.errores} errores`
+            : progresoTN.estado === "error"
+            ? `❌ ${progresoTN.mensajeError || "Error en la sincronización"}`
+            : `⏳ ${progresoTN.procesados || 0} de ${
+                progresoTN.total || filas.length
+              } (${progresoTN.porcentaje || 0}%)`}
+        </div>
+      )}
       {/* Tabla de productos */}
       {filas.length > 0 && (
         <div className={styles.tablaWrapper}>
