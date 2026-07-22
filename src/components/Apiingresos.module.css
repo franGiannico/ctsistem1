@@ -239,7 +239,6 @@
 .tdEstado {
   text-align: center;
   font-size: 1rem;
-  width: 60px;
 }
 
 .tdSku {
@@ -261,7 +260,6 @@
   text-align: center;
   font-weight: 600;
   color: #1a1a2e;
-  width: 70px;
 }
 
 .tdMensaje {
@@ -304,7 +302,60 @@
 }
 
 
+/* ==========================================
+   Distribución de anchos de la tabla
+   ========================================== */
 
+/* Estado */
+.tabla th:nth-child(1),
+.tabla td:nth-child(1) {
+  width: 4%;
+  text-align: center;
+}
+
+/* SKU */
+.tabla th:nth-child(2),
+.tabla td:nth-child(2) {
+  width: 8%;
+}
+
+/* Nombre */
+.tabla th:nth-child(3),
+.tabla td:nth-child(3) {
+  width: 20%;
+}
+
+/* Stock */
+.tabla th:nth-child(4),
+.tabla td:nth-child(4) {
+  width: 5%;
+  text-align: center;
+}
+
+/* Stock a publicar */
+.tabla th:nth-child(5),
+.tabla td:nth-child(5) {
+  width: 8%;
+  text-align: center;
+}
+
+/* Precio base */
+.tabla th:nth-child(6),
+.tabla td:nth-child(6) {
+  width: 9%;
+}
+
+/* Mercado Libre */
+.tabla th:nth-child(7),
+.tabla td:nth-child(7) {
+  width: 23%;
+}
+
+/* Tiendanube */
+.tabla th:nth-child(8),
+.tabla td:nth-child(8) {
+  width: 23%;
+}
 
 
 
