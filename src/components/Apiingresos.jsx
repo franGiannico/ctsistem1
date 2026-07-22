@@ -7,6 +7,7 @@ import styles from "./Apiingresos.module.css";
 
 const ApiIngresos = () => {
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+  console.log("BACKEND_URL =", BACKEND_URL);
   const API_TOKEN =
     import.meta.env.VITE_API_TOKEN || "ctsistem-token-2024-seguro-123";
 

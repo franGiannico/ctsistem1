@@ -1,9 +1,11 @@
 /* Apiingresos.module.css */
 
 .container {
-  max-width: 900px;
+  width: 100%;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 2rem 1.5rem;
+  box-sizing: border-box;
   font-family: 'Segoe UI', sans-serif;
   color: #1a1a2e;
 }
@@ -24,8 +26,9 @@
 /* Upload */
 .uploadZone {
   width: 100%;
-  max-width: 720px;
+  max-width: none;
   min-height: 170px;
+  box-sizing: border-box;
   border: 2px dashed #4a6cf7;
   border-radius: 16px;
   background: #f4f7ff;
@@ -187,13 +190,18 @@
 
 /* Tabla */
 .tablaWrapper {
+  width: 100%;
+  max-width: 100%;
   overflow-x: auto;
   border-radius: 10px;
   border: 1px solid #e0e6ff;
+  box-sizing: border-box;
 }
 
 .tabla {
   width: 100%;
+  min-width: 1050px;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.88rem;
 }
