@@ -309,7 +309,7 @@
 /* Estado */
 .tabla th:nth-child(1),
 .tabla td:nth-child(1) {
-  width: 4%;
+  width: 5%;
   text-align: center;
 }
 
@@ -335,7 +335,7 @@
 /* Stock a publicar */
 .tabla th:nth-child(5),
 .tabla td:nth-child(5) {
-  width: 8%;
+  width: 9%;
   text-align: center;
 }
 
@@ -348,13 +348,13 @@
 /* Mercado Libre */
 .tabla th:nth-child(7),
 .tabla td:nth-child(7) {
-  width: 23%;
+  width: 22%;
 }
 
 /* Tiendanube */
 .tabla th:nth-child(8),
 .tabla td:nth-child(8) {
-  width: 23%;
+  width: 22%;
 }
 
 
