@@ -417,7 +417,107 @@ const handleSincronizar = async () => {
 
   setProcesando(false);
 };
-       
+  
+// Función para descargar los resultados en un archivo Excel
+const handleDescargarResultados = () => {
+  if (filas.length === 0) {
+    alert("No hay resultados para descargar.");
+    return;
+  }
+
+  const datosExcel = filas.map((fila) => ({
+    Estado:
+      fila.estado === "ok"
+        ? "Correcto"
+        : fila.estado === "error"
+        ? "Error"
+        : fila.estado === "procesando"
+        ? "Procesando"
+        : "Pendiente",
+
+    SKU: fila.sku || "",
+    Nombre: fila.nombre || "",
+    "Stock original": fila.stock ?? "",
+    "Stock publicado": fila.stockAPublicar ?? "",
+    "Precio base": fila.precioBase ?? "",
+
+    "Estado Mercado Libre":
+      fila.mlEstado === "ok"
+        ? "Correcto"
+        : fila.mlEstado === "error"
+        ? "Error"
+        : fila.mlEstado === "omitido"
+        ? "Omitido"
+        : fila.mlEstado === "procesando"
+        ? "Procesando"
+        : "Pendiente",
+
+    "Detalle Mercado Libre": fila.mlMensaje || "",
+
+    "Estado Tiendanube":
+      fila.tnEstado === "ok"
+        ? "Correcto"
+        : fila.tnEstado === "error"
+        ? "Error"
+        : fila.tnEstado === "omitido"
+        ? "Omitido"
+        : fila.tnEstado === "procesando"
+        ? "Procesando"
+        : "Pendiente",
+
+    "Detalle Tiendanube": fila.tnMensaje || "",
+
+    "Resultado general": fila.mensaje || "",
+  }));
+
+  const hoja = XLSX.utils.json_to_sheet(datosExcel);
+
+  hoja["!cols"] = [
+    { wch: 14 }, // Estado
+    { wch: 18 }, // SKU
+    { wch: 45 }, // Nombre
+    { wch: 15 }, // Stock original
+    { wch: 16 }, // Stock publicado
+    { wch: 16 }, // Precio base
+    { wch: 22 }, // Estado ML
+    { wch: 60 }, // Detalle ML
+    { wch: 20 }, // Estado TN
+    { wch: 60 }, // Detalle TN
+    { wch: 30 }, // Resultado general
+  ];
+
+  // Activa el autofiltro en la primera fila.
+  hoja["!autofilter"] = {
+    ref: hoja["!ref"],
+  };
+
+  const libro = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    libro,
+    hoja,
+    "Resultado sincronización"
+  );
+
+  const ahora = new Date();
+
+  const fecha = ahora
+    .toLocaleDateString("es-AR")
+    .replaceAll("/", "-");
+
+  const hora = ahora
+    .toLocaleTimeString("es-AR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+    .replaceAll(":", "-");
+
+  XLSX.writeFile(
+    libro,
+    `sincronizacion-${fecha}-${hora}.xlsx`
+  );
+};
+
   const handleLimpiar = () => {
     setFilas([]);
     setResumen(null);
@@ -559,6 +659,15 @@ const handleSincronizar = async () => {
           >
             🗑 Limpiar
           </button>
+          {resumen && !procesando && (
+          <button
+            type="button"
+            onClick={handleDescargarResultados}
+            className={styles.btnDescargar}
+          >
+            📥 Descargar resultados
+          </button>
+        )}
         </div>
       )}
 
