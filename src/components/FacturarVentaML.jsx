@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styles from './FacturarVentaML.module.css';
 
 export default function FacturarVentaML() {
@@ -8,6 +8,7 @@ export default function FacturarVentaML() {
   const [dniManual, setDniManual] = useState('');
   const [modoManual, setModoManual] = useState(false);
   const [tipoConsumidorSeleccionado, setTipoConsumidorSeleccionado] = useState('Consumidor Final');
+  const [ventasParaFacturar, setVentasParaFacturar] = useState([]);
   
   // Estados para formulario manual
   const [productos, setProductos] = useState([
@@ -53,6 +54,52 @@ export default function FacturarVentaML() {
       throw error;
     }
   };
+
+  // ---- Listado "Ventas para facturar" (mensajes de clientes pidiendo factura) ----
+
+  const cargarVentasParaFacturar = async () => {
+    try {
+      const res = await authenticatedFetch(`${BACKEND_URL}/meli/ventas-para-facturar`);
+      const data = await res.json();
+      setVentasParaFacturar(data.items || []);
+    } catch (error) {
+      console.error('Error cargando ventas para facturar:', error);
+    }
+  };
+
+  const toggleVentaParaFacturar = async (id) => {
+    // Actualización optimista para que se sienta instantáneo
+    setVentasParaFacturar(prev =>
+      prev.map(v => (v._id === id ? { ...v, tildada: !v.tildada } : v))
+    );
+    try {
+      await authenticatedFetch(`${BACKEND_URL}/meli/ventas-para-facturar/${id}`, {
+        method: 'PATCH',
+      });
+    } catch (error) {
+      console.error('Error actualizando venta para facturar:', error);
+      cargarVentasParaFacturar(); // revertimos si falló
+    }
+  };
+
+  const borrarListadoParaFacturar = async () => {
+    if (!window.confirm('¿Borrar todo el listado de ventas para facturar?')) return;
+    try {
+      await authenticatedFetch(`${BACKEND_URL}/meli/ventas-para-facturar`, {
+        method: 'DELETE',
+      });
+      setVentasParaFacturar([]);
+    } catch (error) {
+      console.error('Error borrando listado de ventas para facturar:', error);
+    }
+  };
+
+  useEffect(() => {
+    cargarVentasParaFacturar();
+    // Refrescamos cada 30s para reflejar mensajes nuevos sin recargar la página
+    const intervalo = setInterval(cargarVentasParaFacturar, 30000);
+    return () => clearInterval(intervalo);
+  }, []);
 
   const buscarVenta = async () => {
     try {
@@ -220,6 +267,7 @@ ${productosTexto}
   };
 
   return (
+    <div className={styles.pageLayout}>
     <div className={styles.container}>
       <h2 className={styles.title}>Facturar Venta</h2>
 
@@ -509,6 +557,41 @@ ${productosTexto}
           {mensajeEnviado}
         </div>
       )}
+    </div>
+
+      <aside className={styles.facturarSidebar}>
+        <h3 className={styles.facturarSidebarTitle}>Ventas para facturar</h3>
+
+        {ventasParaFacturar.length === 0 ? (
+          <p className={styles.facturarSidebarEmpty}>No hay ventas pendientes.</p>
+        ) : (
+          <ul className={styles.facturarSidebarList}>
+            {ventasParaFacturar.map((venta) => (
+              <li key={venta._id} className={styles.facturarSidebarItem}>
+                <label className={styles.facturarSidebarLabel}>
+                  <input
+                    type="checkbox"
+                    checked={venta.tildada}
+                    onChange={() => toggleVentaParaFacturar(venta._id)}
+                  />
+                  <span className={venta.tildada ? styles.facturarSidebarChecked : ''}>
+                    Venta {venta.numeroVenta}
+                  </span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {ventasParaFacturar.length > 0 && (
+          <button
+            onClick={borrarListadoParaFacturar}
+            className={styles.facturarSidebarClearButton}
+          >
+            Borrar todo
+          </button>
+        )}
+      </aside>
     </div>
   );
 }

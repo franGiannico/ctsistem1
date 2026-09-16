@@ -22,6 +22,19 @@ const MeliTokenSchema = new mongoose.Schema({
 // Para simplificar, asumo que el user_id de ML siempre será el mismo para esta cuenta única.
 const MeliToken = mongoose.models.MeliToken || mongoose.model('MeliToken', MeliTokenSchema);
 
+// Modelo VentaParaFacturar: ventas donde el cliente pidió factura por mensaje interno de ML
+const VentaParaFacturarSchema = new mongoose.Schema({
+  numeroVenta: { type: String, required: true },
+  mensaje: String,
+  messageId: { type: String, unique: true, sparse: true }, // evita duplicar si ML reenvía la notificación
+  tildada: { type: Boolean, default: false },
+  fecha: { type: Date, default: Date.now },
+});
+
+const VentaParaFacturar =
+  mongoose.models.VentaParaFacturar ||
+  mongoose.model('VentaParaFacturar', VentaParaFacturarSchema);
+
 const {
   MELI_CLIENT_ID,
   MELI_CLIENT_SECRET,
@@ -1213,15 +1226,122 @@ router.get('/debug/item/:id', async (req, res) => {
 });
 
 // Webhook de notificaciones Mercado Libre
-router.post('/notificaciones', (req, res) => {
-
-  // ML espera status 200 rápido
+router.post('/notificaciones', async (req, res) => {
+  // ML espera status 200 rápido, así que respondemos antes de procesar
   res.sendStatus(200);
+
+  try {
+    const { topic, resource } = req.body || {};
+
+    // Solo nos interesa el topic de mensajería post-venta
+    if (topic !== 'messages') return;
+
+    const tokenDoc = await MeliToken.findOne();
+    if (!tokenDoc?.access_token) {
+      console.error('❌ [ML MENSAJE] No hay token de ML guardado, no se puede procesar el mensaje.');
+      return;
+    }
+
+    const { data } = await axios.get(`https://api.mercadolibre.com${resource}`, {
+      headers: {
+        Authorization: `Bearer ${tokenDoc.access_token}`,
+        'X-Pack-Format': 'true',
+      },
+    });
+
+    // 🔍 Log del payload completo: útil para confirmar el formato real la primera vez
+    // que llegue un mensaje (el formato puede variar según el tipo de resource).
+    console.log('📩 [ML MENSAJE] Notificación de mensajes recibida:', JSON.stringify(data));
+
+    // El resource puede devolver un solo mensaje o un listado, según el caso
+    const mensajes = Array.isArray(data)
+      ? data
+      : Array.isArray(data?.messages)
+      ? data.messages
+      : [data];
+
+    for (const msg of mensajes) {
+      const texto = String(msg?.text || msg?.message || '');
+      if (!texto.toLowerCase().includes('factura')) continue;
+
+      // Intentamos varias formas conocidas de encontrar el número de venta/orden.
+      // Si ninguna funciona, revisar el log de arriba para ajustar esta extracción.
+      const numeroVenta =
+        msg?.order_id ||
+        msg?.related_orders?.[0]?.id ||
+        msg?.resource_id ||
+        (resource.match(/packs\/(\d+)/) || [])[1] ||
+        'desconocido';
+
+      const messageId = msg?.id || msg?.message_id;
+
+      try {
+        await VentaParaFacturar.updateOne(
+          messageId ? { messageId: String(messageId) } : { numeroVenta: String(numeroVenta), mensaje: texto },
+          {
+            $setOnInsert: {
+              numeroVenta: String(numeroVenta),
+              mensaje: texto,
+              ...(messageId ? { messageId: String(messageId) } : {}),
+              fecha: new Date(),
+            },
+          },
+          { upsert: true }
+        );
+        console.log(`✅ [ML MENSAJE] Venta ${numeroVenta} agregada al listado "para facturar".`);
+      } catch (dbError) {
+        console.error('❌ [ML MENSAJE] Error guardando venta para facturar:', dbError.message);
+      }
+    }
+  } catch (error) {
+    console.error(
+      '❌ [ML MENSAJE] Error procesando notificación de mensajes:',
+      error.response?.data || error.message
+    );
+  }
 });
 
 // Webhook de notificaciones Mercado Libre para la app vieja (si aún se usa)
 router.post('/notificaciones-old', (req, res) => {
   res.sendStatus(200);
+});
+
+// 📋 Listado de ventas para facturar (mensajes de clientes que mencionaron "factura")
+router.get('/ventas-para-facturar', async (req, res) => {
+  try {
+    const items = await VentaParaFacturar.find().sort({ fecha: -1 });
+    res.json({ items });
+  } catch (error) {
+    console.error('❌ Error al obtener ventas para facturar:', error.message);
+    res.status(500).json({ error: 'Error al obtener el listado de ventas para facturar.' });
+  }
+});
+
+// ✅ Tildar / destildar una venta del listado
+router.patch('/ventas-para-facturar/:id', async (req, res) => {
+  try {
+    const item = await VentaParaFacturar.findById(req.params.id);
+    if (!item) return res.status(404).json({ error: 'No encontrado.' });
+
+    item.tildada = !item.tildada;
+    await item.save();
+
+    res.json(item);
+  } catch (error) {
+    console.error('❌ Error al actualizar venta para facturar:', error.message);
+    res.status(500).json({ error: 'Error al actualizar la venta.' });
+  }
+});
+
+// 🗑️ Borrar todo el listado de ventas para facturar
+router.delete('/ventas-para-facturar', async (req, res) => {
+  try {
+    await VentaParaFacturar.deleteMany({});
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('❌ Error al borrar el listado de ventas para facturar:', error.message);
+    res.status(500).json({ error: 'Error al borrar el listado.' });
+  }
 });
 
 module.exports = router;

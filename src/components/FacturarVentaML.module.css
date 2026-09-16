@@ -479,8 +479,107 @@
     text-align: center;
 }
 
+/* Layout general: contenido principal + panel lateral "Ventas para facturar" */
+.pageLayout {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 1300px;
+    margin: 0 auto;
+}
+
+.pageLayout .container {
+    flex: 1;
+    min-width: 0;
+}
+
+.facturarSidebar {
+    width: 280px;
+    flex-shrink: 0;
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 20px;
+    margin-top: 20px;
+}
+
+.facturarSidebarTitle {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 1rem 0;
+    text-align: center;
+}
+
+.facturarSidebarEmpty {
+    color: #6c757d;
+    font-size: 0.9rem;
+    text-align: center;
+    margin: 0;
+}
+
+.facturarSidebarList {
+    list-style: none;
+    margin: 0 0 1rem 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.facturarSidebarItem {
+    padding: 0.6rem 0.75rem;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #ffc107;
+}
+
+.facturarSidebarLabel {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: #333;
+}
+
+.facturarSidebarChecked {
+    text-decoration: line-through;
+    color: #6c757d;
+}
+
+.facturarSidebarClearButton {
+    width: 100%;
+    padding: 10px 16px;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.facturarSidebarClearButton:hover {
+    background-color: #c82333;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
+    .pageLayout {
+        flex-direction: column;
+    }
+
+    .facturarSidebar {
+        width: 100%;
+        position: static;
+        margin-top: 0;
+    }
+
     .container {
         padding: 10px;
         width: 95vw;
