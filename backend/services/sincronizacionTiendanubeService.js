@@ -173,6 +173,11 @@ const procesarSincronizacionTiendanube = async ({
   const TAMANIO_LOTE = 20;
   const productos = job.productos || [];
 
+  // Si el trabajo es viejo (de antes de este cambio) no va a tener estos campos:
+  // en ese caso se mantiene el comportamiento anterior (sincronizar todo).
+  const necesitaStock = job.sincronizarStock !== false;
+  const necesitaPrecios = job.sincronizarPrecios !== false;
+
   for (let inicio = 0; inicio < productos.length; inicio += TAMANIO_LOTE) {
     const loteEntrada = productos.slice(inicio, inicio + TAMANIO_LOTE);
 
@@ -188,10 +193,8 @@ const procesarSincronizacionTiendanube = async ({
 
       const productoValido =
         sku &&
-        Number.isInteger(cantidad) &&
-        cantidad >= 0 &&
-        Number.isFinite(precioBase) &&
-        precioBase > 0;
+        (!necesitaStock || (Number.isInteger(cantidad) && cantidad >= 0)) &&
+        (!necesitaPrecios || (Number.isFinite(precioBase) && precioBase > 0));
 
       if (!productoValido) {
         resultadosLote.push({
@@ -219,56 +222,89 @@ const procesarSincronizacionTiendanube = async ({
         continue;
       }
 
-      const precios = calcularPreciosTiendanube(precioBase);
+      // Solo calculamos precios si realmente los vamos a tocar.
+      const precios = necesitaPrecios
+        ? calcularPreciosTiendanube(precioBase)
+        : null;
 
-      const nivelActual = encontrada.inventoryLevels?.[0] || {};
+      // Payload para el endpoint combinado /products/stock-price.
+      // Solo incluye "inventory_levels" y/o "price" según lo que se pidió sincronizar;
+      // el campo que se omite queda sin tocar del lado de Tiendanube.
+      const variantePayload = { id: encontrada.variantId };
 
-      const inventoryLevel = {
-        stock: cantidad,
-      };
+      if (necesitaStock) {
+        const nivelActual = encontrada.inventoryLevels?.[0] || {};
 
-      if (nivelActual.id !== undefined) {
-        inventoryLevel.id = nivelActual.id;
+        const inventoryLevel = {
+          stock: cantidad,
+        };
+
+        if (nivelActual.id !== undefined) {
+          inventoryLevel.id = nivelActual.id;
+        }
+
+        if (nivelActual.location_id !== undefined) {
+          inventoryLevel.location_id = nivelActual.location_id;
+        }
+
+        variantePayload.inventory_levels = [inventoryLevel];
       }
 
-      if (nivelActual.location_id !== undefined) {
-        inventoryLevel.location_id = nivelActual.location_id;
+      if (necesitaPrecios) {
+        variantePayload.price = precios.precioLista;
       }
 
-      if (!actualizacionesPorProducto.has(encontrada.productId)) {
-        actualizacionesPorProducto.set(encontrada.productId, {
-          id: encontrada.productId,
-          variants: [],
-        });
+      if (necesitaStock || necesitaPrecios) {
+        if (!actualizacionesPorProducto.has(encontrada.productId)) {
+          actualizacionesPorProducto.set(encontrada.productId, {
+            id: encontrada.productId,
+            variants: [],
+          });
+        }
+
+        actualizacionesPorProducto
+          .get(encontrada.productId)
+          .variants.push(variantePayload);
       }
 
-      actualizacionesPorProducto
-        .get(encontrada.productId)
-        .variants.push({
+      // El precio promocional es un concepto puramente de precio: solo se toca
+      // si se pidió sincronizar precios.
+      if (necesitaPrecios) {
+        if (!preciosPorProducto.has(encontrada.productId)) {
+          preciosPorProducto.set(encontrada.productId, []);
+        }
+
+        preciosPorProducto.get(encontrada.productId).push({
           id: encontrada.variantId,
           price: precios.precioLista,
-          inventory_levels: [inventoryLevel],
+          promotional_price: precios.precioPromocional,
         });
-
-      if (!preciosPorProducto.has(encontrada.productId)) {
-        preciosPorProducto.set(encontrada.productId, []);
       }
 
-      preciosPorProducto.get(encontrada.productId).push({
-        id: encontrada.variantId,
-        price: precios.precioLista,
-        promotional_price: precios.precioPromocional,
-      });
+      let mensaje;
+      if (necesitaStock && necesitaPrecios) {
+        mensaje = "Stock y precios actualizados.";
+      } else if (necesitaStock) {
+        mensaje = "Stock actualizado.";
+      } else if (necesitaPrecios) {
+        mensaje = "Precios actualizados.";
+      } else {
+        mensaje = "Sin cambios (no se seleccionó stock ni precios).";
+      }
 
       resultadosLote.push({
         sku,
         success: true,
-        mensaje: `Stock y precios actualizados.`,
+        mensaje,
         cantidad,
         precioBase,
-        precioPromocional: precios.precioPromocional,
-        precioLista: precios.precioLista,
-        cuotas: precios.cuotas,
+        ...(necesitaPrecios
+          ? {
+              precioPromocional: precios.precioPromocional,
+              precioLista: precios.precioLista,
+              cuotas: precios.cuotas,
+            }
+          : {}),
       });
     }
 

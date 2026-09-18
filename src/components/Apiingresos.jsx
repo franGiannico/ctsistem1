@@ -17,8 +17,12 @@ const ApiIngresos = () => {
   const [archivoNombre, setArchivoNombre] = useState("");
   const inputRef = useRef(null);
   const [sincronizarML, setSincronizarML] = useState(true);
-  const [sincronizarTN, setSincronizarTN] = useState(true);
+  const [sincronizarStockTN, setSincronizarStockTN] = useState(true);
+  const [sincronizarPreciosTN, setSincronizarPreciosTN] = useState(true);
   const [progresoTN, setProgresoTN] = useState(null);
+
+  // Se sincroniza algo de Tiendanube si al menos una de las dos opciones está tildada
+  const activarTN = sincronizarStockTN || sincronizarPreciosTN;
 
   //Función para calcular stock a publicar (restar 1 al stock real, mínimo 0)
   const calcularStockAPublicar = (stockExcel) => {
@@ -100,7 +104,7 @@ const ApiIngresos = () => {
 const handleSincronizar = async () => {
   if (filas.length === 0) return;
 
-  if (!sincronizarML && !sincronizarTN) {
+  if (!sincronizarML && !activarTN) {
     alert("Seleccioná al menos una plataforma para sincronizar.");
     return;
   }
@@ -114,8 +118,8 @@ const handleSincronizar = async () => {
     mensaje: "Sincronizando...",
     mlEstado: sincronizarML ? "procesando" : "omitido",
     mlMensaje: sincronizarML ? "Esperando sincronización..." : "Omitido",
-    tnEstado: sincronizarTN ? "procesando" : "omitido",
-    tnMensaje: sincronizarTN ? "Esperando sincronización..." : "Omitido",
+    tnEstado: activarTN ? "procesando" : "omitido",
+    tnMensaje: activarTN ? "Esperando sincronización..." : "Omitido",
   }));
 
   setFilas([...filasActualizadas]);
@@ -188,7 +192,7 @@ const handleSincronizar = async () => {
    * Trabajo asíncrono masivo: se envía todo el lote y luego se consulta el progreso.
    * El backend se encarga de crear el trabajo en MongoDB y procesarlo en segundo plano.
    */
-  if (sincronizarTN) {
+  if (activarTN) {
   filasActualizadas = filasActualizadas.map((fila) => ({
     ...fila,
     tnEstado: "procesando",
@@ -222,6 +226,8 @@ const handleSincronizar = async () => {
             cantidad: fila.stockAPublicar,
             precioBase: fila.precioBase,
           })),
+          sincronizarStock: sincronizarStockTN,
+          sincronizarPrecios: sincronizarPreciosTN,
         }),
       }
     );
@@ -386,7 +392,7 @@ const handleSincronizar = async () => {
       !sincronizarML || fila.mlEstado === "ok";
 
     const tnCorrecto =
-      !sincronizarTN || fila.tnEstado === "ok";
+      !activarTN || fila.tnEstado === "ok";
 
     const filaCorrecta = mlCorrecto && tnCorrecto;
 
@@ -601,10 +607,19 @@ const handleDescargarResultados = () => {
         <label className={styles.switchLabel}>
           <input
             type="checkbox"
-            checked={sincronizarTN}
-            onChange={(e) => setSincronizarTN(e.target.checked)}
+            checked={sincronizarStockTN}
+            onChange={(e) => setSincronizarStockTN(e.target.checked)}
           />
           Sincronizar stock TN
+        </label>
+
+        <label className={styles.switchLabel}>
+          <input
+            type="checkbox"
+            checked={sincronizarPreciosTN}
+            onChange={(e) => setSincronizarPreciosTN(e.target.checked)}
+          />
+          Sincronizar precios TN
         </label>
       </div>
 
@@ -700,7 +715,7 @@ const handleDescargarResultados = () => {
           </span>
         </div>
       )}
-      {progresoTN && sincronizarTN && (
+      {progresoTN && activarTN && (
         <div className={styles.progresoTN}>
           <strong>Tiendanube:</strong>{" "}
           {progresoTN.estado === "finalizado"

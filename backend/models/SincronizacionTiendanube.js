@@ -39,6 +39,17 @@ const SincronizacionTiendanubeSchema = new mongoose.Schema({
     },
   ],
 
+  // Qué se debe actualizar en Tiendanube para este trabajo
+  sincronizarStock: {
+    type: Boolean,
+    default: true,
+  },
+
+  sincronizarPrecios: {
+    type: Boolean,
+    default: true,
+  },
+
   total: {
     type: Number,
     default: 0,

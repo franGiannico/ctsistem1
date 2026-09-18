@@ -808,7 +808,7 @@ router.post("/actualizar-stock-masivo", async (req, res) => {
 });
 
 router.post("/iniciar-sincronizacion", async (req, res) => {
-  const { productos } = req.body;
+  const { productos, sincronizarStock, sincronizarPrecios } = req.body;
 
   if (!Array.isArray(productos) || productos.length === 0) {
     return res.status(400).json({
@@ -816,10 +816,25 @@ router.post("/iniciar-sincronizacion", async (req, res) => {
     });
   }
 
+  // Por compatibilidad con llamadas viejas que no mandan estos campos,
+  // si no vienen definidos se asume que se sincroniza todo (como antes).
+  const debeSincronizarStock =
+    sincronizarStock === undefined ? true : Boolean(sincronizarStock);
+  const debeSincronizarPrecios =
+    sincronizarPrecios === undefined ? true : Boolean(sincronizarPrecios);
+
+  if (!debeSincronizarStock && !debeSincronizarPrecios) {
+    return res.status(400).json({
+      error: "Se debe sincronizar al menos stock o precios.",
+    });
+  }
+
   try {
     const job = await SincronizacionTiendanube.create({
       estado: "pendiente",
       productos,
+      sincronizarStock: debeSincronizarStock,
+      sincronizarPrecios: debeSincronizarPrecios,
       total: productos.length,
       procesados: 0,
       exitosos: 0,
