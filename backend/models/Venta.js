@@ -27,6 +27,10 @@ const VentaSchema = new mongoose.Schema({
     direccion: String,
     piso: String,
     barrio: String,
+
+    // Fecha/hora límite que Mercado Libre informa para despachar la venta
+    // (lead_time.estimated_handling_limit.date del shipment). Solo aplica a ML.
+    horaLimiteDespacho: Date,
 });
 
 // Evitar recompilación del modelo si ya existe

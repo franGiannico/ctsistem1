@@ -1,5 +1,5 @@
 // src/components/Apiventas.jsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Link } from "react-router-dom";
 import styles from './Apiventas.module.css';
 import MeliAuthButton from './MeliAuthButton';
@@ -52,8 +52,6 @@ function Apiventas() {
     cliente: "",
     puntoDespacho: "Punto de Despacho"
   });
-  const [horaLimite, setHoraLimite] = useState('');
-  const [horaLimiteTemporal, setHoraLimiteTemporal] = useState('');
   const [activeTab, setActiveTab] = useState("listado"); // 'cargar' o 'listado' (arranca en "Ver Ventas")
   const [sincronizandoML, setSincronizandoML] = useState(false);
   const [sincronizandoTN, setSincronizandoTN] = useState(false);
@@ -96,7 +94,6 @@ function Apiventas() {
   useEffect(() => {
     if (activeTab === 'listado') {
       cargarVentasDesdeServidor();
-      obtenerHoraLimiteDesdeBackend();
     }
   }, [activeTab]);
 
@@ -125,38 +122,6 @@ function Apiventas() {
     } catch (error) {
       console.error("Error al cargar ventas:", error);
     }
-  };
-
-  // Obtener hora límite
-  const obtenerHoraLimiteDesdeBackend = async () => {
-    try {
-      const response = await authenticatedFetch(`${BACKEND_URL}/apiventas/obtener-hora-limite`);
-      const data = await response.json();
-      if (data.horaLimiteGeneral) {
-        setHoraLimite(data.horaLimiteGeneral);
-        setHoraLimiteTemporal(data.horaLimiteGeneral);
-      }
-    } catch (error) {
-      console.error("Error al obtener hora límite:", error);
-    }
-  };
-
-  // Actualizar hora límite
-  const actualizarHoraLimiteEnBackend = async (hora) => {
-    try {
-      await authenticatedFetch(`${BACKEND_URL}/apiventas/actualizar-hora-limite`, {
-        method: "POST",
-        body: JSON.stringify({ horaLimite: hora })
-      });
-    } catch (error) {
-      console.error("Error al actualizar hora límite:", error);
-    }
-  };
-
-  const handleHoraLimiteInputChange = (e) => setHoraLimiteTemporal(e.target.value);
-  const enviarHoraLimite = () => {
-    setHoraLimite(horaLimiteTemporal);
-    actualizarHoraLimiteEnBackend(horaLimiteTemporal);
   };
 
   const handleInputChange = (e) => {
@@ -499,6 +464,33 @@ function Apiventas() {
     esVentaTiendanube(venta) &&
     String(venta.tipoEnvio || "").toLowerCase().includes("flex");
 
+  // Formatea la hora límite de despacho que informa Mercado Libre.
+  // Si es hoy, muestra solo "HH:mm"; si es otro día, agrega "DD/MM".
+  const formatearHoraLimite = (fecha) => {
+    if (!fecha || isNaN(fecha.getTime())) return "";
+    const ahora = new Date();
+    const esHoy =
+      fecha.getFullYear() === ahora.getFullYear() &&
+      fecha.getMonth() === ahora.getMonth() &&
+      fecha.getDate() === ahora.getDate();
+    const hora = fecha.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+    if (esHoy) return hora;
+    const dia = fecha.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" });
+    return `${dia} ${hora}`;
+  };
+
+  // Hora límite más urgente entre las ventas de ML pendientes (no completadas),
+  // calculada automáticamente a partir del dato que informa Mercado Libre por
+  // cada venta (ya no se carga a mano).
+  const horaLimiteMasUrgente = useMemo(() => {
+    const fechas = ventas
+      .filter((v) => v.esML && !v.completada && v.horaLimiteDespacho)
+      .map((v) => new Date(v.horaLimiteDespacho))
+      .filter((f) => !isNaN(f.getTime()));
+    if (fechas.length === 0) return null;
+    return fechas.reduce((masUrgente, f) => (f < masUrgente ? f : masUrgente), fechas[0]);
+  }, [ventas]);
+
   // Función para agrupar ventas por punto de despacho
   const agruparVentasPorPunto = () => {
     const grupos = {};
@@ -747,19 +739,6 @@ function Apiventas() {
             </select>
 
             <button type="submit">Agregar Venta</button>
-
-            <div className={styles.horaLimiteContainer}>
-              <label className={styles.horaLimiteLabel}>Hora Límite de Entrega:</label>
-              <input
-                type="time"
-                value={horaLimiteTemporal}
-                onChange={handleHoraLimiteInputChange}
-                className={styles.horaLimiteInput}
-              />
-              <button type="button" onClick={enviarHoraLimite} className={styles.enviarHoraLimiteBtn}>
-                Set
-              </button>
-            </div>
           </form>
 
         </div>
@@ -800,9 +779,9 @@ function Apiventas() {
               </span>
               <span className={styles.statLabel}>Entregadas</span>
             </div>
-            {horaLimite && (
+            {horaLimiteMasUrgente && (
               <div className={`${styles.statCard} ${styles.statCardHora}`}>
-                <span className={styles.statNumber}>{horaLimite}</span>
+                <span className={styles.statNumber}>{formatearHoraLimite(horaLimiteMasUrgente)}</span>
                 <span className={styles.statLabel}>Hora límite</span>
               </div>
             )}

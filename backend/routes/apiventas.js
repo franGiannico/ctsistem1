@@ -1,17 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const mongoose = require("mongoose");
-
 
 const Venta = require("../models/Venta"); // ✅ Importar modelo compartido
-
-// Esquema de la base de datos para la Hora Límite General
-const HoraLimiteGeneralSchema = new mongoose.Schema({
-  _id: { type: String, default: 'general' }, // Un ID fijo para el documento
-  horaLimiteGeneral: String,
-}, { collection: 'configuracion_general' }); // Puedes usar otro nombre de colección si lo prefieres
-
-const HoraLimiteGeneralModel = mongoose.model("HoraLimiteGeneral", HoraLimiteGeneralSchema, "configuracion_general");
 
 // Obtener todas las ventas
 router.get("/cargar-ventas", async (req, res) => {
@@ -21,41 +11,6 @@ router.get("/cargar-ventas", async (req, res) => {
   } catch (error) {
     console.error("Error al obtener ventas:", error);
     res.status(500).json({ error: "Error al obtener ventas" });
-  }
-});
-
-// Obtener la hora límite general
-router.get("/obtener-hora-limite", async (req, res) => {
-  try {
-    const config = await HoraLimiteGeneralModel.findById("general");
-    const horaLimiteGeneral = config ? config.horaLimiteGeneral : "";
-    res.json({ horaLimiteGeneral });
-  } catch (error) {
-    console.error("Error al obtener la hora límite:", error);
-    res.status(500).json({ error: "Error al obtener la hora límite" });
-  }
-});
-
-// Ruta para actualizar la hora límite
-router.post("/actualizar-hora-limite", async (req, res) => {
-  try {
-    const { horaLimite } = req.body;
-    console.log("Hora límite recibida:", horaLimite);
-
-    let config = await HoraLimiteGeneralModel.findById('general');
-
-    if (config) {
-      config.horaLimiteGeneral = horaLimite;
-      await config.save();
-      res.json({ message: "Hora límite actualizada con éxito", horaLimite: config.horaLimiteGeneral });
-    } else {
-      const nuevaConfig = new HoraLimiteGeneralModel({ _id: 'general', horaLimiteGeneral: horaLimite });
-      await nuevaConfig.save();
-      res.json({ message: "Hora límite guardada con éxito", horaLimite: nuevaConfig.horaLimiteGeneral });
-    }
-  } catch (error) {
-    console.error("Error al actualizar la hora límite:", error);
-    res.status(500).json({ error: "Error al actualizar la hora límite" });
   }
 });
 
