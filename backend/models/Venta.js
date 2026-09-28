@@ -20,6 +20,13 @@ const VentaSchema = new mongoose.Schema({
     codigoSeguimiento: {
     type: String,
     default: ""},
+
+    // Datos de contacto/domicilio: solo se completan para ventas de Tiendanube
+    // con envío Flex casero (no aplica a ML ni al resto de Tiendanube).
+    telefono: String,
+    direccion: String,
+    piso: String,
+    barrio: String,
 });
 
 // Evitar recompilación del modelo si ya existe

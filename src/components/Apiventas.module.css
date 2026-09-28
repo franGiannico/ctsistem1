@@ -175,6 +175,20 @@
     margin-left: 8px;
 }
 
+.datosFlex {
+    font-size: 0.85em;
+    color: #333;
+    margin-top: 6px;
+    padding: 6px 8px;
+    background: #fff4e5;
+    border-left: 3px solid #ff9800;
+    border-radius: 4px;
+}
+
+.datosFlex p {
+    margin: 2px 0;
+}
+
 .atributo {
     margin: 0;
 }

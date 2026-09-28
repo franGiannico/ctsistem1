@@ -335,6 +335,25 @@ router.get('/sincronizar-ventas', async (req, res) => {
             // Categoría fija para que Tiendanube no se mezcle con ML/manuales
             const puntoDespacho = "Ventas Tiendanube";
 
+            // Envío "Flex" casero (configurado por nosotros como opción de envío en TN):
+            // para estas ventas además guardamos teléfono, domicilio, piso y barrio,
+            // porque no hay logística de Tiendanube que se encargue de la entrega.
+            const esEnvioFlexTN = shippingOption.toLowerCase().includes("flex");
+
+            let datosContactoFlex = {};
+            if (esEnvioFlexTN) {
+                const direccionEnvio = order.shipping_address || {};
+
+                const telefono = order.customer?.phone || direccionEnvio.phone || "";
+                const calle = direccionEnvio.address || "";
+                const numeroCalle = direccionEnvio.number || "";
+                const direccion = [calle, numeroCalle].filter(Boolean).join(" ");
+                const piso = direccionEnvio.floor || "";
+                const barrio = direccionEnvio.locality || "";
+
+                datosContactoFlex = { telefono, direccion, piso, barrio };
+            }
+
             // Productos
             for (const product of order.products) {
                 const sku = product.sku || product.variant_sku || "Sin SKU";
@@ -358,7 +377,8 @@ router.get('/sincronizar-ventas', async (req, res) => {
                 nota: order.note || "",
                 tipoEnvio: shippingOption,
                 completada: estadoPrevio.completada,
-                entregada: estadoPrevio.entregada
+                entregada: estadoPrevio.entregada,
+                ...datosContactoFlex
                 });
             }
         }

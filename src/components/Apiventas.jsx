@@ -484,27 +484,29 @@ function Apiventas() {
     }
   };
 
+  // Identifica si una venta es de Tiendanube (cualquier forma en que venga marcada)
+  const esVentaTiendanube = (venta) =>
+    venta.esTiendanube === true ||
+    venta.origen === "tiendanube" ||
+    venta.origen === "Tiendanube" ||
+    venta.plataforma === "tiendanube" ||
+    venta.fuente === "tiendanube";
+
+  // Identifica las ventas de Tiendanube con envío "Flex" casero (el que armamos
+  // nosotros mismos como opción de envío en TN, sin logística propia de TN).
+  // Se usa tanto para agruparlas aparte como para mostrarles teléfono/domicilio.
+  const esVentaFlexTN = (venta) =>
+    esVentaTiendanube(venta) &&
+    String(venta.tipoEnvio || "").toLowerCase().includes("flex");
+
   // Función para agrupar ventas por punto de despacho
   const agruparVentasPorPunto = () => {
     const grupos = {};
 
     ventas.forEach((venta) => {
-      const esVentaTiendanube =
-        venta.esTiendanube === true ||
-        venta.origen === "tiendanube" ||
-        venta.origen === "Tiendanube" ||
-        venta.plataforma === "tiendanube" ||
-        venta.fuente === "tiendanube";
-
-      // Dentro de Tiendanube, el envío "Flex" (el que armamos nosotros mismos
-      // como opción de envío casera en TN) se agrupa aparte de las ventas TN comunes.
-      const esEnvioFlexTN =
-        esVentaTiendanube &&
-        String(venta.tipoEnvio || "").toLowerCase().includes("flex");
-
-      const categoria = esEnvioFlexTN
+      const categoria = esVentaFlexTN(venta)
         ? "Tiendanube - Envío Flex"
-        : esVentaTiendanube
+        : esVentaTiendanube(venta)
         ? "Ventas Tiendanube"
         : venta.puntoDespacho || "Punto de Despacho";
 
@@ -940,6 +942,14 @@ function Apiventas() {
                             <p><strong>N° Venta:</strong> {venta.numeroVenta}</p>
                             {(venta.esML || venta.esTiendanube) && venta.tipoEnvio && (
                               <p><strong>Tipo de Envío:</strong> {venta.tipoEnvio}</p>
+                            )}
+                            {esVentaFlexTN(venta) && (
+                              <div className={styles.datosFlex}>
+                                {venta.telefono && <p><strong>Teléfono:</strong> {venta.telefono}</p>}
+                                {venta.direccion && <p><strong>Domicilio:</strong> {venta.direccion}</p>}
+                                {venta.piso && <p><strong>Piso:</strong> {venta.piso}</p>}
+                                {venta.barrio && <p><strong>Barrio:</strong> {venta.barrio}</p>}
+                              </div>
                             )}
                           </div>
                           <button
