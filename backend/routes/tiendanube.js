@@ -93,6 +93,44 @@ const calcularPreciosTiendanube = (precioBase) => {
   };
 };
 
+// 💲 Previsualización de precios TN: calcula el precio de lista y promocional
+// que se va a publicar, sin llamar a la API de Tiendanube (no requiere token).
+// Se usa para mostrarle al usuario el precio calculado apenas carga el Excel.
+router.post('/calcular-precios', (req, res) => {
+  const { productos } = req.body;
+
+  if (!Array.isArray(productos) || productos.length === 0) {
+    return res.status(400).json({
+      error: 'Se requiere un array "productos" con al menos un elemento.',
+    });
+  }
+
+  const resultados = productos.map((producto) => {
+    const sku = String(producto?.sku || '').trim();
+    const precioBase = Number(producto?.precioBase);
+
+    try {
+      const precios = calcularPreciosTiendanube(precioBase);
+
+      return {
+        sku,
+        precioBase,
+        precioPromocional: precios.precioPromocional,
+        precioLista: precios.precioLista,
+        cuotas: precios.cuotas,
+      };
+    } catch (error) {
+      return {
+        sku,
+        precioBase,
+        error: error.message || 'No se pudo calcular el precio.',
+      };
+    }
+  });
+
+  res.json({ resultados });
+});
+
 const CACHE_CATALOGO_TN_MS = 5 * 60 * 1000;
 
 let cacheCatalogoTN = {

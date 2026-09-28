@@ -89,12 +89,94 @@ const ApiIngresos = () => {
             mlMensaje: "",
             tnEstado: "pendiente",
             tnMensaje: "",
+            precioListaTN: null,
+            precioPromocionalTN: null,
+            cuotasTN: null,
+            precioTNError: "",
+            precioTNCalculando: true,
           };
         });
 
       setFilas(filasParsed);
+      cargarPreciosTN(filasParsed);
     };
     reader.readAsBinaryString(file);
+  };
+
+  // Trae el precio de lista/promocional que Tiendanube va a publicar,
+  // aplicando la misma fórmula de costos que usa la sincronización real
+  // (pero sin tocar Tiendanube: es solo una previsualización).
+  const cargarPreciosTN = async (filasParaCalcular) => {
+    if (!filasParaCalcular || filasParaCalcular.length === 0) return;
+
+    try {
+      const res = await fetch(
+        `${BACKEND_URL}/tiendanube/calcular-precios`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: API_TOKEN,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            productos: filasParaCalcular.map((fila) => ({
+              sku: fila.sku,
+              precioBase: fila.precioBase,
+            })),
+          }),
+        }
+      );
+
+      const data = await res.json();
+      const resultadosPorSku = new Map(
+        (data.resultados || []).map((resultado) => [
+          String(resultado.sku || "").trim().toLowerCase(),
+          resultado,
+        ])
+      );
+
+      setFilas((prev) =>
+        prev.map((fila) => {
+          const resultado = resultadosPorSku.get(
+            String(fila.sku).trim().toLowerCase()
+          );
+
+          if (!resultado) {
+            return {
+              ...fila,
+              precioTNCalculando: false,
+              precioTNError: "No se pudo calcular el precio TN",
+            };
+          }
+
+          if (resultado.error) {
+            return {
+              ...fila,
+              precioTNCalculando: false,
+              precioTNError: resultado.error,
+            };
+          }
+
+          return {
+            ...fila,
+            precioTNCalculando: false,
+            precioListaTN: resultado.precioLista,
+            precioPromocionalTN: resultado.precioPromocional,
+            cuotasTN: resultado.cuotas,
+            precioTNError: "",
+          };
+        })
+      );
+    } catch (error) {
+      console.error("Error calculando precios TN:", error);
+      setFilas((prev) =>
+        prev.map((fila) => ({
+          ...fila,
+          precioTNCalculando: false,
+          precioTNError: "Error al calcular el precio TN",
+        }))
+      );
+    }
   };
 
   const esperar = (milisegundos) =>
@@ -739,6 +821,7 @@ const handleDescargarResultados = () => {
                 <th>Stock</th>
                 <th>Stock a publicar</th>
                 <th>Precio base</th>
+                <th>Precio TN</th>
                 <th>ML</th>
                 <th>TN</th>
               </tr>
@@ -787,6 +870,29 @@ const handleDescargarResultados = () => {
                       currency: "ARS",
                       maximumFractionDigits: 2,
                     })}
+                  </td>
+                  <td className={styles.tdPrecioTN}>
+                    {fila.precioTNCalculando ? (
+                      "Calculando..."
+                    ) : fila.precioTNError ? (
+                      <span className={styles.mensajeError}>
+                        {fila.precioTNError}
+                      </span>
+                    ) : (
+                      <>
+                        Promo:{" "}
+                        {Number(fila.precioPromocionalTN || 0).toLocaleString(
+                          "es-AR",
+                          { style: "currency", currency: "ARS", maximumFractionDigits: 0 }
+                        )}
+                        <br />
+                        Lista:{" "}
+                        {Number(fila.precioListaTN || 0).toLocaleString(
+                          "es-AR",
+                          { style: "currency", currency: "ARS", maximumFractionDigits: 0 }
+                        )}
+                      </>
+                    )}
                   </td>
                   <td
                     className={`${styles.tdMensaje} ${
