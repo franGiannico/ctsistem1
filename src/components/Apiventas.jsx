@@ -54,7 +54,7 @@ function Apiventas() {
   });
   const [horaLimite, setHoraLimite] = useState('');
   const [horaLimiteTemporal, setHoraLimiteTemporal] = useState('');
-  const [activeTab, setActiveTab] = useState("cargar"); // 'cargar' o 'listado'
+  const [activeTab, setActiveTab] = useState("listado"); // 'cargar' o 'listado' (arranca en "Ver Ventas")
   const [sincronizandoML, setSincronizandoML] = useState(false);
   const [sincronizandoTN, setSincronizandoTN] = useState(false);
   const sincronizando = sincronizandoML || sincronizandoTN;
