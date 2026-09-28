@@ -55,7 +55,10 @@ function Apiventas() {
   const [horaLimite, setHoraLimite] = useState('');
   const [horaLimiteTemporal, setHoraLimiteTemporal] = useState('');
   const [activeTab, setActiveTab] = useState("cargar"); // 'cargar' o 'listado'
-  const [cargando, setCargando] = useState(false);
+  const [sincronizandoML, setSincronizandoML] = useState(false);
+  const [sincronizandoTN, setSincronizandoTN] = useState(false);
+  const sincronizando = sincronizandoML || sincronizandoTN;
+  const [mostrarConfig, setMostrarConfig] = useState(false);
   const [ventasConNotaAbierta, setVentasConNotaAbierta] = useState(new Set()); // IDs de ventas con input de nota abierto
   const [notasTemporales, setNotasTemporales] = useState({}); // Notas temporales mientras se editan
 
@@ -94,6 +97,15 @@ function Apiventas() {
       obtenerHoraLimiteDesdeBackend();
     }
   }, [activeTab]);
+
+  // 🔄 Auto-sincronización: se ejecuta una sola vez al montar el componente
+  // (primera entrada a la página, F5 o "Actualizar" del navegador), sin importar
+  // en qué pestaña se esté. Sincroniza Mercado Libre y Tiendanube en paralelo.
+  useEffect(() => {
+    sincronizarVentasML();
+    sincronizarTiendanube();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Cargar ventas internas
   const cargarVentasDesdeServidor = async () => {
@@ -498,7 +510,7 @@ function Apiventas() {
   };
   // Sincronizar ventas Mercado Libre y reemplazar el listado completo
   const sincronizarVentasML = async () => {
-    setCargando(true);
+    setSincronizandoML(true);
     try {
       const response = await authenticatedFetch(`${BACKEND_URL}/meli/sincronizar-ventas`, {
         cache: 'no-store'
@@ -506,8 +518,8 @@ function Apiventas() {
       const data = await response.json();
 
       if (data.sincronizando) {
-        // Si está sincronizando, esperar y verificar estado
-        verificarEstadoSincronizacion();
+        // Si está sincronizando, esperar (de verdad) a que termine antes de bajar el indicador
+        await verificarEstadoSincronizacion();
       } else if (data.ventas) {
         // Si devuelve ventas directamente (caso legacy)
         setVentas(data.ventas);
@@ -515,34 +527,37 @@ function Apiventas() {
     } catch (error) {
       console.error("Error al sincronizar ventas ML:", error);
     } finally {
-      setCargando(false);
+      setSincronizandoML(false);
     }
   };
 
   // Sincronizar ventas Tiendanube
   const sincronizarTiendanube = async () => {
-    setCargando(true);
+    setSincronizandoTN(true);
     try {
       const response = await authenticatedFetch(`${BACKEND_URL}/tiendanube/sincronizar-ventas`);
       const data = await response.json();
       console.log('Resultado Sync TN:', data);
 
-      // Esperar brevemente y recargar
-      setTimeout(cargarVentasDesdeServidor, 2000);
+      // Esperar brevemente y recargar (esperamos de verdad para que el indicador
+      // de carga refleje el tiempo real de la sincronización)
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await cargarVentasDesdeServidor();
     } catch (error) {
       console.error("Error al sincronizar ventas Tiendanube:", error);
     } finally {
-      setCargando(false);
+      setSincronizandoTN(false);
     }
   };
 
-  // Verificar estado de sincronización
+  // Verificar estado de sincronización (devuelve una Promise que se resuelve
+  // recién cuando la sincronización de ML terminó de verdad)
   const verificarEstadoSincronizacion = async () => {
     console.log("🔄 Iniciando verificación de estado de sincronización...");
     const maxIntentos = 30; // 30 intentos = ~1 minuto
-    let intentos = 0;
+    const dormir = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    const verificar = async () => {
+    for (let intentos = 0; intentos < maxIntentos; intentos++) {
       try {
         const response = await authenticatedFetch(`${BACKEND_URL}/meli/estado-sincronizacion`);
         const data = await response.json();
@@ -550,24 +565,20 @@ function Apiventas() {
         if (!data.sincronizando && data.ultimaSincronizacion) {
           // Sincronización completada, recargar ventas
           console.log("✅ Sincronización completada:", data.ultimaSincronizacion.mensaje);
-          cargarVentasDesdeServidor();
+          await cargarVentasDesdeServidor();
           return;
-        }
-
-        if (intentos < maxIntentos) {
-          intentos++;
-          setTimeout(verificar, 2000); // Verificar cada 2 segundos
-        } else {
-          console.log("⏰ Timeout esperando sincronización");
-          cargarVentasDesdeServidor(); // Recargar de todas formas
         }
       } catch (error) {
         console.error("Error verificando estado:", error);
-        cargarVentasDesdeServidor();
+        await cargarVentasDesdeServidor();
+        return;
       }
-    };
 
-    verificar();
+      await dormir(2000); // Verificar cada 2 segundos
+    }
+
+    console.log("⏰ Timeout esperando sincronización");
+    await cargarVentasDesdeServidor(); // Recargar de todas formas
   };
 
 
@@ -745,17 +756,45 @@ function Apiventas() {
       {/* Listado unificado de ventas manuales + ML */}
       {activeTab === "listado" && (
         <>
-          <div className={styles.contadorContainer}>
-            <p className={styles.ventasTotales}>Ventas Totales: {ventas.length}</p>
-            <p className={styles.ventasPreparadas}>
-              Ventas Preparadas: {ventas.filter((v) => v.completada).length}
-            </p>
-            <p className={styles.ventasEntregadas}>
-              Ventas Entregadas: {ventas.filter((v) => v.entregada).length}
-            </p>
-          </div>
+          {sincronizando && (
+            <div className={styles.syncBanner}>
+              <div className={styles.syncBannerTrack}>
+                <div className={styles.syncBannerFill} />
+              </div>
+              <p className={styles.syncBannerText}>
+                {sincronizandoML && sincronizandoTN
+                  ? "Sincronizando ventas de Mercado Libre y Tiendanube…"
+                  : sincronizandoML
+                  ? "Sincronizando ventas de Mercado Libre…"
+                  : "Sincronizando ventas de Tiendanube…"}
+              </p>
+            </div>
+          )}
 
-          <h3>Hora Límite: {horaLimite}</h3>
+          <div className={styles.statsRow}>
+            <div className={`${styles.statCard} ${styles.statCardTotal}`}>
+              <span className={styles.statNumber}>{ventas.length}</span>
+              <span className={styles.statLabel}>Totales</span>
+            </div>
+            <div className={`${styles.statCard} ${styles.statCardPreparadas}`}>
+              <span className={styles.statNumber}>
+                {ventas.filter((v) => v.completada).length}
+              </span>
+              <span className={styles.statLabel}>Preparadas</span>
+            </div>
+            <div className={`${styles.statCard} ${styles.statCardEntregadas}`}>
+              <span className={styles.statNumber}>
+                {ventas.filter((v) => v.entregada).length}
+              </span>
+              <span className={styles.statLabel}>Entregadas</span>
+            </div>
+            {horaLimite && (
+              <div className={`${styles.statCard} ${styles.statCardHora}`}>
+                <span className={styles.statNumber}>{horaLimite}</span>
+                <span className={styles.statLabel}>Hora límite</span>
+              </div>
+            )}
+          </div>
 
           <div className={styles.actionsRow}>
             <button onClick={borrarVentasCompletadas} className={`${styles.borrarCompletadas} ${styles.actionButton}`}>
@@ -767,34 +806,55 @@ function Apiventas() {
             >
               Escanear paquetes
             </button>
-            <MeliAuthButton
-              className={`${styles.meliConnectBtn} ${styles.actionButton}`}
-              wrapperClassName={styles.actionItem}
-            />
-
             <button
-              onClick={sincronizarVentasML}
-              disabled={cargando}
-              className={`${styles.meliSyncBtn} ${styles.actionButton}`}
+              type="button"
+              onClick={() => setMostrarConfig((valor) => !valor)}
+              className={styles.configToggleBtn}
             >
-              {cargando ? 'Sincronizando...' : 'Sincronizar ventas Mercado Libre'}
-            </button>
-
-            <TiendanubeAuthButton
-              className={`${styles.meliConnectBtn} ${styles.actionButton}`}
-              wrapperClassName={styles.actionItem}
-            />
-
-            <button
-              onClick={sincronizarTiendanube}
-              disabled={cargando}
-              className={`${styles.meliSyncBtn} ${styles.actionButton}`}
-              style={{ background: 'linear-gradient(135deg, #2D325E, #4A5294)', color: 'white' }}
-            >
-              {cargando ? 'Sincronizando...' : 'Sincronizar Tiendanube'}
+              {mostrarConfig ? "✕ Cerrar configuración" : "⚙️ Configuración"}
             </button>
           </div>
 
+          {mostrarConfig && (
+            <div className={styles.configPanel}>
+              <p className={styles.configPanelTitle}>Conexiones y sincronización manual</p>
+
+              <div className={styles.configPanelRow}>
+                <MeliAuthButton
+                  className={`${styles.meliConnectBtn} ${styles.actionButton}`}
+                  wrapperClassName={styles.actionItem}
+                />
+                <button
+                  onClick={sincronizarVentasML}
+                  disabled={sincronizandoML}
+                  className={`${styles.meliSyncBtn} ${styles.actionButton}`}
+                >
+                  {sincronizandoML ? 'Sincronizando...' : 'Sincronizar ventas Mercado Libre'}
+                </button>
+              </div>
+
+              <div className={styles.configPanelRow}>
+                <TiendanubeAuthButton
+                  className={`${styles.meliConnectBtn} ${styles.actionButton}`}
+                  wrapperClassName={styles.actionItem}
+                />
+                <button
+                  onClick={sincronizarTiendanube}
+                  disabled={sincronizandoTN}
+                  className={`${styles.meliSyncBtn} ${styles.actionButton}`}
+                  style={{ background: 'linear-gradient(135deg, #2D325E, #4A5294)', color: 'white' }}
+                >
+                  {sincronizandoTN ? 'Sincronizando...' : 'Sincronizar Tiendanube'}
+                </button>
+              </div>
+
+              <p className={styles.configPanelHint}>
+                Las ventas se sincronizan solas al entrar a esta pestaña o actualizar la página.
+                Usá estos botones solo para forzar una sincronización manual o para conectar
+                (o reconectar) las cuentas.
+              </p>
+            </div>
+          )}
 
           {/* Botón flotante para mostrar/ocultar todas */}
           <div className={styles.stickyHeader}>
