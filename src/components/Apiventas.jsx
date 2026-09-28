@@ -85,7 +85,9 @@ function Apiventas() {
       setMostrarTodas(false);
     } else {
       // Si estaba oculto, expandir todas las categorías que existen
-      const todasLasCategorias = new Set(ventas.map(v => v.puntoDespacho));
+      // Usamos las categorías ya agrupadas (no el puntoDespacho crudo) para que
+      // esto incluya también subgrupos como "Tiendanube - Envío Flex".
+      const todasLasCategorias = new Set(Object.keys(agruparVentasPorPunto()));
       setCategoriasExpandidas(todasLasCategorias);
       setMostrarTodas(true);
     }
@@ -427,8 +429,8 @@ function Apiventas() {
     doc.text(puntoLines, margin + 80, yPos);
     yPos += lineHeight * puntoLines.length;
 
-    // Tipo de Envío (si es ML)
-    if (venta.esML && venta.tipoEnvio) {
+    // Tipo de Envío (ML o Tiendanube)
+    if ((venta.esML || venta.esTiendanube) && venta.tipoEnvio) {
       doc.setFont(undefined, 'bold');
       doc.text('Tipo Envío:', margin, yPos);
       doc.setFont(undefined, 'normal');
@@ -494,7 +496,15 @@ function Apiventas() {
         venta.plataforma === "tiendanube" ||
         venta.fuente === "tiendanube";
 
-      const categoria = esVentaTiendanube
+      // Dentro de Tiendanube, el envío "Flex" (el que armamos nosotros mismos
+      // como opción de envío casera en TN) se agrupa aparte de las ventas TN comunes.
+      const esEnvioFlexTN =
+        esVentaTiendanube &&
+        String(venta.tipoEnvio || "").toLowerCase().includes("flex");
+
+      const categoria = esEnvioFlexTN
+        ? "Tiendanube - Envío Flex"
+        : esVentaTiendanube
         ? "Ventas Tiendanube"
         : venta.puntoDespacho || "Punto de Despacho";
 
@@ -928,7 +938,7 @@ function Apiventas() {
                             )}
                             <p><strong>Cliente:</strong> {venta.cliente}</p>
                             <p><strong>N° Venta:</strong> {venta.numeroVenta}</p>
-                            {venta.esML && venta.tipoEnvio && (
+                            {(venta.esML || venta.esTiendanube) && venta.tipoEnvio && (
                               <p><strong>Tipo de Envío:</strong> {venta.tipoEnvio}</p>
                             )}
                           </div>
