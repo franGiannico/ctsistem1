@@ -329,6 +329,20 @@ async function procesarSincronizacion() {
             tipoEnvio = data.logistic_type || "A coordinar";
         }
 
+        // 👇 La fecha límite de despacho NO viene en el objeto principal del shipment,
+        // sino en un endpoint aparte: /shipments/:id/lead_time (estimated_handling_limit).
+        let horaLimiteDespacho = null;
+        try {
+          const { data: leadTime } = await axios.get(
+            `https://api.mercadolibre.com/shipments/${shipmentId}/lead_time`,
+            { headers: { Authorization: `Bearer ${accessToken}` } }
+          );
+          console.log(`⏰ LEAD TIME (${shipmentId}):`, JSON.stringify(leadTime));
+          horaLimiteDespacho = leadTime?.estimated_handling_limit?.date || null;
+        } catch (leadTimeError) {
+          console.error(`❌ Error obteniendo lead_time ${shipmentId}:`, leadTimeError.response?.data || leadTimeError.message);
+        }
+
         // Agregamos status para debug/uso futuro
         return {
           tipoEnvio,
@@ -336,7 +350,7 @@ async function procesarSincronizacion() {
           substatus: data.substatus,
           historial: data.substatus_history,
           codigoSeguimiento: data.tracking_number || "",
-          horaLimiteDespacho: data.lead_time?.estimated_handling_limit?.date || null,
+          horaLimiteDespacho,
         };
 
       } catch (error) {
