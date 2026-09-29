@@ -468,15 +468,7 @@ function Apiventas() {
   // Si es hoy, muestra solo "HH:mm"; si es otro día, agrega "DD/MM".
   const formatearHoraLimite = (fecha) => {
     if (!fecha || isNaN(fecha.getTime())) return "";
-    const ahora = new Date();
-    const esHoy =
-      fecha.getFullYear() === ahora.getFullYear() &&
-      fecha.getMonth() === ahora.getMonth() &&
-      fecha.getDate() === ahora.getDate();
-    const hora = fecha.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
-    if (esHoy) return hora;
-    const dia = fecha.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" });
-    return `${dia} ${hora}`;
+    return fecha.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false });
   };
 
   // Hora límite más urgente entre las ventas de ML pendientes (no completadas),
