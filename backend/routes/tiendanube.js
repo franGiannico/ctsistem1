@@ -340,6 +340,15 @@ router.get('/sincronizar-ventas', async (req, res) => {
             // porque no hay logística de Tiendanube que se encargue de la entrega.
             const esEnvioFlexTN = shippingOption.toLowerCase().includes("flex");
 
+            // 🕵️ DIAGNÓSTICO TEMPORAL: para ventas que no son Flex, logueamos la orden
+            // completa (sin "products", que es largo) para encontrar el campo exacto
+            // donde viene el punto de retiro (ej: "Retira en Don Bosco"). Se puede
+            // borrar una vez que identifiquemos el campo correcto.
+            if (!esEnvioFlexTN) {
+                const { products: _products, ...ordenSinProductos } = order;
+                console.log(`🕵️ ORDEN TN NO-FLEX (${numeroVenta}):`, JSON.stringify(ordenSinProductos));
+            }
+
             let datosContactoFlex = {};
             if (esEnvioFlexTN) {
                 const direccionEnvio = order.shipping_address || {};
