@@ -976,6 +976,79 @@ router.get('/debug/orden/:id', async (req, res) => {
   }
 });
 
+// 🕵️ DIAGNÓSTICO TEMPORAL: probar la búsqueda pública de Mercado Libre para
+// comparar precios de la competencia por nombre de producto. Devuelve el JSON
+// crudo (sin procesar) para poder confirmar con datos reales qué campos trae
+// cada resultado (precio, cuotas sin interés, vendedor) antes de construir la
+// función real de "comparar precio vs competencia". Se puede borrar una vez
+// que confirmemos el formato.
+// Ejemplo de uso: /meli/debug/buscar-competencia?q=taladro percutor bosch gsb 13000
+router.get('/debug/buscar-competencia', async (req, res) => {
+  const q = req.query.q;
+  if (!q) {
+    return res.status(400).json({ error: 'Falta el parámetro "q" (nombre del producto a buscar).' });
+  }
+
+  console.log(`🕵️ [DEBUG] Buscando competencia en ML para: "${q}"`);
+
+  try {
+    let tokenDoc = await MeliToken.findOne();
+    if (!tokenDoc || !tokenDoc.access_token) {
+      return res.status(401).json({ error: 'No autenticado con Mercado Libre.' });
+    }
+
+    const now = Date.now();
+    const tokenCreatedAt = new Date(tokenDoc.created_at).getTime();
+    const expiresInMs = tokenDoc.expires_in * 1000;
+    const bufferTimeMs = 5 * 60 * 1000;
+
+    if (now > tokenCreatedAt + expiresInMs - bufferTimeMs) {
+      console.log('🔄 [DEBUG] Token expirado, refrescando...');
+      try {
+        tokenDoc.access_token = await refreshMeliToken(tokenDoc);
+      } catch (refreshError) {
+        console.error('❌ [DEBUG] Fallo al refrescar token:', refreshError.message);
+        return res.status(401).json({ error: 'Token expirado y no se pudo refrescar.' });
+      }
+    }
+
+    const { access_token, user_id } = tokenDoc;
+
+    const searchResponse = await axios.get('https://api.mercadolibre.com/sites/MLA/search', {
+      params: { q, limit: 10 },
+      headers: { Authorization: `Bearer ${access_token}` },
+    });
+
+    const resultados = (searchResponse.data.results || []).map((r) => ({
+      id: r.id,
+      title: r.title,
+      price: r.price,
+      original_price: r.original_price,
+      currency_id: r.currency_id,
+      seller_id: r.seller?.id,
+      es_propio: String(r.seller?.id) === String(user_id),
+      installments: r.installments,
+      condition: r.condition,
+      permalink: r.permalink,
+    }));
+
+    console.log(`✅ [DEBUG] ${resultados.length} resultados encontrados para "${q}"`);
+
+    return res.json({
+      query: q,
+      total_resultados_api: searchResponse.data.paging?.total,
+      mi_seller_id: user_id,
+      resultados,
+    });
+  } catch (err) {
+    console.error('❌ [DEBUG] Error buscando competencia:', err.response?.data || err.message);
+    return res.status(500).json({
+      error: 'Error al buscar en Mercado Libre.',
+      detalle: err.response?.data || err.message,
+    });
+  }
+});
+
 // Ruta pública para debug de billing info (sin autenticación)
 router.get('/debug/billing/:user_id', async (req, res) => {
   const userId = req.params.user_id;
