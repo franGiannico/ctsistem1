@@ -471,12 +471,14 @@ function Apiventas() {
     return fecha.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false });
   };
 
-  // Hora límite más urgente entre las ventas de ML pendientes (no completadas),
-  // calculada automáticamente a partir del dato que informa Mercado Libre por
-  // cada venta (ya no se carga a mano).
+  // Hora límite más urgente entre las ventas de ML cargadas, calculada
+  // automáticamente a partir del dato que informa Mercado Libre por cada
+  // venta (ya no se carga a mano). Se muestra sin importar si la venta ya
+  // fue tildada como "Preparada" o "Entregada": el cartel tiene que seguir
+  // arriba hasta que la venta realmente desaparezca del listado.
   const horaLimiteMasUrgente = useMemo(() => {
     const fechas = ventas
-      .filter((v) => v.esML && !v.completada && v.horaLimiteDespacho)
+      .filter((v) => v.esML && v.horaLimiteDespacho)
       .map((v) => new Date(v.horaLimiteDespacho))
       .filter((f) => !isNaN(f.getTime()));
     if (fechas.length === 0) return null;
