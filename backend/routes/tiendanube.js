@@ -340,13 +340,21 @@ router.get('/sincronizar-ventas', async (req, res) => {
             // porque no hay logística de Tiendanube que se encargue de la entrega.
             const esEnvioFlexTN = shippingOption.toLowerCase().includes("flex");
 
-            // 🕵️ DIAGNÓSTICO TEMPORAL: para ventas que no son Flex, logueamos la orden
-            // completa (sin "products", que es largo) para encontrar el campo exacto
-            // donde viene el punto de retiro (ej: "Retira en Don Bosco"). Se puede
-            // borrar una vez que identifiquemos el campo correcto.
-            if (!esEnvioFlexTN) {
-                const { products: _products, ...ordenSinProductos } = order;
-                console.log(`🕵️ ORDEN TN NO-FLEX (${numeroVenta}):`, JSON.stringify(ordenSinProductos));
+            // Venta con "Retiro en punto de retiro": el cliente eligió pasar a buscarla
+            // por una de nuestras sucursales configuradas en Tiendanube (ej: "Don Bosco").
+            // No agrupamos por punto de retiro (a pedido), solo dejamos la aclaración
+            // en la nota de la venta: "Retira en {nombre del punto}".
+            const esRetiroPuntoTN =
+                order.shipping === "pickup-point" || order.shipping_pickup_type === "pickup";
+
+            const nombrePuntoRetiroTN = esRetiroPuntoTN
+                ? (order.shipping_pickup_details?.name || order.shipping_option || "")
+                : "";
+
+            let notaFinal = order.note || "";
+            if (esRetiroPuntoTN && nombrePuntoRetiroTN) {
+                const notaRetiro = `Retira en ${nombrePuntoRetiroTN}`;
+                notaFinal = notaFinal ? `${notaRetiro} | ${notaFinal}` : notaRetiro;
             }
 
             let datosContactoFlex = {};
@@ -383,7 +391,7 @@ router.get('/sincronizar-ventas', async (req, res) => {
                 imagen,
                 esTiendanube: true,
                 origen: "tiendanube",
-                nota: order.note || "",
+                nota: notaFinal,
                 tipoEnvio: shippingOption,
                 completada: estadoPrevio.completada,
                 entregada: estadoPrevio.entregada,
