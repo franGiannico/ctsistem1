@@ -343,6 +343,28 @@ async function procesarSincronizacion() {
           console.error(`❌ Error obteniendo lead_time ${shipmentId}:`, leadTimeError.response?.data || leadTimeError.message);
         }
 
+        // 🕵️ DIAGNÓSTICO TEMPORAL: probamos otros dos endpoints candidatos a tener
+        // la fecha límite de despacho, para confirmar cuál trae el dato real antes
+        // de usarlo. Se puede borrar una vez que encontremos el campo correcto.
+        try {
+          const { data: sla } = await axios.get(
+            `https://api.mercadolibre.com/shipments/${shipmentId}/sla`,
+            { headers: { Authorization: `Bearer ${accessToken}` } }
+          );
+          console.log(`🕵️ SLA (${shipmentId}):`, JSON.stringify(sla));
+        } catch (slaError) {
+          console.log(`🕵️ SLA (${shipmentId}) no disponible:`, slaError.response?.status, slaError.response?.data || slaError.message);
+        }
+        try {
+          const { data: delays } = await axios.get(
+            `https://api.mercadolibre.com/shipments/${shipmentId}/delays`,
+            { headers: { Authorization: `Bearer ${accessToken}` } }
+          );
+          console.log(`🕵️ DELAYS (${shipmentId}):`, JSON.stringify(delays));
+        } catch (delaysError) {
+          console.log(`🕵️ DELAYS (${shipmentId}) no disponible:`, delaysError.response?.status, delaysError.response?.data || delaysError.message);
+        }
+
         // Agregamos status para debug/uso futuro
         return {
           tipoEnvio,
