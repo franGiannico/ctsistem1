@@ -17,7 +17,7 @@ router.get("/cargar-ventas", async (req, res) => {
 // Agregar una nueva venta
 router.post("/guardar-ventas", async (req, res) => {
   try {
-    const { sku, nombre, cantidad, numeroVenta, cliente, puntoDespacho } = req.body;
+    const { sku, nombre, cantidad, numeroVenta, cliente, puntoDespacho, nota } = req.body;
 
     // Validar todos los campos necesarios
     if (!sku || !nombre || !cantidad || !numeroVenta || !cliente || !puntoDespacho) {
@@ -32,6 +32,9 @@ router.post("/guardar-ventas", async (req, res) => {
       numeroVenta: numeroVenta.toString(), // Convertir a string para consistencia
       cliente,
       puntoDespacho,
+      // 👇 Nota opcional (ej: "Retira en Savio" al cargar un pedido interno pegado).
+      // No la pisamos con "" si no viene, así no rompe al resto de las ventas manuales.
+      ...(nota ? { nota } : {}),
       completada: false,
       entregada: false
       // Los campos de ML (imagen, esML, etc.) se agregarán automáticamente como undefined/null

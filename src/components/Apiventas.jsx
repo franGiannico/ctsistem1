@@ -8,6 +8,19 @@ import jsPDF from 'jspdf';
 import logoImage from '../assets/logo.png';
 import { Html5QrcodeScanner } from "html5-qrcode";
 
+// Opciones de punto de despacho, compartidas entre el alta manual y la
+// vista previa del pedido interno pegado (ver parsearPedidoInterno).
+const PUNTOS_DESPACHO = [
+  "Llevar al Expreso",
+  "Retira el Expreso",
+  "Punto de Despacho",
+  "Flex",
+  "A coordinar",
+  "Guardia",
+  "Domicilio",
+  "Showroom",
+  "Enviar a Savio",
+];
 
 function Apiventas() {
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
@@ -59,6 +72,12 @@ function Apiventas() {
   const [mostrarConfig, setMostrarConfig] = useState(false);
   const [ventasConNotaAbierta, setVentasConNotaAbierta] = useState(new Set()); // IDs de ventas con input de nota abierto
   const [notasTemporales, setNotasTemporales] = useState({}); // Notas temporales mientras se editan
+
+  // 🆕 Pedido interno pegado (texto que copia la otra app de ventas de Coniferal)
+  const [textoPedidoInterno, setTextoPedidoInterno] = useState("");
+  const [productosPedidoInterno, setProductosPedidoInterno] = useState([]);
+  const [pedidoParseError, setPedidoParseError] = useState("");
+  const [guardandoPedidoInterno, setGuardandoPedidoInterno] = useState(false);
 
   // 🆕 Estado para controlar qué categorías están expandidas (muestran completadas)
   const [categoriasExpandidas, setCategoriasExpandidas] = useState(new Set());
@@ -149,6 +168,140 @@ function Apiventas() {
       setFormData({ sku: "", nombre: "", cantidad: 1, numeroVenta: "", cliente: "", puntoDespacho: "Punto de Despacho" });
     } catch (error) {
       console.error("Error al guardar la venta:", error);
+    }
+  };
+
+  // 🆕 Pedido interno pegado: parsea el texto que copia la otra app de ventas
+  // de Coniferal (resumen de "Nuevo pedido interno") y devuelve los datos
+  // necesarios para precargar una venta por cada producto detectado.
+  //
+  // Formato esperado (puede variar de a poco, por eso todo es tolerante a
+  // que falte algún dato):
+  //   Empleado: Apellido, Nombre (Legajo 1234)
+  //   * 1 x Nombre del producto (SKU: ABC123) - $1.234,56 c/u = $1.234,56
+  //   Envío: Retiro en punta de línea - Nombre del punto (Gratis)
+  const parsearPedidoInterno = (texto) => {
+    if (!texto || !texto.trim()) {
+      return { error: "Pegá primero el texto del pedido." };
+    }
+
+    // "Empleado: Giannico, Francisco Javier (Legajo 2520)"
+    const matchEmpleado = texto.match(/Empleado:\s*(.+?)\s*\(Legajo\s*(\d+)\)/i);
+    const cliente = matchEmpleado ? matchEmpleado[1].trim() : "";
+    const legajo = matchEmpleado ? matchEmpleado[2].trim() : "";
+
+    // "Envío: Retiro en punta de línea - Savio (Gratis)"
+    const matchEnvio = texto.match(/Env[ií]o:\s*(.+?)(?:\s*\(|$)/im);
+    const envioTexto = matchEnvio ? matchEnvio[1].trim() : "";
+    const matchRetiro = envioTexto.match(/Retiro en punta de l[ií]nea\s*-\s*(.+)/i);
+    const puntoRetiro = matchRetiro ? matchRetiro[1].trim() : "";
+
+    // Líneas de producto: "* 1 x Producto (SKU: ABC123) - $1.234,56 c/u = ..."
+    // El "(SKU: ...)" es opcional por si la otra app todavía no lo incluye.
+    const lineasProducto = texto.match(/^\*\s*\d+\s*x\s*.+$/gim) || [];
+    const productos = lineasProducto
+      .map((linea) => {
+        const matchLinea = linea.match(/^\*\s*(\d+)\s*x\s*(.+?)(?:\s*\(SKU:\s*([^)]+)\))?\s*-\s*\$/i);
+        if (!matchLinea) return null;
+        return {
+          cantidad: parseInt(matchLinea[1], 10) || 1,
+          nombre: (matchLinea[2] || "").trim(),
+          sku: (matchLinea[3] || "").trim(),
+        };
+      })
+      .filter(Boolean);
+
+    if (productos.length === 0) {
+      return { error: 'No se detectó ningún producto en el texto pegado. Revisá que tenga el formato de siempre (líneas que empiezan con "*").' };
+    }
+
+    return { cliente, legajo, envioTexto, puntoRetiro, productos };
+  };
+
+  // Analiza el texto pegado y arma la vista previa editable
+  const handleAnalizarPedido = () => {
+    const resultado = parsearPedidoInterno(textoPedidoInterno);
+    if (resultado.error) {
+      setPedidoParseError(resultado.error);
+      setProductosPedidoInterno([]);
+      return;
+    }
+
+    setPedidoParseError("");
+
+    const ahora = new Date();
+    const timestamp = ahora.toISOString().replace(/[-:T]/g, "").slice(0, 14); // YYYYMMDDHHmmss
+    const baseNumeroVenta = `INT-${resultado.legajo || "SN"}-${timestamp}`;
+    const notaSugerida = resultado.puntoRetiro ? `Retira en ${resultado.puntoRetiro}` : "";
+
+    const filas = resultado.productos.map((p, idx) => ({
+      numeroVenta: `${baseNumeroVenta}-${idx + 1}`,
+      sku: p.sku,
+      nombre: p.nombre,
+      cantidad: p.cantidad,
+      cliente: resultado.cliente,
+      puntoDespacho: "Punto de Despacho",
+      nota: notaSugerida,
+    }));
+
+    setProductosPedidoInterno(filas);
+  };
+
+  // Edita un campo de una fila detectada antes de confirmar la carga
+  const handleEditarProductoPedido = (index, campo, valor) => {
+    setProductosPedidoInterno((prev) =>
+      prev.map((p, i) => (i === index ? { ...p, [campo]: valor } : p))
+    );
+  };
+
+  // Quita una fila detectada por error antes de confirmar la carga
+  const handleQuitarProductoPedido = (index) => {
+    setProductosPedidoInterno((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Cancela el pedido pegado y limpia todo
+  const handleCancelarPedidoInterno = () => {
+    setTextoPedidoInterno("");
+    setProductosPedidoInterno([]);
+    setPedidoParseError("");
+  };
+
+  // Confirma la carga: guarda una venta por cada producto de la vista previa
+  const handleConfirmarPedidoInterno = async () => {
+    const faltaAlgo = productosPedidoInterno.some(
+      (p) => !p.sku.trim() || !p.nombre.trim() || !p.cliente.trim() || !p.cantidad || !p.puntoDespacho
+    );
+    if (faltaAlgo) {
+      setPedidoParseError("Completá SKU, producto, cliente y punto de despacho en todos los productos antes de cargar.");
+      return;
+    }
+
+    setGuardandoPedidoInterno(true);
+    setPedidoParseError("");
+    try {
+      for (const p of productosPedidoInterno) {
+        await authenticatedFetch(`${BACKEND_URL}/apiventas/guardar-ventas`, {
+          method: "POST",
+          body: JSON.stringify({
+            sku: p.sku.trim(),
+            nombre: p.nombre.trim(),
+            cantidad: Number(p.cantidad),
+            numeroVenta: p.numeroVenta,
+            cliente: p.cliente.trim(),
+            puntoDespacho: p.puntoDespacho,
+            nota: p.nota?.trim() || "",
+          }),
+        });
+      }
+      const cantidadCargada = productosPedidoInterno.length;
+      handleCancelarPedidoInterno();
+      cargarVentasDesdeServidor();
+      alert(`Se ${cantidadCargada === 1 ? "cargó" : "cargaron"} ${cantidadCargada} venta${cantidadCargada === 1 ? "" : "s"} correctamente.`);
+    } catch (error) {
+      console.error("Error al cargar el pedido interno:", error);
+      setPedidoParseError('Hubo un error al cargar alguno de los productos. Revisá "Ver Ventas" antes de reintentar, puede que algunos ya se hayan cargado.');
+    } finally {
+      setGuardandoPedidoInterno(false);
     }
   };
 
@@ -713,6 +866,109 @@ function Apiventas() {
       {/* Cargar ventas manuales */}
       {activeTab === "cargar" && (
         <div className={styles.cargarWrapper}>
+          {/* 🆕 Pegar pedido interno: carga automática desde el texto que copia
+              la otra app de ventas de Coniferal */}
+          <div className={styles.pedidoInternoWrapper}>
+            <h3>Cargar desde pedido interno</h3>
+            <p className={styles.pedidoInternoAyuda}>
+              Pegá acá el texto del resumen de pedido y se detectan los productos automáticamente.
+            </p>
+            <textarea
+              value={textoPedidoInterno}
+              onChange={(e) => setTextoPedidoInterno(e.target.value)}
+              placeholder="Pegá acá el texto del pedido interno..."
+              className={styles.textareaPedido}
+              rows={8}
+            />
+            <button type="button" onClick={handleAnalizarPedido} className={styles.analizarPedidoBtn}>
+              Analizar pedido
+            </button>
+
+            {pedidoParseError && <p className={styles.pedidoError}>{pedidoParseError}</p>}
+
+            {productosPedidoInterno.length > 0 && (
+              <div className={styles.previewPedido}>
+                <p className={styles.previewPedidoTitulo}>
+                  Se detectaron {productosPedidoInterno.length} producto(s). Revisá y completá antes de confirmar:
+                </p>
+
+                {productosPedidoInterno.map((p, idx) => (
+                  <div key={idx} className={styles.filaPedidoProducto}>
+                    <input
+                      type="text"
+                      value={p.sku}
+                      onChange={(e) => handleEditarProductoPedido(idx, "sku", e.target.value)}
+                      placeholder="SKU"
+                    />
+                    <input
+                      type="text"
+                      value={p.nombre}
+                      onChange={(e) => handleEditarProductoPedido(idx, "nombre", e.target.value)}
+                      placeholder="Producto"
+                    />
+                    <input
+                      type="number"
+                      min="1"
+                      value={p.cantidad}
+                      onChange={(e) => handleEditarProductoPedido(idx, "cantidad", e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      value={p.cliente}
+                      onChange={(e) => handleEditarProductoPedido(idx, "cliente", e.target.value)}
+                      placeholder="Cliente"
+                    />
+                    <select
+                      value={p.puntoDespacho}
+                      onChange={(e) => handleEditarProductoPedido(idx, "puntoDespacho", e.target.value)}
+                    >
+                      {PUNTOS_DESPACHO.map((opcion) => (
+                        <option key={opcion} value={opcion}>{opcion}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      value={p.nota}
+                      onChange={(e) => handleEditarProductoPedido(idx, "nota", e.target.value)}
+                      placeholder="Nota (opcional)"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleQuitarProductoPedido(idx)}
+                      className={styles.quitarProductoPedidoBtn}
+                      title="Quitar este producto"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+
+                <div className={styles.previewPedidoAcciones}>
+                  <button
+                    type="button"
+                    onClick={handleConfirmarPedidoInterno}
+                    disabled={guardandoPedidoInterno}
+                    className={styles.confirmarPedidoBtn}
+                  >
+                    {guardandoPedidoInterno
+                      ? "Cargando..."
+                      : `Cargar ${productosPedidoInterno.length} venta${productosPedidoInterno.length === 1 ? "" : "s"}`}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelarPedidoInterno}
+                    disabled={guardandoPedidoInterno}
+                    className={styles.cancelarPedidoBtn}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <hr className={styles.separadorCargar} />
+
           <form onSubmit={handleSubmit} className={styles.form}>
             <input type="text" name="sku" value={formData.sku} onChange={handleInputChange} placeholder="SKU" required />
             <input type="text" name="nombre" value={formData.nombre} onChange={handleInputChange} placeholder="Producto (color/talle opcional)" required />
@@ -721,15 +977,9 @@ function Apiventas() {
             <input type="text" name="cliente" value={formData.cliente} onChange={handleInputChange} placeholder="Cliente" required />
 
             <select name="puntoDespacho" value={formData.puntoDespacho} onChange={handleInputChange} required>
-              <option value="Llevar al Expreso">Llevar al Expreso</option>
-              <option value="Retira el Expreso">Retira el Expreso</option>
-              <option value="Punto de Despacho">Punto de Despacho</option>
-              <option value="Flex">Flex</option>
-              <option value="A coordinar">A coordinar</option>
-              <option value="Guardia">Guardia</option>
-              <option value="Domicilio">Domicilio</option>
-              <option value="Showroom">Showroom</option>
-              <option value="Enviar a Savio">Enviar a Savio</option>
+              {PUNTOS_DESPACHO.map((opcion) => (
+                <option key={opcion} value={opcion}>{opcion}</option>
+              ))}
             </select>
 
             <button type="submit">Agregar Venta</button>
