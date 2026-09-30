@@ -745,3 +745,171 @@
   font-size: 1.1rem;
   margin-bottom: 1rem;
 }
+
+/* ===== Pegar pedido interno (Cargar Ventas) ===== */
+
+.pedidoInternoWrapper {
+  width: 100%;
+  max-width: 700px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  margin-bottom: 10px;
+}
+
+.pedidoInternoWrapper h3 {
+  margin-bottom: 4px;
+}
+
+.pedidoInternoAyuda {
+  color: #666;
+  font-size: 0.9rem;
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.textareaPedido {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.analizarPedidoBtn {
+  align-self: flex-start;
+  margin-top: 10px;
+  padding: 10px 18px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.analizarPedidoBtn:hover {
+  background-color: #0056b3;
+}
+
+.pedidoError {
+  color: #b00020;
+  background: #ffe5e5;
+  border: 1px solid #b00020;
+  border-radius: 4px;
+  padding: 8px 10px;
+  margin-top: 10px;
+  font-size: 0.9rem;
+}
+
+.previewPedido {
+  margin-top: 16px;
+  padding: 12px;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+.previewPedidoTitulo {
+  margin-top: 0;
+  font-size: 0.9rem;
+  color: #444;
+}
+
+.filaPedidoProducto {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.filaPedidoProducto input,
+.filaPedidoProducto select {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.filaPedidoProducto input[placeholder="SKU"] {
+  flex: 0 1 110px;
+}
+
+.filaPedidoProducto input[placeholder="Producto"] {
+  flex: 1 1 220px;
+}
+
+.filaPedidoProducto input[type="number"] {
+  flex: 0 1 70px;
+}
+
+.filaPedidoProducto input[placeholder="Cliente"] {
+  flex: 1 1 160px;
+}
+
+.filaPedidoProducto select {
+  flex: 1 1 150px;
+}
+
+.filaPedidoProducto input[placeholder="Nota (opcional)"] {
+  flex: 1 1 160px;
+}
+
+.quitarProductoPedidoBtn {
+  padding: 8px 10px;
+  background-color: #ffe5e5;
+  color: #b00020;
+  border: 1px solid #b00020;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.previewPedidoAcciones {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.confirmarPedidoBtn {
+  padding: 10px 18px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.confirmarPedidoBtn:hover {
+  background-color: #43a047;
+}
+
+.confirmarPedidoBtn:disabled,
+.cancelarPedidoBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cancelarPedidoBtn {
+  padding: 10px 18px;
+  background-color: #eee;
+  color: #333;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.separadorCargar {
+  width: 100%;
+  max-width: 700px;
+  border: none;
+  border-top: 1px solid #ddd;
+  margin: 24px 0;
+}
