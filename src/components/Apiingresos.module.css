@@ -393,28 +393,202 @@
   opacity: 0.6;
 }
 
+/* ==========================================
+   Precio base editable
+   ========================================== */
+.inputPrecioBase {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.4rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-weight: 600;
+}
 
+.inputPrecioBase:focus {
+  outline: none;
+  border-color: #4a6cf7;
+  box-shadow: 0 0 0 2px rgba(74, 108, 247, 0.15);
+}
 
+/* ==========================================
+   Comparación de precios (ComparaYa)
+   ========================================== */
+.panelComparacion {
+  margin: 1.2rem 0;
+  padding: 1rem 1.2rem;
+  border: 1px solid #e0e6ff;
+  border-radius: 10px;
+  background: #fafbff;
+}
 
+.panelTitulo {
+  margin: 0 0 0.4rem;
+  font-size: 1.05rem;
+  color: #3a4a8a;
+}
 
+.panelAyuda {
+  margin: 0 0 0.8rem;
+  font-size: 0.85rem;
+  color: #555;
+  line-height: 1.45;
+}
 
+.panelAcciones {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.8rem;
+}
 
+.btnComparar {
+  padding: 0.55rem 1.2rem;
+  background: #00838f;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
 
+.btnComparar:hover:not(:disabled) {
+  background: #006f79;
+}
 
+.btnComparar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
+.progresoComparacion {
+  font-size: 0.85rem;
+  color: #444;
+}
 
+.tablaComparacionWrapper {
+  max-height: 520px;
+  overflow: auto;
+  border: 1px solid #e0e6ff;
+  border-radius: 8px;
+  background: white;
+}
 
+.tablaComparacion {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
 
+.tablaComparacion th {
+  position: sticky;
+  top: 0;
+  background: #f0f4ff;
+  padding: 0.5rem 0.8rem;
+  text-align: left;
+  color: #3a4a8a;
+  border-bottom: 2px solid #d0daff;
+  white-space: nowrap;
+}
 
+.tablaComparacion td {
+  padding: 0.5rem 0.8rem;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: top;
+}
 
+.cmpNombre {
+  font-size: 0.78rem;
+  color: #777;
+}
 
+.cmpCelda {
+  line-height: 1.45;
+}
 
+.cmpDetalle {
+  font-size: 0.78rem;
+  color: #666;
+}
 
+.cmpGeneral {
+  margin-top: 0.3rem;
+  padding-top: 0.3rem;
+  border-top: 1px dashed #ddd;
+}
 
+.cmpAviso {
+  margin-top: 0.3rem;
+  font-size: 0.78rem;
+  color: #b26a00;
+}
 
+.cmpBaja {
+  color: #c62828;
+  font-weight: 600;
+}
 
+.cmpSube {
+  color: #00a650;
+  font-weight: 600;
+}
 
+.cmpAcciones {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 0.3rem;
+  font-size: 0.78rem;
+}
 
+.cmpLinkBox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+}
 
+.cmpSinLink {
+  font-size: 0.78rem;
+  color: #888;
+}
 
+.inputLinkCY {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
 
+.btnGuardarLink,
+.btnUsarSugerido {
+  align-self: flex-start;
+  padding: 0.35rem 0.8rem;
+  background: #4a6cf7;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.35rem;
+}
+
+.btnGuardarLink:disabled,
+.btnUsarSugerido:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnLinkTexto {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #4a6cf7;
+  cursor: pointer;
+  font-size: 0.78rem;
+  text-decoration: underline;
+}

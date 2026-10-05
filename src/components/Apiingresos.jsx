@@ -21,6 +21,12 @@ const ApiIngresos = () => {
   const [sincronizarPreciosTN, setSincronizarPreciosTN] = useState(true);
   const [progresoTN, setProgresoTN] = useState(null);
 
+  // Comparación de precios con otras tiendas (opcional, independiente de la sync de precios TN)
+  const [compararPrecios, setCompararPrecios] = useState(false);
+  const [comparando, setComparando] = useState(false);
+  const [progresoComparacion, setProgresoComparacion] = useState(null);
+  const [textosLink, setTextosLink] = useState({}); // { sku: "texto pegado" }
+
   // Se sincroniza algo de Tiendanube si al menos una de las dos opciones está tildada
   const activarTN = sincronizarStockTN || sincronizarPreciosTN;
 
@@ -63,6 +69,12 @@ const ApiIngresos = () => {
       const colPrecio = headers.find(
         (h) => h.trim().toLowerCase() === "precio"
       );
+      // Columna opcional con el link de la ficha de ComparaYa de cada producto
+      const colLinkCY = headers.find((h) =>
+        ["comparaya", "link comparaya", "link_comparaya", "url comparaya"].includes(
+          h.trim().toLowerCase()
+        )
+      );
 
       if (!colSKU || !colStock || !colPrecio) {
         alert(
@@ -94,6 +106,20 @@ const ApiIngresos = () => {
             cuotasTN: null,
             precioTNError: "",
             precioTNCalculando: true,
+            linkComparaYa: colLinkCY ? String(row[colLinkCY] || "").trim() : "",
+            slugComparaYa: "",
+            cmpEstado: "pendiente",
+            cmpMensaje: "",
+            cmpMejor: null,
+            cmpGeneral: null,
+            cmpVerificado: true,
+            cmpFicha: "",
+            sugBase: null,
+            sugPromo: null,
+            sugLista: null,
+            sugCuotas: null,
+            sugTipo: "",
+            sugError: "",
           };
         });
 
@@ -177,6 +203,335 @@ const ApiIngresos = () => {
         }))
       );
     }
+  };
+
+  const encabezadosJSON = () => ({
+    Authorization: API_TOKEN,
+    "Content-Type": "application/json",
+  });
+
+  const formatoARS = (n) =>
+    Number(n || 0).toLocaleString("es-AR", {
+      style: "currency",
+      currency: "ARS",
+      maximumFractionDigits: 0,
+    });
+
+  const actualizarFilaPorSku = (sku, cambios) => {
+    setFilas((prev) => prev.map((f) => (f.sku === sku ? { ...f, ...cambios } : f)));
+  };
+
+  // Recalcula la previsualización TN de UNA fila (después de cambiar su precio base)
+  const recalcularPrecioTNFila = async (sku, precioBase) => {
+    actualizarFilaPorSku(sku, { precioTNCalculando: true, precioTNError: "" });
+    try {
+      const res = await fetch(`${BACKEND_URL}/tiendanube/calcular-precios`, {
+        method: "POST",
+        headers: encabezadosJSON(),
+        body: JSON.stringify({ productos: [{ sku, precioBase }] }),
+      });
+      const data = await res.json();
+      const r = (data.resultados || [])[0];
+
+      setFilas((prev) =>
+        prev.map((f) => {
+          // Si mientras tanto se cambió otra vez el precio, no pisamos con una respuesta vieja
+          if (f.sku !== sku || f.precioBase !== precioBase) return f;
+          if (!r || r.error) {
+            return {
+              ...f,
+              precioTNCalculando: false,
+              precioTNError: (r && r.error) || "No se pudo calcular el precio TN",
+            };
+          }
+          return {
+            ...f,
+            precioTNCalculando: false,
+            precioListaTN: r.precioLista,
+            precioPromocionalTN: r.precioPromocional,
+            cuotasTN: r.cuotas,
+            precioTNError: "",
+          };
+        })
+      );
+    } catch (error) {
+      actualizarFilaPorSku(sku, {
+        precioTNCalculando: false,
+        precioTNError: "Error al calcular el precio TN",
+      });
+    }
+  };
+
+  // Confirma un precio base editado a mano (al salir del campo o con Enter)
+  const confirmarPrecioBase = (i, valor, input) => {
+    const fila = filas[i];
+    if (!fila) return;
+    const nuevo = Number(String(valor).replace(",", "."));
+
+    if (!Number.isFinite(nuevo) || nuevo <= 0) {
+      if (input) input.value = fila.precioBase;
+      return;
+    }
+    if (nuevo === fila.precioBase) return;
+
+    setFilas((prev) =>
+      prev.map((f, idx) =>
+        idx === i
+          ? {
+              ...f,
+              precioBase: nuevo,
+              estado: "pendiente",
+              mensaje: "",
+              tnEstado: "pendiente",
+              tnMensaje: "",
+            }
+          : f
+      )
+    );
+    recalcularPrecioTNFila(fila.sku, nuevo);
+  };
+
+  // Aplica el precio base sugerido (solo cuando el usuario toca el botón)
+  const aplicarPrecioSugerido = (sku) => {
+    setFilas((prev) =>
+      prev.map((f) =>
+        f.sku === sku && f.sugBase
+          ? {
+              ...f,
+              precioBase: f.sugBase,
+              precioPromocionalTN: f.sugPromo,
+              precioListaTN: f.sugLista,
+              cuotasTN: f.sugCuotas,
+              precioTNError: "",
+              precioTNCalculando: false,
+              estado: "pendiente",
+              mensaje: "",
+              tnEstado: "pendiente",
+              tnMensaje: "",
+            }
+          : f
+      )
+    );
+  };
+
+  const describirOferta = (oferta) => {
+    if (!oferta) return "";
+    const cuotas = oferta.cuotas
+      ? ` · ${oferta.cuotas} cuotas${oferta.sinInteres ? " sin interés" : ""}`
+      : "";
+    return `${oferta.tienda}${cuotas}`;
+  };
+
+  // Consulta ComparaYa (de a una ficha por vez) y calcula el precio base sugerido.
+  // Es solo una sugerencia: no modifica ningún precio por sí sola.
+  const consultarFilas = async (lista) => {
+    const objetivos = [];
+
+    for (let n = 0; n < lista.length; n++) {
+      const f = lista[n];
+      setProgresoComparacion({
+        hecho: n,
+        total: lista.length,
+        mensaje: `Consultando ${f.sku}...`,
+      });
+      actualizarFilaPorSku(f.sku, {
+        cmpEstado: "comparando",
+        cmpMensaje: "Consultando...",
+        sugBase: null,
+        sugError: "",
+      });
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/comparaya/comparar`, {
+          method: "POST",
+          headers: encabezadosJSON(),
+          body: JSON.stringify({ sku: f.sku, cuotasPropias: f.cuotasTN || 0 }),
+        });
+        const d = await res.json();
+
+        if (!res.ok || d.error) {
+          actualizarFilaPorSku(f.sku, {
+            cmpEstado: "error",
+            cmpMensaje: d.error || "No se pudo consultar ComparaYa",
+          });
+          continue;
+        }
+
+        actualizarFilaPorSku(f.sku, {
+          cmpEstado: "ok",
+          cmpMensaje: "",
+          cmpMejor: d.mejorComparable || null,
+          cmpGeneral: d.mejorGeneral || null,
+          cmpVerificado: d.verificado !== false,
+          cmpFicha: d.slug ? `https://comparaya.net/p/${d.slug}` : "",
+        });
+
+        const referencia = d.mejorComparable || d.mejorGeneral;
+        if (referencia && referencia.precio > 1 && f.precioPromocionalTN) {
+          objetivos.push({
+            sku: f.sku,
+            precioPromocionalObjetivo: referencia.precio - 1,
+            tipo: d.mejorComparable ? "comparable" : "general",
+          });
+        }
+      } catch (error) {
+        actualizarFilaPorSku(f.sku, {
+          cmpEstado: "error",
+          cmpMensaje: "Error de conexión",
+        });
+      }
+    }
+
+    // Precio base que lleva el promocional de TN a $1 por debajo de la competencia
+    if (objetivos.length > 0) {
+      setProgresoComparacion({
+        hecho: lista.length,
+        total: lista.length,
+        mensaje: "Calculando precios sugeridos...",
+      });
+      try {
+        const res = await fetch(
+          `${BACKEND_URL}/tiendanube/calcular-precio-base-objetivo`,
+          {
+            method: "POST",
+            headers: encabezadosJSON(),
+            body: JSON.stringify({
+              productos: objetivos.map((o) => ({
+                sku: o.sku,
+                precioPromocionalObjetivo: o.precioPromocionalObjetivo,
+              })),
+            }),
+          }
+        );
+        const data = await res.json();
+        const porSku = new Map((data.resultados || []).map((r) => [r.sku, r]));
+
+        objetivos.forEach((o) => {
+          const r = porSku.get(o.sku);
+          if (!r || r.error) {
+            actualizarFilaPorSku(o.sku, {
+              sugBase: null,
+              sugError: (r && r.error) || "No se pudo calcular el precio sugerido",
+            });
+            return;
+          }
+          actualizarFilaPorSku(o.sku, {
+            sugBase: r.precioBase,
+            sugPromo: r.precioPromocional,
+            sugLista: r.precioLista,
+            sugCuotas: r.cuotas,
+            sugTipo: o.tipo,
+            sugError: "",
+          });
+        });
+      } catch (error) {
+        console.error("Error calculando precios sugeridos:", error);
+      }
+    }
+  };
+
+  // Compara todos los productos que tienen link de ComparaYa guardado
+  const handleCompararPrecios = async () => {
+    if (filas.length === 0 || comparando) return;
+    setComparando(true);
+    setProgresoComparacion({ hecho: 0, total: 0, mensaje: "Buscando vínculos guardados..." });
+
+    try {
+      // 1) Si el Excel trae la columna «ComparaYa», guardamos esos links
+      const delExcel = filas
+        .filter((f) => f.linkComparaYa)
+        .map((f) => ({ sku: f.sku, link: f.linkComparaYa }));
+
+      if (delExcel.length > 0) {
+        await fetch(`${BACKEND_URL}/comparaya/links`, {
+          method: "POST",
+          headers: encabezadosJSON(),
+          body: JSON.stringify({ links: delExcel }),
+        });
+      }
+
+      // 2) Vínculos guardados para los SKUs cargados
+      const resLinks = await fetch(`${BACKEND_URL}/comparaya/links/consultar`, {
+        method: "POST",
+        headers: encabezadosJSON(),
+        body: JSON.stringify({ skus: filas.map((f) => f.sku) }),
+      });
+      const dataLinks = await resLinks.json();
+      const links = dataLinks.links || {};
+
+      setFilas((prev) =>
+        prev.map((f) => ({
+          ...f,
+          slugComparaYa: links[f.sku] || "",
+          cmpEstado: links[f.sku] ? "pendiente" : "sin_link",
+          cmpMensaje: "",
+          cmpMejor: null,
+          cmpGeneral: null,
+          sugBase: null,
+          sugError: "",
+        }))
+      );
+
+      const conLink = filas.filter((f) => links[f.sku]);
+      await consultarFilas(conLink);
+
+      setProgresoComparacion({
+        hecho: conLink.length,
+        total: conLink.length,
+        mensaje:
+          conLink.length === 0
+            ? "Ningún producto tiene link de ComparaYa todavía. Pegalo en la tabla de abajo."
+            : `Listo: ${conLink.length} productos comparados, ${
+                filas.length - conLink.length
+              } sin link.`,
+      });
+    } catch (error) {
+      console.error("Error comparando precios:", error);
+      setProgresoComparacion({
+        hecho: 0,
+        total: 0,
+        mensaje: "Error al comparar precios. Probá de nuevo.",
+      });
+    }
+
+    setComparando(false);
+  };
+
+  // Guarda el link pegado para un producto y lo compara enseguida
+  const handleGuardarLinkFila = async (fila) => {
+    const texto = (textosLink[fila.sku] || "").trim();
+    if (!texto || comparando) return;
+
+    setComparando(true);
+    try {
+      const res = await fetch(`${BACKEND_URL}/comparaya/links`, {
+        method: "POST",
+        headers: encabezadosJSON(),
+        body: JSON.stringify({ links: [{ sku: fila.sku, link: texto }] }),
+      });
+      const data = await res.json();
+      const slug = data.guardados && data.guardados[fila.sku];
+
+      if (!res.ok || !slug) {
+        actualizarFilaPorSku(fila.sku, {
+          cmpEstado: "sin_link",
+          cmpMensaje: "Link inválido. Tiene que ser de la forma https://comparaya.net/p/...",
+        });
+        setComparando(false);
+        return;
+      }
+
+      setTextosLink((prev) => ({ ...prev, [fila.sku]: "" }));
+      actualizarFilaPorSku(fila.sku, { slugComparaYa: slug, cmpMensaje: "" });
+      await consultarFilas([fila]);
+      setProgresoComparacion(null);
+    } catch (error) {
+      actualizarFilaPorSku(fila.sku, {
+        cmpEstado: "sin_link",
+        cmpMensaje: "No se pudo guardar el link",
+      });
+    }
+    setComparando(false);
   };
 
   const esperar = (milisegundos) =>
@@ -528,6 +883,10 @@ const handleDescargarResultados = () => {
     "Stock original": fila.stock ?? "",
     "Stock publicado": fila.stockAPublicar ?? "",
     "Precio base": fila.precioBase ?? "",
+    "Competencia (mínimo comparable)": fila.cmpMejor
+      ? `${fila.cmpMejor.precio} - ${describirOferta(fila.cmpMejor)}`
+      : "",
+    "Precio base sugerido": fila.sugBase ?? "",
 
     "Estado Mercado Libre":
       fila.mlEstado === "ok"
@@ -610,6 +969,7 @@ const handleDescargarResultados = () => {
     setFilas([]);
     setResumen(null);
     setArchivoNombre("");
+    setProgresoComparacion(null);
     if (inputRef.current) inputRef.current.value = "";
   };
 
@@ -703,6 +1063,15 @@ const handleDescargarResultados = () => {
           />
           Sincronizar precios TN
         </label>
+
+        <label className={styles.switchLabel}>
+          <input
+            type="checkbox"
+            checked={compararPrecios}
+            onChange={(e) => setCompararPrecios(e.target.checked)}
+          />
+          Comparar precios con otras tiendas
+        </label>
       </div>
 
       {/* Zona de carga */}
@@ -745,7 +1114,7 @@ const handleDescargarResultados = () => {
           <button
             onClick={handleSincronizar}
             className={styles.btnSincronizar}
-            disabled={procesando}
+            disabled={procesando || comparando}
           >
             {procesando ? "⏳ Sincronizando..." : "🚀 Sincronizar Stock"}
           </button>
@@ -809,6 +1178,236 @@ const handleDescargarResultados = () => {
               } (${progresoTN.porcentaje || 0}%)`}
         </div>
       )}
+      {/* Comparación de precios con otras tiendas (ComparaYa) */}
+      {compararPrecios && filas.length > 0 && (
+        <div className={styles.panelComparacion}>
+          <h3 className={styles.panelTitulo}>🔎 Comparación de precios (ComparaYa)</h3>
+          <p className={styles.panelAyuda}>
+            Solo sugiere: ningún precio cambia hasta que toques «Usar este
+            precio». Pegá una vez el link de la ficha de ComparaYa de cada
+            producto (https://comparaya.net/p/...), o agregá al Excel una
+            columna «ComparaYa» con esos links. Quedan guardados para la
+            próxima vez.
+          </p>
+          <div className={styles.panelAcciones}>
+            <button
+              type="button"
+              onClick={handleCompararPrecios}
+              disabled={comparando || procesando}
+              className={styles.btnComparar}
+            >
+              {comparando ? "⏳ Comparando..." : "🔎 Comparar precios"}
+            </button>
+            {progresoComparacion && (
+              <span className={styles.progresoComparacion}>
+                {progresoComparacion.total > 0 && comparando
+                  ? `${progresoComparacion.hecho} / ${progresoComparacion.total} · `
+                  : ""}
+                {progresoComparacion.mensaje}
+              </span>
+            )}
+          </div>
+
+          <div className={styles.tablaComparacionWrapper}>
+            <table className={styles.tablaComparacion}>
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th>Mi precio (TN)</th>
+                  <th>Competencia</th>
+                  <th>Precio sugerido</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filas.map((fila) => (
+                  <tr key={`cmp-${fila.sku}`}>
+                    <td>
+                      <strong>{fila.sku}</strong>
+                      <br />
+                      <span className={styles.cmpNombre}>{fila.nombre}</span>
+                    </td>
+
+                    <td className={styles.cmpCelda}>
+                      Base: {formatoARS(fila.precioBase)}
+                      <br />
+                      {fila.precioPromocionalTN
+                        ? `Promo: ${formatoARS(fila.precioPromocionalTN)}`
+                        : "Promo: —"}
+                      <br />
+                      {fila.precioListaTN
+                        ? `Lista: ${formatoARS(fila.precioListaTN)}`
+                        : ""}
+                    </td>
+
+                    <td className={styles.cmpCelda}>
+                      {fila.cmpEstado === "pendiente" && "—"}
+                      {fila.cmpEstado === "comparando" && "⏳ Consultando..."}
+                      {fila.cmpEstado === "error" && (
+                        <span className={styles.mensajeError}>
+                          ❌ {fila.cmpMensaje}
+                        </span>
+                      )}
+                      {(fila.cmpEstado === "sin_link" ||
+                        fila.cmpEstado === "error") && (
+                        <div className={styles.cmpLinkBox}>
+                          {fila.cmpEstado === "sin_link" && (
+                            <span className={styles.cmpSinLink}>
+                              {fila.cmpMensaje || "Sin link de ComparaYa"}
+                            </span>
+                          )}
+                          <input
+                            type="text"
+                            placeholder="Pegá el link de ComparaYa"
+                            value={textosLink[fila.sku] || ""}
+                            disabled={comparando}
+                            className={styles.inputLinkCY}
+                            onChange={(e) =>
+                              setTextosLink((prev) => ({
+                                ...prev,
+                                [fila.sku]: e.target.value,
+                              }))
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleGuardarLinkFila(fila);
+                            }}
+                          />
+                          <button
+                            type="button"
+                            className={styles.btnGuardarLink}
+                            disabled={comparando || !(textosLink[fila.sku] || "").trim()}
+                            onClick={() => handleGuardarLinkFila(fila)}
+                          >
+                            Guardar y comparar
+                          </button>
+                        </div>
+                      )}
+                      {fila.cmpEstado === "ok" && (
+                        <>
+                          {fila.cmpMejor ? (
+                            <div>
+                              Con tus mismas cuotas:{" "}
+                              <strong>{formatoARS(fila.cmpMejor.precio)}</strong>
+                              <br />
+                              <span className={styles.cmpDetalle}>
+                                {describirOferta(fila.cmpMejor)}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className={styles.cmpDetalle}>
+                              Nadie ofrece tus mismas cuotas sin interés.
+                            </div>
+                          )}
+                          {fila.cmpGeneral &&
+                            (!fila.cmpMejor ||
+                              fila.cmpGeneral.precio < fila.cmpMejor.precio) && (
+                              <div className={styles.cmpGeneral}>
+                                Más barato (cualquier condición):{" "}
+                                <strong>{formatoARS(fila.cmpGeneral.precio)}</strong>
+                                <br />
+                                <span className={styles.cmpDetalle}>
+                                  {describirOferta(fila.cmpGeneral)}
+                                </span>
+                              </div>
+                            )}
+                          {!fila.cmpVerificado && (
+                            <div className={styles.cmpAviso}>
+                              ⚠ Ninguna oferta nombra el código {fila.sku}:
+                              revisá que sea el mismo modelo.
+                            </div>
+                          )}
+                          <div className={styles.cmpAcciones}>
+                            {fila.cmpFicha && (
+                              <a
+                                href={fila.cmpFicha}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                Ver ficha
+                              </a>
+                            )}
+                            <button
+                              type="button"
+                              className={styles.btnLinkTexto}
+                              disabled={comparando}
+                              onClick={() =>
+                                actualizarFilaPorSku(fila.sku, {
+                                  cmpEstado: "sin_link",
+                                  cmpMensaje: "Pegá el nuevo link",
+                                })
+                              }
+                            >
+                              Cambiar link
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </td>
+
+                    <td className={styles.cmpCelda}>
+                      {fila.cmpEstado === "ok" && fila.sugBase ? (
+                        <>
+                          <div>
+                            Base: <strong>{formatoARS(fila.sugBase)}</strong>{" "}
+                            {fila.precioBase > 0 && (
+                              <span
+                                className={
+                                  fila.sugBase < fila.precioBase
+                                    ? styles.cmpBaja
+                                    : styles.cmpSube
+                                }
+                              >
+                                (
+                                {(
+                                  ((fila.sugBase - fila.precioBase) /
+                                    fila.precioBase) *
+                                  100
+                                ).toFixed(1)}
+                                %)
+                              </span>
+                            )}
+                          </div>
+                          <div className={styles.cmpDetalle}>
+                            Promo {formatoARS(fila.sugPromo)} · Lista{" "}
+                            {formatoARS(fila.sugLista)}
+                            {fila.sugCuotas ? ` · ${fila.sugCuotas} cuotas` : ""}
+                          </div>
+                          <div className={styles.cmpDetalle}>
+                            {fila.sugBase === fila.precioBase
+                              ? "✅ Ya aplicado"
+                              : fila.sugBase < fila.precioBase
+                              ? "Para quedar $1 abajo de la competencia"
+                              : "Estás más barato: podrías subir y seguir ganando"}
+                            {fila.sugTipo === "general"
+                              ? " (contra el más barato, sin cuotas equivalentes)"
+                              : ""}
+                          </div>
+                          <button
+                            type="button"
+                            className={styles.btnUsarSugerido}
+                            disabled={
+                              procesando ||
+                              comparando ||
+                              fila.sugBase === fila.precioBase
+                            }
+                            onClick={() => aplicarPrecioSugerido(fila.sku)}
+                          >
+                            Usar este precio
+                          </button>
+                        </>
+                      ) : fila.sugError ? (
+                        <span className={styles.mensajeError}>{fila.sugError}</span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Tabla de productos */}
       {filas.length > 0 && (
         <div className={styles.tablaWrapper}>
@@ -865,11 +1464,21 @@ const handleDescargarResultados = () => {
                     />
                   </td>
                   <td className={styles.tdPrecio}>
-                    {Number(fila.precioBase || 0).toLocaleString("es-AR", {
-                      style: "currency",
-                      currency: "ARS",
-                      maximumFractionDigits: 2,
-                    })}
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      key={`${fila.sku}-${fila.precioBase}`}
+                      defaultValue={fila.precioBase}
+                      disabled={procesando || comparando}
+                      className={styles.inputPrecioBase}
+                      onBlur={(e) =>
+                        confirmarPrecioBase(i, e.target.value, e.target)
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") e.target.blur();
+                      }}
+                    />
                   </td>
                   <td className={styles.tdPrecioTN}>
                     {fila.precioTNCalculando ? (
