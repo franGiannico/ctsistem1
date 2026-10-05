@@ -131,6 +131,68 @@ router.post('/calcular-precios', (req, res) => {
   res.json({ resultados });
 });
 
+// 🎯 Cálculo inverso: dado el precio promocional al que queremos llegar en TN,
+// devuelve el precio base más alto cuyo promocional no lo supere. Se usa para
+// sugerir un precio base que le gane a la competencia (solo sugiere, no publica).
+const calcularBasePorPromocional = (objetivo) => {
+  const meta = Math.floor(Number(objetivo));
+  if (!Number.isFinite(meta) || meta <= 0) {
+    throw new Error('"precioPromocionalObjetivo" debe ser un número mayor que 0.');
+  }
+
+  let base = Math.max(1, Math.floor(meta * (1 - calcularPreciosTiendanube(meta).costoTotal)));
+  let precios = calcularPreciosTiendanube(base);
+
+  // Bajar hasta que el promocional no supere el objetivo.
+  for (let i = 0; i < 300 && precios.precioPromocional > meta && base > 1; i++) {
+    const exceso = precios.precioPromocional - meta;
+    base = Math.max(1, base - Math.max(1, Math.ceil(exceso * (1 - precios.costoTotal))));
+    precios = calcularPreciosTiendanube(base);
+  }
+
+  if (precios.precioPromocional > meta) {
+    throw new Error('No se pudo encontrar un precio base para ese objetivo.');
+  }
+
+  // Subir mientras siga sin superarlo (para no regalar margen).
+  for (let i = 0; i < 300; i++) {
+    const siguiente = calcularPreciosTiendanube(base + 1);
+    if (siguiente.precioPromocional > meta) break;
+    base += 1;
+    precios = siguiente;
+  }
+
+  return { precioBase: base, ...precios };
+};
+
+router.post('/calcular-precio-base-objetivo', (req, res) => {
+  const { productos } = req.body;
+
+  if (!Array.isArray(productos) || productos.length === 0) {
+    return res.status(400).json({
+      error: 'Se requiere un array "productos" con al menos un elemento.',
+    });
+  }
+
+  const resultados = productos.map((producto) => {
+    const sku = String(producto?.sku || '').trim();
+    try {
+      const r = calcularBasePorPromocional(producto?.precioPromocionalObjetivo);
+      return {
+        sku,
+        precioBase: r.precioBase,
+        precioPromocional: r.precioPromocional,
+        precioLista: r.precioLista,
+        cuotas: r.cuotas,
+      };
+    } catch (error) {
+      return { sku, error: error.message || 'No se pudo calcular el precio base.' };
+    }
+  });
+
+  res.json({ resultados });
+});
+
 const CACHE_CATALOGO_TN_MS = 5 * 60 * 1000;
 
 let cacheCatalogoTN = {
