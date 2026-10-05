@@ -1028,6 +1028,60 @@ router.get('/debug/comparaya', async (req, res) => {
   }
 });
 
+// 🕵️ DIAGNÓSTICO TEMPORAL (ComparaYa, vía sitemap): el sitemap.xml está declarado
+// en su robots.txt. Miramos si lista las páginas de producto (cuyas URLs incluyen
+// el código del modelo) y si la ficha de un producto trae los precios en el HTML.
+// Son 2 o 3 consultas en total, sin tocar /api/. Se borra al terminar.
+// Ejemplo: /meli/debug/comparaya-sitemap?q=ap175
+router.get('/debug/comparaya-sitemap', async (req, res) => {
+  const q = String(req.query.q || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 40);
+  if (!q) return res.status(400).json({ error: 'Falta el parámetro "q".' });
+
+  const cabeceras = {
+    'User-Agent': 'ConiferalPriceCheck/1.0 (+contacto: fjgiannico@gmail.com)',
+    'Accept-Language': 'es-AR,es;q=0.9',
+  };
+  const pedir = (url) =>
+    axios.get(url, { headers: cabeceras, timeout: 20000, responseType: 'text', transformResponse: [(d) => d] });
+
+  try {
+    const sm = await pedir('https://comparaya.net/sitemap.xml');
+    const xml = String(sm.data || '');
+    const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+    const coincidencias = locs.filter((u) => u.toLowerCase().includes(q));
+
+    const resultado = {
+      sitemapStatus: sm.status,
+      largoSitemap: xml.length,
+      cantidadDeUrls: locs.length,
+      primerasUrls: locs.slice(0, 5),
+      urlsConProductoP: locs.filter((u) => u.includes('/p/')).length,
+      coincidenciasConLaBusqueda: coincidencias.slice(0, 5),
+    };
+
+    if (coincidencias.length > 0) {
+      const ficha = await pedir(coincidencias[0]);
+      const html = String(ficha.data || '');
+      const ventana = (regex, ancho) => {
+        const m = regex.exec(html);
+        return m ? html.slice(Math.max(0, m.index - ancho), m.index + ancho) : null;
+      };
+      resultado.ficha = {
+        url: coincidencias[0],
+        status: ficha.status,
+        largoHtml: html.length,
+        contienePrecio44999: /44[.]?999/.test(html),
+        contieneSinInteres: /sin inter/i.test(html),
+        alrededorDelPrecio: ventana(/44[.]?999/, 500),
+      };
+    }
+
+    return res.json(resultado);
+  } catch (err) {
+    return res.status(500).json({ error: err.message, status: err.response?.status });
+  }
+});
+
 // 🕵️ DIAGNÓSTICO TEMPORAL: probar la búsqueda pública de Mercado Libre para
 // comparar precios de la competencia por nombre de producto. Devuelve el JSON
 // crudo (sin procesar) para poder confirmar con datos reales qué campos trae
