@@ -1000,17 +1000,28 @@ router.get('/debug/comparaya', async (req, res) => {
     });
 
     const html = String(respuesta.data || '');
-    const textoPlano = html.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-    const idx = html.indexOf('$');
+
+    // Ventanas de texto alrededor de cada aparición de un término (máx. 3)
+    const ventanas = (regex, ancho) => {
+      const salida = [];
+      const g = new RegExp(regex.source, 'gi');
+      let m;
+      while ((m = g.exec(html)) !== null && salida.length < 3) {
+        salida.push(html.slice(Math.max(0, m.index - ancho), m.index + ancho));
+      }
+      return salida;
+    };
 
     return res.json({
       status: respuesta.status,
       largoHtml: html.length,
-      contieneNombreProducto: /ap175/i.test(html),
-      contieneSignoPesos: idx !== -1,
-      contieneCuotas: /cuotas/i.test(html),
-      muestraTextoVisible: textoPlano.slice(0, 600),
-      muestraAlrededorDelPrimerPrecio: idx !== -1 ? html.slice(Math.max(0, idx - 300), idx + 300) : null,
+      contieneAP175: /ap175/i.test(html),
+      contienePava: /pava/i.test(html),
+      contienePrecio44999: /44[.]?999/.test(html),
+      contieneCuotasSinInteres: /sin inter/i.test(html),
+      alrededorDeAP175: ventanas(/ap175/, 250),
+      alrededorDePava: ventanas(/pava/, 400),
+      alrededorDelPrecio: ventanas(/44[.]?999/, 300),
     });
   } catch (err) {
     return res.status(500).json({ error: err.message, status: err.response?.status });
