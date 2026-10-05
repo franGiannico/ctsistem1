@@ -976,6 +976,47 @@ router.get('/debug/orden/:id', async (req, res) => {
   }
 });
 
+// 🕵️ DIAGNÓSTICO TEMPORAL (ComparaYa): hace UNA sola consulta a la página pública
+// de búsqueda de comparaya.net (su robots.txt permite todo salvo /dashboard,
+// /login y /api/, y acá no tocamos /api/) para ver qué devuelve un pedido
+// simple desde el servidor: si los productos/precios vienen en el HTML o si la
+// página los carga después con JavaScript. No guarda nada. Se borra al terminar.
+// Ejemplo: /meli/debug/comparaya?q=ap175
+router.get('/debug/comparaya', async (req, res) => {
+  const q = String(req.query.q || '').slice(0, 80);
+  if (!q) return res.status(400).json({ error: 'Falta el parámetro "q".' });
+
+  try {
+    const respuesta = await axios.get('https://comparaya.net/', {
+      params: { search: q },
+      headers: {
+        'User-Agent': 'ConiferalPriceCheck/1.0 (+contacto: fjgiannico@gmail.com)',
+        'Accept': 'text/html',
+        'Accept-Language': 'es-AR,es;q=0.9',
+      },
+      timeout: 15000,
+      responseType: 'text',
+      transformResponse: [(d) => d],
+    });
+
+    const html = String(respuesta.data || '');
+    const textoPlano = html.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    const idx = html.indexOf('$');
+
+    return res.json({
+      status: respuesta.status,
+      largoHtml: html.length,
+      contieneNombreProducto: /ap175/i.test(html),
+      contieneSignoPesos: idx !== -1,
+      contieneCuotas: /cuotas/i.test(html),
+      muestraTextoVisible: textoPlano.slice(0, 600),
+      muestraAlrededorDelPrimerPrecio: idx !== -1 ? html.slice(Math.max(0, idx - 300), idx + 300) : null,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message, status: err.response?.status });
+  }
+});
+
 // 🕵️ DIAGNÓSTICO TEMPORAL: probar la búsqueda pública de Mercado Libre para
 // comparar precios de la competencia por nombre de producto. Devuelve el JSON
 // crudo (sin procesar) para poder confirmar con datos reales qué campos trae
