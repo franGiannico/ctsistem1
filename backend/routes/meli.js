@@ -1060,15 +1060,61 @@ router.get('/debug/comparaya-ficha', async (req, res) => {
 
     const ld = [...html.matchAll(/<script[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)].map((m) => m[1].slice(0, 1500));
 
+    // Versión en texto plano (sin scripts, estilos ni etiquetas) para ver la
+    // estructura de ofertas: tienda, precio, cuotas.
+    const texto = html
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' | ')
+      .replace(/(\s*\|\s*)+/g, ' | ')
+      .replace(/\s+/g, ' ');
+    const i = texto.search(/44[.]?999/);
+    const desde = Math.max(0, i - 1500);
+
     return res.json({
       status: r.status,
       largoHtml: html.length,
-      contieneNuevasHogar: /nuevas hogar/i.test(html),
-      contienePrecio44999: /44[.]?999/.test(html),
-      contieneSinInteres: /sin inter/i.test(html),
-      jsonLd: ld,
-      alrededorDeNuevasHogar: ventanas(/nuevas hogar/, 350),
-      alrededorDelPrecio: ventanas(/44[.]?999/, 350),
+      jsonLdProducto: ld.filter((x) => /"Product"/.test(x)),
+      textoOfertas: i >= 0 ? texto.slice(desde, desde + 5000) : texto.slice(0, 3000),
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message, status: err.response?.status });
+  }
+});
+
+// 🕵️ DIAGNÓSTICO TEMPORAL (ComparaYa, listado): su propio sitio declara en el
+// marcado schema.org una página de búsqueda pública /products?search=. Una sola
+// consulta para ver si el servidor entrega los links /p/<slug> en el HTML.
+// Ejemplo: /meli/debug/comparaya-productos?q=ap175
+router.get('/debug/comparaya-productos', async (req, res) => {
+  const q = String(req.query.q || '').toLowerCase().replace(/[^a-z0-9 -]/g, '').slice(0, 40);
+  if (!q) return res.status(400).json({ error: 'Falta el parámetro "q".' });
+
+  try {
+    const r = await axios.get('https://comparaya.net/products', {
+      params: { search: q },
+      headers: {
+        'User-Agent': 'ConiferalPriceCheck/1.0 (+contacto: fjgiannico@gmail.com)',
+        'Accept-Language': 'es-AR,es;q=0.9',
+      },
+      timeout: 20000,
+      responseType: 'text',
+      transformResponse: [(d) => d],
+    });
+    const html = String(r.data || '');
+    const links = [...new Set([...html.matchAll(/href="(\/p\/[^"#?]+)"/g)].map((m) => m[1]))];
+    const texto = html
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' | ')
+      .replace(/(\s*\|\s*)+/g, ' | ')
+      .replace(/\s+/g, ' ');
+    return res.json({
+      status: r.status,
+      largoHtml: html.length,
+      cantidadLinksProducto: links.length,
+      links: links.slice(0, 30),
+      textoInicio: texto.slice(0, 800),
     });
   } catch (err) {
     return res.status(500).json({ error: err.message, status: err.response?.status });
