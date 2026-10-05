@@ -1028,6 +1028,53 @@ router.get('/debug/comparaya', async (req, res) => {
   }
 });
 
+// 🕵️ DIAGNÓSTICO TEMPORAL (ComparaYa, ficha de producto): una sola consulta a
+// la ficha pública /p/<slug> (permitida por su robots.txt) para ver si los
+// precios por tienda y las cuotas vienen en el HTML que recibe el servidor.
+// Ejemplo: /meli/debug/comparaya-ficha?slug=pava-electrica-liliana-1-7-lts-ap175-negra
+router.get('/debug/comparaya-ficha', async (req, res) => {
+  const slug = String(req.query.slug || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 120);
+  if (!slug) return res.status(400).json({ error: 'Falta el parámetro "slug".' });
+
+  try {
+    const r = await axios.get(`https://comparaya.net/p/${slug}`, {
+      headers: {
+        'User-Agent': 'ConiferalPriceCheck/1.0 (+contacto: fjgiannico@gmail.com)',
+        'Accept-Language': 'es-AR,es;q=0.9',
+      },
+      timeout: 20000,
+      responseType: 'text',
+      transformResponse: [(d) => d],
+    });
+    const html = String(r.data || '');
+
+    const ventanas = (regex, ancho) => {
+      const salida = [];
+      const g = new RegExp(regex.source, 'gi');
+      let m;
+      while ((m = g.exec(html)) !== null && salida.length < 2) {
+        salida.push(html.slice(Math.max(0, m.index - ancho), m.index + ancho));
+      }
+      return salida;
+    };
+
+    const ld = [...html.matchAll(/<script[^>]*application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)].map((m) => m[1].slice(0, 1500));
+
+    return res.json({
+      status: r.status,
+      largoHtml: html.length,
+      contieneNuevasHogar: /nuevas hogar/i.test(html),
+      contienePrecio44999: /44[.]?999/.test(html),
+      contieneSinInteres: /sin inter/i.test(html),
+      jsonLd: ld,
+      alrededorDeNuevasHogar: ventanas(/nuevas hogar/, 350),
+      alrededorDelPrecio: ventanas(/44[.]?999/, 350),
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message, status: err.response?.status });
+  }
+});
+
 // 🕵️ DIAGNÓSTICO TEMPORAL (ComparaYa, vía sitemap): el sitemap.xml está declarado
 // en su robots.txt. Miramos si lista las páginas de producto (cuyas URLs incluyen
 // el código del modelo) y si la ficha de un producto trae los precios en el HTML.
