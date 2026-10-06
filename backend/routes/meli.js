@@ -1390,21 +1390,50 @@ router.post('/notificaciones', async (req, res) => {
     // Solo nos interesa el topic de mensajería post-venta
     if (topic !== 'messages') return;
 
-    const tokenDoc = await MeliToken.findOne();
-    if (!tokenDoc?.access_token) {
-      console.error('❌ [ML MENSAJE] No hay token de ML guardado, no se puede procesar el mensaje.');
+    console.log(`📨 [ML MENSAJE] Webhook recibido: topic=${topic} resource=${resource}`);
+
+    if (!resource) {
+      console.error('❌ [ML MENSAJE] La notificación vino sin "resource".');
       return;
     }
 
-    const { data } = await axios.get(`https://api.mercadolibre.com${resource}`, {
-      headers: {
-        Authorization: `Bearer ${tokenDoc.access_token}`,
-        'X-Pack-Format': 'true',
-      },
-    });
+    // Token vigente (se renueva solo si venció). Antes se usaba el token guardado
+    // tal cual: si nadie había usado la app en las últimas horas ya estaba vencido
+    // y el mensaje se perdía sin avisar.
+    let tokenInfo;
+    try {
+      tokenInfo = await tokenMeliVigente();
+    } catch (e) {
+      console.error('❌ [ML MENSAJE] No hay token de ML válido para procesar el mensaje:', e.message);
+      return;
+    }
 
-    // 🔍 Log del payload completo: útil para confirmar el formato real la primera vez
-    // que llegue un mensaje (el formato puede variar según el tipo de resource).
+    // Para mensajes sueltos ML pide el parámetro tag=post_sale
+    const url =
+      `https://api.mercadolibre.com${resource}` +
+      (resource.startsWith('/messages/') && !resource.includes('?') ? '?tag=post_sale' : '');
+
+    const pedirMensaje = (accessToken) =>
+      axios.get(url, {
+        headers: { Authorization: `Bearer ${accessToken}`, 'X-Pack-Format': 'true' },
+      });
+
+    let data;
+    try {
+      ({ data } = await pedirMensaje(tokenInfo.access_token));
+    } catch (e) {
+      // Si igual vino un 401, renovamos el token y reintentamos una vez
+      if (e.response?.status === 401) {
+        console.log('🔄 [ML MENSAJE] 401 al leer el mensaje, renovando token y reintentando...');
+        const tokenDoc = await MeliToken.findOne();
+        const nuevoToken = await refreshMeliToken(tokenDoc);
+        ({ data } = await pedirMensaje(nuevoToken));
+      } else {
+        throw e;
+      }
+    }
+
+    // 🔍 Log del payload completo: útil para confirmar el formato real
     console.log('📩 [ML MENSAJE] Notificación de mensajes recibida:', JSON.stringify(data));
 
     // El resource puede devolver un solo mensaje o un listado, según el caso
@@ -1414,15 +1443,43 @@ router.post('/notificaciones', async (req, res) => {
       ? data.messages
       : [data];
 
+    // El texto puede venir como string o como objeto ({ plain: "..." })
+    const leerTexto = (msg) => {
+      const t = msg?.text ?? msg?.message;
+      if (typeof t === 'string') return t;
+      if (t && typeof t === 'object') return String(t.plain ?? t.text ?? t.body ?? '');
+      return '';
+    };
+
+    const miUserId = String(tokenInfo.user_id || '');
+
     for (const msg of mensajes) {
-      const texto = String(msg?.text || msg?.message || '');
-      if (!texto.toLowerCase().includes('factura')) continue;
+      const texto = leerTexto(msg);
+
+      // Ignoramos lo que escribimos nosotros (ej. "te envío la factura")
+      const emisor = String(msg?.from?.user_id ?? msg?.from?.id ?? '');
+      if (emisor && miUserId && emisor === miUserId) {
+        console.log('ℹ️ [ML MENSAJE] Mensaje propio, se ignora.');
+        continue;
+      }
+
+      // "factur" cubre factura / facturar / facturación; también CUIT y comprobante
+      if (!/factur|fatura|cuit|comprobante/i.test(texto)) {
+        console.log(
+          `ℹ️ [ML MENSAJE] Mensaje sin pedido de factura, se ignora: "${texto.slice(0, 80)}"`
+        );
+        continue;
+      }
 
       // Intentamos varias formas conocidas de encontrar el número de venta/orden.
-      // Si ninguna funciona, revisar el log de arriba para ajustar esta extracción.
+      const recursos = Array.isArray(msg?.message_resources) ? msg.message_resources : [];
+      const recursoVenta =
+        recursos.find((r) => r?.name === 'orders') || recursos.find((r) => r?.name === 'packs');
+
       const numeroVenta =
         msg?.order_id ||
         msg?.related_orders?.[0]?.id ||
+        recursoVenta?.id ||
         msg?.resource_id ||
         (resource.match(/packs\/(\d+)/) || [])[1] ||
         'desconocido';
@@ -1450,6 +1507,7 @@ router.post('/notificaciones', async (req, res) => {
   } catch (error) {
     console.error(
       '❌ [ML MENSAJE] Error procesando notificación de mensajes:',
+      error.response?.status,
       error.response?.data || error.message
     );
   }
