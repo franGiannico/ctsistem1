@@ -66,6 +66,8 @@ router.patch("/actualizar-venta/:id", async (req, res) => {
     if (typeof nota !== "undefined") {
       // Si la nota está vacía o es null, establecerla como cadena vacía o null
       updateFields.nota = nota === "" || nota === null ? "" : nota;
+      // Nota escrita a mano: la sincronización con las plataformas no la pisa.
+      updateFields.notaEditada = true;
     }
 
     const ventaActualizada = await Venta.findByIdAndUpdate(

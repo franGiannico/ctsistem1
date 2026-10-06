@@ -305,6 +305,14 @@ function Apiventas() {
     }
   };
 
+  // Si una acción sobre una venta falla (ej. la venta ya no existe porque cambió
+  // el listado), recargamos para no seguir trabajando sobre datos viejos y avisamos
+  // en vez de fallar en silencio.
+  const avisarErrorGuardado = (mensaje) => {
+    cargarVentasDesdeServidor();
+    alert(`${mensaje} Se recargó el listado: probá de nuevo.`);
+  };
+
   // Marcar completada o entregada
   const marcarCompletada = async (id, estadoActual) => {
     try {
@@ -320,6 +328,7 @@ function Apiventas() {
       );
     } catch (error) {
       console.error("Error al actualizar venta:", error);
+      avisarErrorGuardado("No se pudo marcar la venta como preparada.");
     }
   };
 
@@ -337,6 +346,7 @@ function Apiventas() {
       );
     } catch (error) {
       console.error("Error al actualizar entrega:", error);
+      avisarErrorGuardado("No se pudo marcar la venta como despachada.");
     }
   };
 
@@ -393,6 +403,7 @@ function Apiventas() {
       });
     } catch (error) {
       console.error("Error al guardar la nota:", error);
+      avisarErrorGuardado("No se pudo guardar la nota.");
     }
   };
 

@@ -468,19 +468,10 @@ async function procesarSincronizacion() {
     // Log de tags removido por seguridad
 
 
-    // Obtener estados existentes de ventas ML antes de sincronizar
-    const ventasExistentes = await Venta.find({ esML: true });
-    const estadosExistentes = {};
-    ventasExistentes.forEach(venta => {
-      estadosExistentes[venta.numeroVenta] = {
-        completada: venta.completada,
-        entregada: venta.entregada
-      };
-    });
-    console.log(`📊 Estados preservados para ${Object.keys(estadosExistentes).length} ventas ML existentes`);
-
-    // Limpiar ventas anteriores de ML
-    await Venta.deleteMany({ esML: true });
+    // Ya no se borra y recrea todo: guardarVentasSincronizadas actualiza cada venta
+    // por su numeroVenta y conserva tildas (completada/entregada) y notas editadas.
+    // Ventas cuyo envío no se pudo consultar ahora: se dejan como están (no se borran).
+    const numerosAMantener = [];
     // Log removido por seguridad
 
     // Acá seguimos igual que antes, pero con ordenesFiltradas
@@ -525,6 +516,13 @@ async function procesarSincronizacion() {
       // 👇 obtenemos info adicional de envío desde /shipments/:id
       const envio = await obtenerDatosEnvio(orden.shipping?.id, access_token, axios);
 
+      // Si falló la consulta del envío, no sabemos el estado real: conservamos la venta
+      // tal como está en vez de borrarla (y perder sus tildas/notas) por un error pasajero.
+      if (envio.tipoEnvio === "Error consultando envío") {
+        numerosAMantener.push(numeroVenta);
+        continue;
+      }
+
        // 🔍 Filtrar ventas ya entregadas (fulfilled: true)
       if (orden.fulfilled === true) {
         continue; // Saltar esta orden
@@ -565,8 +563,7 @@ async function procesarSincronizacion() {
       }
 
       // 👇 guardamos la venta en Mongo preservando estados existentes
-      const estadoExistente = estadosExistentes[numeroVenta] || { completada: false, entregada: false };
-      const ventaAGuardar = new Venta({
+      const ventaAGuardar = {
         sku,
         nombre: nombreFinal,
         cantidad: quantity,
@@ -574,8 +571,6 @@ async function procesarSincronizacion() {
         packId,
         cliente,
         puntoDespacho,
-        completada: estadoExistente.completada,
-        entregada: estadoExistente.entregada,
         imagen,
         esML: true,
         variationId,
@@ -584,15 +579,25 @@ async function procesarSincronizacion() {
         nota: notaOrden,
         codigoSeguimiento: envio.codigoSeguimiento || "",
         horaLimiteDespacho: envio.horaLimiteDespacho || null,
-      });
+      };
 
-      console.log(`💾 Guardando venta: Usando=${numeroVenta} (ID=${orden.id}, PackID=${packLog}) - ${nombreFinal} - ${cliente} - Estados: completada=${estadoExistente.completada}, entregada=${estadoExistente.entregada}`);
+      console.log(`💾 Venta lista para guardar: Usando=${numeroVenta} (ID=${orden.id}, PackID=${packLog}) - ${nombreFinal} - ${cliente}`);
 
       // Log removido por seguridad
       ventasAGuardar.push(ventaAGuardar);
 
     }
 
+
+    // Guardar (crear/actualizar) y quitar las que ya no corresponden. Esto va ANTES
+    // del chequeo de lista vacía: si no hay ventas pendientes, hay que limpiar igual.
+    const { guardarVentasSincronizadas } = require('../services/ventasSync');
+    const resultadoSync = await guardarVentasSincronizadas({
+      filtro: { esML: true },
+      ventas: ventasAGuardar,
+      mantener: numerosAMantener,
+    });
+    console.log(`📊 ML: ${ventasAGuardar.length} ventas vigentes, ${resultadoSync.eliminadas} eliminadas.`);
 
     // Si no había nada nuevo
     if (ventasAGuardar.length === 0) {
@@ -606,8 +611,6 @@ async function procesarSincronizacion() {
       return;
     }
 
-    // Insertar lo nuevo
-    await Venta.insertMany(ventasAGuardar);
     console.log(`✅ ${ventasAGuardar.length} ventas sincronizadas con éxito.`);
 
     // Verificar qué se guardó realmente

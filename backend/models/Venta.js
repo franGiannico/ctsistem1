@@ -17,6 +17,9 @@ const VentaSchema = new mongoose.Schema({
     atributos: [Object],
     tipoEnvio: String,
     nota: String,
+    // true cuando el usuario escribió/editó la nota a mano: la sincronización con
+    // Mercado Libre / Tiendanube ya no la pisa con la nota de la plataforma.
+    notaEditada: { type: Boolean, default: false },
     codigoSeguimiento: {
     type: String,
     default: ""},

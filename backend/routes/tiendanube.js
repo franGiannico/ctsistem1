@@ -373,15 +373,8 @@ router.get('/sincronizar-ventas', async (req, res) => {
         const orders = response.data;
         const ventasAGuardar = [];
 
-        // Obtener estados existentes para preservar 'completada' / 'entregada'
-        const ventasExistentes = await VentaModel.find({ esTiendanube: true });
-        const estadosExistentes = {};
-        ventasExistentes.forEach(v => {
-            estadosExistentes[v.numeroVenta] = { completada: v.completada, entregada: v.entregada };
-        });
-
-        // Limpiar para resincronizar (estrategia simple: borrar y reinsertar, preservando flag)
-        await VentaModel.deleteMany({ esTiendanube: true });
+        // Ya no se borra y recrea todo: guardarVentasSincronizadas actualiza cada venta
+        // por su numeroVenta y conserva tildas (completada/entregada) y notas editadas.
 
         for (const order of orders) {
             // Filtrar solo pagadas y NO enviadas/entregadas
@@ -441,8 +434,6 @@ router.get('/sincronizar-ventas', async (req, res) => {
                 const precio = product.price;
                 const imagen = product.image ? product.image.src : null;
 
-                const estadoPrevio = estadosExistentes[numeroVenta] || { completada: false, entregada: false };
-
                 ventasAGuardar.push({
                 numeroVenta: `${numeroVenta}-${product.id}`,
                 sku,
@@ -452,19 +443,21 @@ router.get('/sincronizar-ventas', async (req, res) => {
                 puntoDespacho,
                 imagen,
                 esTiendanube: true,
-                origen: "tiendanube",
                 nota: notaFinal,
                 tipoEnvio: shippingOption,
-                completada: estadoPrevio.completada,
-                entregada: estadoPrevio.entregada,
                 ...datosContactoFlex
                 });
             }
         }
 
+        const { guardarVentasSincronizadas } = require('../services/ventasSync');
+        const resultadoSync = await guardarVentasSincronizadas({
+            filtro: { esTiendanube: true },
+            ventas: ventasAGuardar,
+        });
+
         if (ventasAGuardar.length > 0) {
-            await VentaModel.insertMany(ventasAGuardar);
-            console.log(`✅ ${ventasAGuardar.length} items de Tiendanube sincronizados.`);
+            console.log(`✅ ${ventasAGuardar.length} items de Tiendanube sincronizados (${resultadoSync.eliminadas} eliminados).`);
         } else {
             console.log('ℹ️ No se encontraron ventas nuevas de Tiendanube.');
         }
