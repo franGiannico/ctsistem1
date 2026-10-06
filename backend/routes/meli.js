@@ -1180,6 +1180,144 @@ router.post('/actualizar-stock', async (req, res) => {
   }
 });
 
+// 🔎 Competencia en el catálogo de Mercado Libre (API oficial).
+// A partir del SKU buscamos NUESTRA publicación, tomamos el producto de catálogo
+// al que está vinculada y listamos las demás publicaciones de ese mismo producto
+// (/products/{id}/items). Si tenemos una publicación de catálogo, también pedimos
+// el "precio para ganar" (/items/{id}/price_to_win). Solo lectura.
+async function tokenMeliVigente() {
+  const tokenDoc = await MeliToken.findOne();
+  if (!tokenDoc || !tokenDoc.access_token) {
+    throw new Error('No autenticado con Mercado Libre.');
+  }
+  const vence =
+    new Date(tokenDoc.created_at).getTime() + tokenDoc.expires_in * 1000 - 5 * 60 * 1000;
+  if (Date.now() > vence) {
+    tokenDoc.access_token = await refreshMeliToken(tokenDoc);
+  }
+  return { access_token: tokenDoc.access_token, user_id: tokenDoc.user_id };
+}
+
+router.post('/competencia-catalogo', async (req, res) => {
+  const sku = String(req.body?.sku || '').trim();
+  if (!sku) return res.status(400).json({ error: 'Falta "sku".' });
+
+  try {
+    const { access_token, user_id } = await tokenMeliVigente();
+    const headers = { Authorization: `Bearer ${access_token}` };
+
+    // 1) Nuestra(s) publicación(es) con ese SKU
+    const busqueda = await axios.get(
+      `https://api.mercadolibre.com/users/${user_id}/items/search`,
+      { params: { seller_sku: sku }, headers }
+    );
+    const ids = (busqueda.data.results || []).slice(0, 5);
+    if (ids.length === 0) {
+      return res.json({
+        sku,
+        encontrada: false,
+        mensaje: 'No hay una publicación propia con ese SKU en Mercado Libre.',
+      });
+    }
+
+    const multi = await axios.get('https://api.mercadolibre.com/items', {
+      params: { ids: ids.join(',') },
+      headers,
+    });
+    const items = (Array.isArray(multi.data) ? multi.data : [])
+      .map((x) => x && x.body)
+      .filter(Boolean);
+
+    const conCatalogo = items.find((i) => i.catalog_product_id);
+    if (!conCatalogo) {
+      return res.json({
+        sku,
+        encontrada: true,
+        enCatalogo: false,
+        mensaje: 'La publicación no está vinculada a un producto de catálogo de ML.',
+      });
+    }
+    const productoId = conCatalogo.catalog_product_id;
+
+    // 2) Otras publicaciones del mismo producto de catálogo
+    const comp = await axios.get(`https://api.mercadolibre.com/products/${productoId}/items`, {
+      headers,
+    });
+    const lista = Array.isArray(comp.data?.results)
+      ? comp.data.results
+      : Array.isArray(comp.data)
+      ? comp.data
+      : [];
+
+    const ofertas = lista
+      .map((r) => {
+        const precio = Number(r.price ?? r.sale_price?.amount ?? r.sale_price);
+        const vendedor = String(r.seller_id ?? r.seller?.id ?? '');
+        const cuotas = Number(r.installments?.quantity) || null;
+        return {
+          itemId: r.item_id || r.id || null,
+          vendedor,
+          propio: vendedor === String(user_id),
+          precio,
+          envioGratis: r.shipping?.free_shipping === true,
+          cuotas,
+          sinInteres: Boolean(r.installments) && Number(r.installments.rate) === 0,
+          tiendaOficial: r.official_store_id || null,
+        };
+      })
+      .filter((o) => Number.isFinite(o.precio) && o.precio > 0)
+      .sort((a, b) => a.precio - b.precio);
+
+    const ajenas = ofertas.filter((o) => !o.propio);
+
+    // 3) Precio para ganar (solo si tenemos una publicación de catálogo)
+    let precioParaGanar = null;
+    let estado = null;
+    let ganador = null;
+    const propiaCatalogo = items.find((i) => i.catalog_listing === true);
+    if (propiaCatalogo) {
+      try {
+        const ptw = await axios.get(
+          `https://api.mercadolibre.com/items/${propiaCatalogo.id}/price_to_win`,
+          { params: { siteId: 'MLA', version: 'v2' }, headers }
+        );
+        precioParaGanar = ptw.data?.price_to_win ?? null;
+        estado = ptw.data?.status ?? null;
+        ganador = ptw.data?.winner
+          ? { itemId: ptw.data.winner.item_id, precio: ptw.data.winner.price }
+          : null;
+      } catch (e) {
+        // Opcional: si falla, seguimos con la lista de competidores.
+      }
+    }
+
+    return res.json({
+      sku,
+      encontrada: true,
+      enCatalogo: true,
+      productoCatalogoId: productoId,
+      cantidadOfertas: ofertas.length,
+      mejor: ajenas[0] || null,
+      ofertas: ajenas.slice(0, 10),
+      precioParaGanar,
+      estado,
+      ganador,
+      // Muestra cruda del primer resultado para poder ajustar si ML cambia el formato.
+      muestraCruda: lista[0] || null,
+    });
+  } catch (error) {
+    console.error('❌ Error consultando competencia en catálogo:', error.response?.data || error.message);
+    return res.status(200).json({
+      sku,
+      error:
+        error.response?.data?.message ||
+        error.message ||
+        'No se pudo consultar la competencia en Mercado Libre.',
+      status: error.response?.status,
+    });
+  }
+});
+
 router.get('/debug/buscar-sku/:sku', async (req, res) => {
   const { sku } = req.params;
   try {

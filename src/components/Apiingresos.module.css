@@ -592,3 +592,9 @@
   font-size: 0.78rem;
   text-decoration: underline;
 }
+
+.cmpBloqueML {
+  margin-bottom: 0.4rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px dashed #ddd;
+}

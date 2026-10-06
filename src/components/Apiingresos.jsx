@@ -120,6 +120,12 @@ const ApiIngresos = () => {
             sugCuotas: null,
             sugTipo: "",
             sugError: "",
+            sugFuente: "",
+            catEstado: "pendiente",
+            catMensaje: "",
+            catMejor: null,
+            catParaGanar: null,
+            catStatus: "",
           };
         });
 
@@ -322,8 +328,12 @@ const ApiIngresos = () => {
     return `${oferta.tienda}${cuotas}`;
   };
 
-  // Consulta ComparaYa (de a una ficha por vez) y calcula el precio base sugerido.
-  // Es solo una sugerencia: no modifica ningún precio por sí sola.
+  // Compara cada producto contra:
+  //  - Mercado Libre (catálogo, API oficial): automático, solo hace falta tener la
+  //    publicación con ese SKU vinculada a un producto de catálogo.
+  //  - ComparaYa (otras tiendas): solo si el producto tiene su link guardado.
+  // Después calcula el precio base sugerido. Es solo una sugerencia: no modifica
+  // ningún precio por sí sola.
   const consultarFilas = async (lista) => {
     const objetivos = [];
 
@@ -335,51 +345,126 @@ const ApiIngresos = () => {
         mensaje: `Consultando ${f.sku}...`,
       });
       actualizarFilaPorSku(f.sku, {
-        cmpEstado: "comparando",
-        cmpMensaje: "Consultando...",
+        cmpEstado: f.slugComparaYa ? "comparando" : "sin_link",
+        cmpMensaje: "",
+        catEstado: "comparando",
+        catMensaje: "",
         sugBase: null,
         sugError: "",
       });
 
+      const referencias = []; // { precio, tipo, fuente }
+
+      // --- Mercado Libre (catálogo) ---
       try {
-        const res = await fetch(`${BACKEND_URL}/comparaya/comparar`, {
+        const res = await fetch(`${BACKEND_URL}/meli/competencia-catalogo`, {
           method: "POST",
           headers: encabezadosJSON(),
-          body: JSON.stringify({ sku: f.sku, cuotasPropias: f.cuotasTN || 0 }),
+          body: JSON.stringify({ sku: f.sku }),
         });
         const d = await res.json();
 
         if (!res.ok || d.error) {
           actualizarFilaPorSku(f.sku, {
-            cmpEstado: "error",
-            cmpMensaje: d.error || "No se pudo consultar ComparaYa",
+            catEstado: "error",
+            catMensaje: d.error || "No se pudo consultar Mercado Libre",
           });
-          continue;
-        }
-
-        actualizarFilaPorSku(f.sku, {
-          cmpEstado: "ok",
-          cmpMensaje: "",
-          cmpMejor: d.mejorComparable || null,
-          cmpGeneral: d.mejorGeneral || null,
-          cmpVerificado: d.verificado !== false,
-          cmpFicha: d.slug ? `https://comparaya.net/p/${d.slug}` : "",
-        });
-
-        const referencia = d.mejorComparable || d.mejorGeneral;
-        if (referencia && referencia.precio > 1 && f.precioPromocionalTN) {
-          objetivos.push({
-            sku: f.sku,
-            precioPromocionalObjetivo: referencia.precio - 1,
-            tipo: d.mejorComparable ? "comparable" : "general",
+        } else if (!d.encontrada || !d.enCatalogo) {
+          actualizarFilaPorSku(f.sku, {
+            catEstado: "sin_catalogo",
+            catMensaje: d.mensaje || "Sin datos de catálogo en Mercado Libre",
           });
+        } else {
+          actualizarFilaPorSku(f.sku, {
+            catEstado: "ok",
+            catMejor: d.mejor || null,
+            catParaGanar: d.precioParaGanar || null,
+            catStatus: d.estado || "",
+          });
+          if (d.mejor) {
+            const mismasCuotas =
+              d.mejor.sinInteres && (!f.cuotasTN || d.mejor.cuotas >= f.cuotasTN);
+            referencias.push({
+              precio: d.mejor.precio,
+              tipo: mismasCuotas ? "comparable" : "general",
+              fuente: "Mercado Libre",
+            });
+          }
         }
       } catch (error) {
         actualizarFilaPorSku(f.sku, {
-          cmpEstado: "error",
-          cmpMensaje: "Error de conexión",
+          catEstado: "error",
+          catMensaje: "Error de conexión con Mercado Libre",
         });
       }
+
+      // --- ComparaYa (solo con link guardado) ---
+      if (f.slugComparaYa) {
+        try {
+          const res = await fetch(`${BACKEND_URL}/comparaya/comparar`, {
+            method: "POST",
+            headers: encabezadosJSON(),
+            body: JSON.stringify({ sku: f.sku, cuotasPropias: f.cuotasTN || 0 }),
+          });
+          const d = await res.json();
+
+          if (!res.ok || d.error) {
+            actualizarFilaPorSku(f.sku, {
+              cmpEstado: "error",
+              cmpMensaje: d.error || "No se pudo consultar ComparaYa",
+            });
+          } else {
+            actualizarFilaPorSku(f.sku, {
+              cmpEstado: "ok",
+              cmpMensaje: "",
+              cmpMejor: d.mejorComparable || null,
+              cmpGeneral: d.mejorGeneral || null,
+              cmpVerificado: d.verificado !== false,
+              cmpFicha: d.slug ? `https://comparaya.net/p/${d.slug}` : "",
+            });
+            if (d.mejorComparable) {
+              referencias.push({
+                precio: d.mejorComparable.precio,
+                tipo: "comparable",
+                fuente: "ComparaYa",
+              });
+            }
+            if (d.mejorGeneral) {
+              referencias.push({
+                precio: d.mejorGeneral.precio,
+                tipo: "general",
+                fuente: "ComparaYa",
+              });
+            }
+          }
+        } catch (error) {
+          actualizarFilaPorSku(f.sku, {
+            cmpEstado: "error",
+            cmpMensaje: "Error de conexión",
+          });
+        }
+      }
+
+      // Referencia: el más barato con mis mismas cuotas; si no hay, el más barato en general
+      const elegir = (tipo) =>
+        referencias
+          .filter((r) => r.tipo === tipo)
+          .sort((x, y) => x.precio - y.precio)[0];
+      const referencia =
+        elegir("comparable") ||
+        referencias.sort((x, y) => x.precio - y.precio)[0];
+
+      if (referencia && referencia.precio > 1 && f.precioPromocionalTN) {
+        objetivos.push({
+          sku: f.sku,
+          precioPromocionalObjetivo: referencia.precio - 1,
+          tipo: referencia.tipo,
+          fuente: referencia.fuente,
+        });
+      }
+
+      // Pausa corta para no saturar las APIs
+      await new Promise((resolve) => setTimeout(resolve, 150));
     }
 
     // Precio base que lleva el promocional de TN a $1 por debajo de la competencia
@@ -421,6 +506,7 @@ const ApiIngresos = () => {
             sugLista: r.precioLista,
             sugCuotas: r.cuotas,
             sugTipo: o.tipo,
+            sugFuente: o.fuente,
             sugError: "",
           });
         });
@@ -473,17 +559,16 @@ const ApiIngresos = () => {
       );
 
       const conLink = filas.filter((f) => links[f.sku]);
-      await consultarFilas(conLink);
+      const paraConsultar = filas.map((f) => ({
+        ...f,
+        slugComparaYa: links[f.sku] || "",
+      }));
+      await consultarFilas(paraConsultar);
 
       setProgresoComparacion({
-        hecho: conLink.length,
-        total: conLink.length,
-        mensaje:
-          conLink.length === 0
-            ? "Ningún producto tiene link de ComparaYa todavía. Pegalo en la tabla de abajo."
-            : `Listo: ${conLink.length} productos comparados, ${
-                filas.length - conLink.length
-              } sin link.`,
+        hecho: filas.length,
+        total: filas.length,
+        mensaje: `Listo: ${filas.length} productos comparados con Mercado Libre, ${conLink.length} también con ComparaYa.`,
       });
     } catch (error) {
       console.error("Error comparando precios:", error);
@@ -523,7 +608,7 @@ const ApiIngresos = () => {
 
       setTextosLink((prev) => ({ ...prev, [fila.sku]: "" }));
       actualizarFilaPorSku(fila.sku, { slugComparaYa: slug, cmpMensaje: "" });
-      await consultarFilas([fila]);
+      await consultarFilas([{ ...fila, slugComparaYa: slug }]);
       setProgresoComparacion(null);
     } catch (error) {
       actualizarFilaPorSku(fila.sku, {
@@ -886,6 +971,7 @@ const handleDescargarResultados = () => {
     "Competencia (mínimo comparable)": fila.cmpMejor
       ? `${fila.cmpMejor.precio} - ${describirOferta(fila.cmpMejor)}`
       : "",
+    "Competencia Mercado Libre": fila.catMejor ? fila.catMejor.precio : "",
     "Precio base sugerido": fila.sugBase ?? "",
 
     "Estado Mercado Libre":
@@ -1184,10 +1270,10 @@ const handleDescargarResultados = () => {
           <h3 className={styles.panelTitulo}>🔎 Comparación de precios (ComparaYa)</h3>
           <p className={styles.panelAyuda}>
             Solo sugiere: ningún precio cambia hasta que toques «Usar este
-            precio». Pegá una vez el link de la ficha de ComparaYa de cada
-            producto (https://comparaya.net/p/...), o agregá al Excel una
-            columna «ComparaYa» con esos links. Quedan guardados para la
-            próxima vez.
+            precio». Compara solo contra Mercado Libre (catálogo), sin que
+            tengas que cargar nada. Para sumar otras tiendas, pegá el link de
+            la ficha de ComparaYa (https://comparaya.net/p/...) de los
+            productos que quieras, o agregá al Excel una columna «ComparaYa».
           </p>
           <div className={styles.panelAcciones}>
             <button
@@ -1240,8 +1326,49 @@ const handleDescargarResultados = () => {
                     </td>
 
                     <td className={styles.cmpCelda}>
-                      {fila.cmpEstado === "pendiente" && "—"}
-                      {fila.cmpEstado === "comparando" && "⏳ Consultando..."}
+                      {fila.catEstado === "pendiente" &&
+                        fila.cmpEstado === "pendiente" &&
+                        "—"}
+                      {fila.catEstado === "comparando" && (
+                        <div>⏳ Consultando Mercado Libre...</div>
+                      )}
+                      {fila.catEstado === "ok" && (
+                        <div className={styles.cmpBloqueML}>
+                          <strong>Mercado Libre:</strong>{" "}
+                          {fila.catMejor ? (
+                            <>
+                              {formatoARS(fila.catMejor.precio)}
+                              <br />
+                              <span className={styles.cmpDetalle}>
+                                {fila.catMejor.envioGratis ? "Envío gratis" : ""}
+                                {fila.catMejor.cuotas
+                                  ? ` · ${fila.catMejor.cuotas} cuotas${
+                                      fila.catMejor.sinInteres ? " sin interés" : ""
+                                    }`
+                                  : ""}
+                              </span>
+                            </>
+                          ) : (
+                            <span className={styles.cmpDetalle}>
+                              sin otros vendedores
+                            </span>
+                          )}
+                          {fila.catParaGanar ? (
+                            <div className={styles.cmpDetalle}>
+                              Precio para ganar en ML:{" "}
+                              {formatoARS(fila.catParaGanar)}
+                              {fila.catStatus ? ` (${fila.catStatus})` : ""}
+                            </div>
+                          ) : null}
+                        </div>
+                      )}
+                      {(fila.catEstado === "sin_catalogo" ||
+                        fila.catEstado === "error") && (
+                        <div className={styles.cmpDetalle}>
+                          Mercado Libre: {fila.catMensaje}
+                        </div>
+                      )}
+                      {fila.cmpEstado === "comparando" && "⏳ Consultando ComparaYa..."}
                       {fila.cmpEstado === "error" && (
                         <span className={styles.mensajeError}>
                           ❌ {fila.cmpMensaje}
@@ -1252,7 +1379,7 @@ const handleDescargarResultados = () => {
                         <div className={styles.cmpLinkBox}>
                           {fila.cmpEstado === "sin_link" && (
                             <span className={styles.cmpSinLink}>
-                              {fila.cmpMensaje || "Sin link de ComparaYa"}
+                              {fila.cmpMensaje || "ComparaYa (opcional): sin link"}
                             </span>
                           )}
                           <input
@@ -1344,7 +1471,7 @@ const handleDescargarResultados = () => {
                     </td>
 
                     <td className={styles.cmpCelda}>
-                      {fila.cmpEstado === "ok" && fila.sugBase ? (
+                      {fila.sugBase ? (
                         <>
                           <div>
                             Base: <strong>{formatoARS(fila.sugBase)}</strong>{" "}
@@ -1377,8 +1504,9 @@ const handleDescargarResultados = () => {
                               : fila.sugBase < fila.precioBase
                               ? "Para quedar $1 abajo de la competencia"
                               : "Estás más barato: podrías subir y seguir ganando"}
+                            {fila.sugFuente ? ` · Referencia: ${fila.sugFuente}` : ""}
                             {fila.sugTipo === "general"
-                              ? " (contra el más barato, sin cuotas equivalentes)"
+                              ? " (el más barato, sin cuotas equivalentes)"
                               : ""}
                           </div>
                           <button
