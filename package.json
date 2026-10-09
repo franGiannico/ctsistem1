@@ -19,6 +19,7 @@
     "html5-qrcode": "^2.3.8",
     "jspdf": "^3.0.4",
     "mongoose": "^8.12.1",
+    "pdfjs-dist": "5.4.530",
     "react": "^19.0.0",
     "react-bootstrap": "^2.10.9",
     "react-dom": "^19.0.0",

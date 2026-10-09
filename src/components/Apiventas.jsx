@@ -7,6 +7,8 @@ import TiendanubeAuthButton from './TiendanubeAuthButton';
 import jsPDF from 'jspdf';
 import logoImage from '../assets/logo.png';
 import { Html5QrcodeScanner } from "html5-qrcode";
+import { esComprobanteDeVenta, parsearComprobanteVenta } from "../utils/comprobanteVenta";
+import { extraerTextoPdf } from "../utils/leerPdf";
 
 // Opciones de punto de despacho, compartidas entre el alta manual y la
 // vista previa del pedido interno pegado (ver parsearPedidoInterno).
@@ -78,6 +80,8 @@ function Apiventas() {
   const [productosPedidoInterno, setProductosPedidoInterno] = useState([]);
   const [pedidoParseError, setPedidoParseError] = useState("");
   const [guardandoPedidoInterno, setGuardandoPedidoInterno] = useState(false);
+  const [leyendoPdf, setLeyendoPdf] = useState(false);
+  const [arrastrandoPdf, setArrastrandoPdf] = useState(false);
 
   // 🆕 Estado para controlar qué categorías están expandidas (muestran completadas)
   const [categoriasExpandidas, setCategoriasExpandidas] = useState(new Set());
@@ -219,8 +223,8 @@ function Apiventas() {
   };
 
   // Analiza el texto pegado y arma la vista previa editable
-  const handleAnalizarPedido = () => {
-    const resultado = parsearPedidoInterno(textoPedidoInterno);
+  const analizarPedidoInternoTexto = (texto) => {
+    const resultado = parsearPedidoInterno(texto);
     if (resultado.error) {
       setPedidoParseError(resultado.error);
       setProductosPedidoInterno([]);
@@ -245,6 +249,72 @@ function Apiventas() {
     }));
 
     setProductosPedidoInterno(filas);
+  };
+
+  // Comprobante de venta del sistema de stock ("Detalle de venta"): arma una fila
+  // por producto. Se ignora el membrete (dirección, teléfono, CUIT, etc.).
+  const analizarComprobanteVenta = (texto) => {
+    const r = parsearComprobanteVenta(texto);
+    if (r.error) {
+      setPedidoParseError(r.error);
+      setProductosPedidoInterno([]);
+      return;
+    }
+
+    setPedidoParseError("");
+
+    const timestamp = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 14);
+    const baseNumeroVenta = `CV-${r.nro || timestamp}`;
+    const partesNota = [];
+    if (r.sucursal) partesNota.push(`Retira en ${r.sucursal}`);
+    if (r.nro) partesNota.push(`comp. ${r.nro}`);
+    const notaSugerida = partesNota.join(" - ");
+    // Venta de mostrador: se retira en persona (Guardia). Otros tipos: se elige a mano.
+    const puntoDespacho = /mostrador/i.test(r.tipoVenta) ? "Guardia" : "Punto de Despacho";
+
+    setProductosPedidoInterno(
+      r.productos.map((p, idx) => ({
+        numeroVenta: `${baseNumeroVenta}-${idx + 1}`,
+        sku: p.sku,
+        nombre: p.nombre,
+        cantidad: p.cantidad,
+        cliente: r.cliente,
+        puntoDespacho,
+        nota: notaSugerida,
+      }))
+    );
+  };
+
+  // Analiza un texto (pegado o extraído de un PDF): comprobante de venta o pedido interno
+  const analizarTexto = (texto) => {
+    if (esComprobanteDeVenta(texto)) {
+      analizarComprobanteVenta(texto);
+    } else {
+      analizarPedidoInternoTexto(texto);
+    }
+  };
+
+  const handleAnalizarPedido = () => analizarTexto(textoPedidoInterno);
+
+  // Lee un PDF soltado o elegido (comprobante de venta) y lo analiza
+  const procesarArchivoPdf = async (archivo) => {
+    if (!archivo) return;
+    if (archivo.type !== "application/pdf" && !/\.pdf$/i.test(archivo.name)) {
+      setPedidoParseError("El archivo tiene que ser un PDF.");
+      return;
+    }
+    setLeyendoPdf(true);
+    setPedidoParseError("");
+    try {
+      const texto = await extraerTextoPdf(archivo);
+      setTextoPedidoInterno(texto);
+      analizarTexto(texto);
+    } catch (error) {
+      console.error("Error leyendo el PDF:", error);
+      setPedidoParseError("No se pudo leer el PDF. Probá copiar y pegar su texto en el cuadro.");
+    } finally {
+      setLeyendoPdf(false);
+    }
   };
 
   // Edita un campo de una fila detectada antes de confirmar la carga
@@ -879,21 +949,58 @@ function Apiventas() {
         <div className={styles.cargarWrapper}>
           {/* 🆕 Pegar pedido interno: carga automática desde el texto que copia
               la otra app de ventas de Coniferal */}
-          <div className={styles.pedidoInternoWrapper}>
-            <h3>Cargar desde pedido interno</h3>
+          <div
+            className={`${styles.pedidoInternoWrapper} ${arrastrandoPdf ? styles.pdfArrastrando : ""}`}
+            onDragOver={(e) => {
+              if (e.dataTransfer?.types?.includes("Files")) {
+                e.preventDefault();
+                setArrastrandoPdf(true);
+              }
+            }}
+            onDragLeave={() => setArrastrandoPdf(false)}
+            onDrop={(e) => {
+              setArrastrandoPdf(false);
+              const archivo = e.dataTransfer?.files?.[0];
+              if (archivo) {
+                e.preventDefault();
+                procesarArchivoPdf(archivo);
+              }
+            }}
+          >
+            <h3>Cargar desde pedido interno o comprobante de venta</h3>
             <p className={styles.pedidoInternoAyuda}>
-              Pegá acá el texto del resumen de pedido y se detectan los productos automáticamente.
+              Pegá acá el texto del pedido interno o del comprobante de venta (se analiza solo al pegar),
+              o soltá el PDF del comprobante sobre este cuadro.
             </p>
             <textarea
               value={textoPedidoInterno}
               onChange={(e) => setTextoPedidoInterno(e.target.value)}
-              placeholder="Pegá acá el texto del pedido interno..."
+              onPaste={(e) => {
+                const campo = e.target;
+                setTimeout(() => {
+                  if (campo.value && campo.value.trim().length > 30) analizarTexto(campo.value);
+                }, 0);
+              }}
+              placeholder="Pegá acá el texto del pedido o del comprobante..."
               className={styles.textareaPedido}
               rows={8}
             />
             <button type="button" onClick={handleAnalizarPedido} className={styles.analizarPedidoBtn}>
               Analizar pedido
             </button>
+            <label className={styles.subirPdfLabel}>
+              {leyendoPdf ? "Leyendo PDF..." : "📄 Subir PDF"}
+              <input
+                type="file"
+                accept="application/pdf,.pdf"
+                style={{ display: "none" }}
+                disabled={leyendoPdf}
+                onChange={(e) => {
+                  procesarArchivoPdf(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
+            </label>
 
             {pedidoParseError && <p className={styles.pedidoError}>{pedidoParseError}</p>}
 

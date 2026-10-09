@@ -906,6 +906,29 @@
   font-size: 1rem;
 }
 
+.pdfArrastrando {
+  outline: 2px dashed #4a6cf7;
+  outline-offset: 4px;
+  background: #f5f8ff;
+}
+
+.subirPdfLabel {
+  display: inline-block;
+  margin-left: 0.6rem;
+  padding: 0.55rem 1rem;
+  border: 1px solid #4a6cf7;
+  border-radius: 8px;
+  color: #4a6cf7;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: white;
+}
+
+.subirPdfLabel:hover {
+  background: #eef2ff;
+}
+
 .separadorCargar {
   width: 100%;
   max-width: 700px;
