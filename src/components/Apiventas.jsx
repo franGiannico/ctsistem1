@@ -65,7 +65,8 @@ function Apiventas() {
     cantidad: 1,
     numeroVenta: "",
     cliente: "",
-    puntoDespacho: "Punto de Despacho"
+    puntoDespacho: "Punto de Despacho",
+    nota: ""
   });
   const [activeTab, setActiveTab] = useState("listado"); // 'cargar' o 'listado' (arranca en "Ver Ventas")
   const [sincronizandoML, setSincronizandoML] = useState(false);
@@ -77,9 +78,15 @@ function Apiventas() {
 
   // 🆕 Pedido interno pegado (texto que copia la otra app de ventas de Coniferal)
   const [textoPedidoInterno, setTextoPedidoInterno] = useState("");
-  const [productosPedidoInterno, setProductosPedidoInterno] = useState([]);
   const [pedidoParseError, setPedidoParseError] = useState("");
-  const [guardandoPedidoInterno, setGuardandoPedidoInterno] = useState(false);
+  // Precarga: los productos detectados se cargan de a uno en el formulario de
+  // siempre. colaCarga = los que faltan después del que se está mostrando.
+  const [colaCarga, setColaCarga] = useState([]);
+  const [totalCola, setTotalCola] = useState(0);
+  const [origenCarga, setOrigenCarga] = useState("");
+  const [guardandoVenta, setGuardandoVenta] = useState(false);
+  const [errorForm, setErrorForm] = useState("");
+  const [avisoForm, setAvisoForm] = useState("");
   const [leyendoPdf, setLeyendoPdf] = useState(false);
   const [arrastrandoPdf, setArrastrandoPdf] = useState(false);
 
@@ -152,26 +159,104 @@ function Apiventas() {
     setFormData({ ...formData, [name]: value });
   };
 
-  // Guardar venta manual
+  const FORM_VACIO = {
+    sku: "",
+    nombre: "",
+    cantidad: 1,
+    numeroVenta: "",
+    cliente: "",
+    puntoDespacho: "Punto de Despacho",
+    nota: ""
+  };
+
+  const filaAFormData = (fila) => ({
+    sku: fila.sku || "",
+    nombre: fila.nombre || "",
+    cantidad: fila.cantidad || 1,
+    numeroVenta: fila.numeroVenta || "",
+    cliente: fila.cliente || "",
+    puntoDespacho: fila.puntoDespacho || "Punto de Despacho",
+    nota: fila.nota || ""
+  });
+
+  // Muestra en el formulario el primer producto detectado y deja el resto en cola.
+  const cargarColaEnFormulario = (filas, origen) => {
+    if (!filas || filas.length === 0) return;
+    const [primera, ...resto] = filas;
+    setFormData(filaAFormData(primera));
+    setColaCarga(resto);
+    setTotalCola(filas.length);
+    setOrigenCarga(origen);
+    setErrorForm("");
+    setAvisoForm("");
+    setPedidoParseError("");
+    setTextoPedidoInterno("");
+  };
+
+  // Pasa al siguiente producto de la cola; si no queda ninguno, vuelve al formulario vacío.
+  const avanzarCola = () => {
+    if (colaCarga.length > 0) {
+      const [siguiente, ...resto] = colaCarga;
+      setFormData(filaAFormData(siguiente));
+      setColaCarga(resto);
+    } else {
+      setFormData({ ...FORM_VACIO });
+      setTotalCola(0);
+      setOrigenCarga("");
+    }
+    setErrorForm("");
+  };
+
+  // Descarta lo precargado y deja el formulario vacío
+  const handleCancelarPrecarga = () => {
+    setFormData({ ...FORM_VACIO });
+    setColaCarga([]);
+    setTotalCola(0);
+    setOrigenCarga("");
+    setErrorForm("");
+    setTextoPedidoInterno("");
+    setPedidoParseError("");
+  };
+
+  const mostrarAviso = (mensaje) => {
+    setAvisoForm(mensaje);
+    setTimeout(() => setAvisoForm(""), 3500);
+  };
+
+  // Guardar venta (manual o precargada)
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (guardandoVenta) return;
+
     const nuevaVenta = {
-      ...formData,
+      sku: formData.sku.trim(),
+      nombre: formData.nombre.trim(),
+      cantidad: Number(formData.cantidad) || 1,
+      numeroVenta: String(formData.numeroVenta).trim(),
+      cliente: formData.cliente.trim(),
+      puntoDespacho: formData.puntoDespacho,
+      nota: (formData.nota || "").trim(),
       completada: false,
       entregada: false,
       imagen: null,
       esML: false   // 👈 fuerza a que quede como manual
     };
 
+    setGuardandoVenta(true);
+    setErrorForm("");
     try {
       await authenticatedFetch(`${BACKEND_URL}/apiventas/guardar-ventas`, {
         method: "POST",
         body: JSON.stringify(nuevaVenta)
       });
       cargarVentasDesdeServidor();
-      setFormData({ sku: "", nombre: "", cantidad: 1, numeroVenta: "", cliente: "", puntoDespacho: "Punto de Despacho" });
+      mostrarAviso(`Venta ${nuevaVenta.numeroVenta} agregada`);
+      avanzarCola();
     } catch (error) {
       console.error("Error al guardar la venta:", error);
+      setErrorForm("No se pudo guardar la venta. Revisá que el N° de venta no esté repetido y probá de nuevo.");
+    } finally {
+      setGuardandoVenta(false);
     }
   };
 
@@ -222,12 +307,11 @@ function Apiventas() {
     return { cliente, legajo, envioTexto, puntoRetiro, productos };
   };
 
-  // Analiza el texto pegado y arma la vista previa editable
+  // Analiza el texto pegado y precarga el formulario
   const analizarPedidoInternoTexto = (texto) => {
     const resultado = parsearPedidoInterno(texto);
     if (resultado.error) {
       setPedidoParseError(resultado.error);
-      setProductosPedidoInterno([]);
       return;
     }
 
@@ -248,7 +332,7 @@ function Apiventas() {
       nota: notaSugerida,
     }));
 
-    setProductosPedidoInterno(filas);
+    cargarColaEnFormulario(filas, "Pedido interno");
   };
 
   // Comprobante de venta del sistema de stock ("Detalle de venta"): arma una fila
@@ -257,7 +341,6 @@ function Apiventas() {
     const r = parsearComprobanteVenta(texto);
     if (r.error) {
       setPedidoParseError(r.error);
-      setProductosPedidoInterno([]);
       return;
     }
 
@@ -272,7 +355,7 @@ function Apiventas() {
     // Venta de mostrador: se retira en persona (Guardia). Otros tipos: se elige a mano.
     const puntoDespacho = /mostrador/i.test(r.tipoVenta) ? "Guardia" : "Punto de Despacho";
 
-    setProductosPedidoInterno(
+    cargarColaEnFormulario(
       r.productos.map((p, idx) => ({
         numeroVenta: `${baseNumeroVenta}-${idx + 1}`,
         sku: p.sku,
@@ -281,7 +364,8 @@ function Apiventas() {
         cliente: r.cliente,
         puntoDespacho,
         nota: notaSugerida,
-      }))
+      })),
+      r.nro ? `Comprobante ${r.nro}` : "Comprobante de venta"
     );
   };
 
@@ -314,64 +398,6 @@ function Apiventas() {
       setPedidoParseError("No se pudo leer el PDF. Probá copiar y pegar su texto en el cuadro.");
     } finally {
       setLeyendoPdf(false);
-    }
-  };
-
-  // Edita un campo de una fila detectada antes de confirmar la carga
-  const handleEditarProductoPedido = (index, campo, valor) => {
-    setProductosPedidoInterno((prev) =>
-      prev.map((p, i) => (i === index ? { ...p, [campo]: valor } : p))
-    );
-  };
-
-  // Quita una fila detectada por error antes de confirmar la carga
-  const handleQuitarProductoPedido = (index) => {
-    setProductosPedidoInterno((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  // Cancela el pedido pegado y limpia todo
-  const handleCancelarPedidoInterno = () => {
-    setTextoPedidoInterno("");
-    setProductosPedidoInterno([]);
-    setPedidoParseError("");
-  };
-
-  // Confirma la carga: guarda una venta por cada producto de la vista previa
-  const handleConfirmarPedidoInterno = async () => {
-    const faltaAlgo = productosPedidoInterno.some(
-      (p) => !p.sku.trim() || !p.nombre.trim() || !p.cliente.trim() || !p.cantidad || !p.puntoDespacho
-    );
-    if (faltaAlgo) {
-      setPedidoParseError("Completá SKU, producto, cliente y punto de despacho en todos los productos antes de cargar.");
-      return;
-    }
-
-    setGuardandoPedidoInterno(true);
-    setPedidoParseError("");
-    try {
-      for (const p of productosPedidoInterno) {
-        await authenticatedFetch(`${BACKEND_URL}/apiventas/guardar-ventas`, {
-          method: "POST",
-          body: JSON.stringify({
-            sku: p.sku.trim(),
-            nombre: p.nombre.trim(),
-            cantidad: Number(p.cantidad),
-            numeroVenta: p.numeroVenta,
-            cliente: p.cliente.trim(),
-            puntoDespacho: p.puntoDespacho,
-            nota: p.nota?.trim() || "",
-          }),
-        });
-      }
-      const cantidadCargada = productosPedidoInterno.length;
-      handleCancelarPedidoInterno();
-      cargarVentasDesdeServidor();
-      alert(`Se ${cantidadCargada === 1 ? "cargó" : "cargaron"} ${cantidadCargada} venta${cantidadCargada === 1 ? "" : "s"} correctamente.`);
-    } catch (error) {
-      console.error("Error al cargar el pedido interno:", error);
-      setPedidoParseError('Hubo un error al cargar alguno de los productos. Revisá "Ver Ventas" antes de reintentar, puede que algunos ya se hayan cargado.');
-    } finally {
-      setGuardandoPedidoInterno(false);
     }
   };
 
@@ -947,162 +973,144 @@ function Apiventas() {
       {/* Cargar ventas manuales */}
       {activeTab === "cargar" && (
         <div className={styles.cargarWrapper}>
-          {/* 🆕 Pegar pedido interno: carga automática desde el texto que copia
-              la otra app de ventas de Coniferal */}
-          <div
-            className={`${styles.pedidoInternoWrapper} ${arrastrandoPdf ? styles.pdfArrastrando : ""}`}
-            onDragOver={(e) => {
-              if (e.dataTransfer?.types?.includes("Files")) {
-                e.preventDefault();
-                setArrastrandoPdf(true);
-              }
-            }}
-            onDragLeave={() => setArrastrandoPdf(false)}
-            onDrop={(e) => {
-              setArrastrandoPdf(false);
-              const archivo = e.dataTransfer?.files?.[0];
-              if (archivo) {
-                e.preventDefault();
-                procesarArchivoPdf(archivo);
-              }
-            }}
-          >
-            <h3>Cargar desde pedido interno o comprobante de venta</h3>
-            <p className={styles.pedidoInternoAyuda}>
-              Pegá acá el texto del pedido interno o del comprobante de venta (se analiza solo al pegar),
-              o soltá el PDF del comprobante sobre este cuadro.
-            </p>
-            <textarea
-              value={textoPedidoInterno}
-              onChange={(e) => setTextoPedidoInterno(e.target.value)}
-              onPaste={(e) => {
-                const campo = e.target;
-                setTimeout(() => {
-                  if (campo.value && campo.value.trim().length > 30) analizarTexto(campo.value);
-                }, 0);
+          <div className={styles.cargarCard}>
+            {/* Zona de pegado: una sola fila. Pegar texto, soltar un PDF o usar el botón. */}
+            <div
+              className={`${styles.zonaPegado} ${arrastrandoPdf ? styles.zonaPegadoActiva : ""}`}
+              onDragOver={(e) => {
+                if (e.dataTransfer?.types?.includes("Files")) {
+                  e.preventDefault();
+                  setArrastrandoPdf(true);
+                }
               }}
-              placeholder="Pegá acá el texto del pedido o del comprobante..."
-              className={styles.textareaPedido}
-              rows={8}
-            />
-            <button type="button" onClick={handleAnalizarPedido} className={styles.analizarPedidoBtn}>
-              Analizar pedido
-            </button>
-            <label className={styles.subirPdfLabel}>
-              {leyendoPdf ? "Leyendo PDF..." : "📄 Subir PDF"}
-              <input
-                type="file"
-                accept="application/pdf,.pdf"
-                style={{ display: "none" }}
-                disabled={leyendoPdf}
-                onChange={(e) => {
-                  procesarArchivoPdf(e.target.files?.[0]);
-                  e.target.value = "";
+              onDragLeave={() => setArrastrandoPdf(false)}
+              onDrop={(e) => {
+                setArrastrandoPdf(false);
+                const archivo = e.dataTransfer?.files?.[0];
+                if (archivo) {
+                  e.preventDefault();
+                  procesarArchivoPdf(archivo);
+                }
+              }}
+            >
+              <span className={styles.zonaIcono} aria-hidden="true">📋</span>
+              <textarea
+                value={textoPedidoInterno}
+                onChange={(e) => setTextoPedidoInterno(e.target.value)}
+                onPaste={(e) => {
+                  const campo = e.target;
+                  setTimeout(() => {
+                    if (campo.value && campo.value.trim().length > 30) analizarTexto(campo.value);
+                  }, 0);
                 }}
+                placeholder={arrastrandoPdf ? "Soltá el PDF acá" : "Pegá el texto del pedido o soltá el PDF"}
+                className={styles.zonaTexto}
+                rows={1}
+                aria-label="Texto del pedido interno o comprobante de venta"
               />
-            </label>
-
-            {pedidoParseError && <p className={styles.pedidoError}>{pedidoParseError}</p>}
-
-            {productosPedidoInterno.length > 0 && (
-              <div className={styles.previewPedido}>
-                <p className={styles.previewPedidoTitulo}>
-                  Se detectaron {productosPedidoInterno.length} producto(s). Revisá y completá antes de confirmar:
-                </p>
-
-                {productosPedidoInterno.map((p, idx) => (
-                  <div key={idx} className={styles.filaPedidoProducto}>
-                    <input
-                      type="text"
-                      value={p.sku}
-                      onChange={(e) => handleEditarProductoPedido(idx, "sku", e.target.value)}
-                      placeholder="SKU"
-                    />
-                    <input
-                      type="text"
-                      value={p.nombre}
-                      onChange={(e) => handleEditarProductoPedido(idx, "nombre", e.target.value)}
-                      placeholder="Producto"
-                    />
-                    <input
-                      type="number"
-                      min="1"
-                      value={p.cantidad}
-                      onChange={(e) => handleEditarProductoPedido(idx, "cantidad", e.target.value)}
-                    />
-                    <input
-                      type="text"
-                      value={p.cliente}
-                      onChange={(e) => handleEditarProductoPedido(idx, "cliente", e.target.value)}
-                      placeholder="Cliente"
-                    />
-                    <select
-                      value={p.puntoDespacho}
-                      onChange={(e) => handleEditarProductoPedido(idx, "puntoDespacho", e.target.value)}
-                    >
-                      {PUNTOS_DESPACHO.map((opcion) => (
-                        <option key={opcion} value={opcion}>{opcion}</option>
-                      ))}
-                    </select>
-                    <input
-                      type="text"
-                      value={p.nota}
-                      onChange={(e) => handleEditarProductoPedido(idx, "nota", e.target.value)}
-                      placeholder="Nota (opcional)"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleQuitarProductoPedido(idx)}
-                      className={styles.quitarProductoPedidoBtn}
-                      title="Quitar este producto"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-
-                <div className={styles.previewPedidoAcciones}>
-                  <button
-                    type="button"
-                    onClick={handleConfirmarPedidoInterno}
-                    disabled={guardandoPedidoInterno}
-                    className={styles.confirmarPedidoBtn}
-                  >
-                    {guardandoPedidoInterno
-                      ? "Cargando..."
-                      : `Cargar ${productosPedidoInterno.length} venta${productosPedidoInterno.length === 1 ? "" : "s"}`}
+              {textoPedidoInterno.trim() && (
+                <>
+                  <button type="button" onClick={handleAnalizarPedido} className={styles.btnPrimarioChico}>
+                    Analizar
                   </button>
                   <button
                     type="button"
-                    onClick={handleCancelarPedidoInterno}
-                    disabled={guardandoPedidoInterno}
-                    className={styles.cancelarPedidoBtn}
+                    onClick={() => { setTextoPedidoInterno(""); setPedidoParseError(""); }}
+                    className={styles.btnIcono}
+                    title="Borrar texto"
+                    aria-label="Borrar texto"
                   >
+                    ✕
+                  </button>
+                </>
+              )}
+              <label className={`${styles.btnPdf} ${leyendoPdf ? styles.btnPdfOcupado : ""}`}>
+                {leyendoPdf ? "Leyendo…" : "Subir PDF"}
+                <input
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  style={{ display: "none" }}
+                  disabled={leyendoPdf}
+                  onChange={(e) => {
+                    procesarArchivoPdf(e.target.files?.[0]);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            </div>
+
+            {pedidoParseError && <p className={styles.alertaError} role="alert">{pedidoParseError}</p>}
+
+            {origenCarga && (
+              <div className={styles.chipCarga}>
+                <span className={styles.chipCargaTexto}>
+                  <strong>{origenCarga}</strong>
+                  {totalCola > 1 ? ` · producto ${totalCola - colaCarga.length} de ${totalCola}` : ""}
+                  <span className={styles.chipCargaAyuda}> — revisá los datos y agregá la venta</span>
+                </span>
+                <span className={styles.chipCargaAcciones}>
+                  {colaCarga.length > 0 && (
+                    <button type="button" onClick={avanzarCola} className={styles.btnLink}>
+                      Saltar
+                    </button>
+                  )}
+                  <button type="button" onClick={handleCancelarPrecarga} className={styles.btnLink}>
                     Cancelar
                   </button>
-                </div>
+                </span>
               </div>
             )}
+
+            <form onSubmit={handleSubmit} className={styles.formCarga}>
+              <label className={`${styles.campo} ${styles.colSku}`}>
+                <span>SKU</span>
+                <input type="text" name="sku" value={formData.sku} onChange={handleInputChange} placeholder="Código" required />
+              </label>
+              <label className={`${styles.campo} ${styles.colProducto}`}>
+                <span>Producto</span>
+                <input type="text" name="nombre" value={formData.nombre} onChange={handleInputChange} placeholder="Producto (color/talle opcional)" required />
+              </label>
+              <label className={`${styles.campo} ${styles.colCant}`}>
+                <span>Cantidad</span>
+                <input type="number" name="cantidad" value={formData.cantidad} onChange={handleInputChange} min="1" required />
+              </label>
+              <label className={`${styles.campo} ${styles.colNro}`}>
+                <span>N° de venta</span>
+                <input type="text" name="numeroVenta" value={formData.numeroVenta} onChange={handleInputChange} placeholder="Ej: 5005" required />
+              </label>
+              <label className={`${styles.campo} ${styles.colCliente}`}>
+                <span>Cliente</span>
+                <input type="text" name="cliente" value={formData.cliente} onChange={handleInputChange} placeholder="Nombre del cliente" required />
+              </label>
+              <label className={`${styles.campo} ${styles.colDespacho}`}>
+                <span>Punto de despacho</span>
+                <select name="puntoDespacho" value={formData.puntoDespacho} onChange={handleInputChange} required>
+                  {PUNTOS_DESPACHO.map((opcion) => (
+                    <option key={opcion} value={opcion}>{opcion}</option>
+                  ))}
+                </select>
+              </label>
+              {(origenCarga || formData.nota) && (
+                <label className={`${styles.campo} ${styles.colNota}`}>
+                  <span>Nota</span>
+                  <input type="text" name="nota" value={formData.nota} onChange={handleInputChange} placeholder="Opcional" />
+                </label>
+              )}
+
+              <div className={`${styles.colAcciones} ${(origenCarga || formData.nota) ? styles.colAccionesAncha : ""}`}>
+                {avisoForm && <span className={styles.avisoOk} role="status">✓ {avisoForm}</span>}
+                <button type="submit" className={styles.btnAgregar} disabled={guardandoVenta}>
+                  {guardandoVenta
+                    ? "Guardando…"
+                    : colaCarga.length > 0
+                    ? "Agregar y seguir"
+                    : "Agregar venta"}
+                </button>
+              </div>
+            </form>
+
+            {errorForm && <p className={styles.alertaError} role="alert">{errorForm}</p>}
           </div>
-
-          <hr className={styles.separadorCargar} />
-
-          <form onSubmit={handleSubmit} className={styles.form}>
-            <input type="text" name="sku" value={formData.sku} onChange={handleInputChange} placeholder="SKU" required />
-            <input type="text" name="nombre" value={formData.nombre} onChange={handleInputChange} placeholder="Producto (color/talle opcional)" required />
-            <input type="number" name="cantidad" value={formData.cantidad} onChange={handleInputChange} min="1" required />
-            <input type="number" name="numeroVenta" value={formData.numeroVenta} onChange={handleInputChange} placeholder="N° Venta" required />
-            <input type="text" name="cliente" value={formData.cliente} onChange={handleInputChange} placeholder="Cliente" required />
-
-            <select name="puntoDespacho" value={formData.puntoDespacho} onChange={handleInputChange} required>
-              {PUNTOS_DESPACHO.map((opcion) => (
-                <option key={opcion} value={opcion}>{opcion}</option>
-              ))}
-            </select>
-
-            <button type="submit">Agregar Venta</button>
-          </form>
-
         </div>
       )}
 

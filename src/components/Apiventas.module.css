@@ -246,43 +246,53 @@
 /* Estilos para las pestañas */
 .tabs {
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
-    margin-bottom: 1rem;
+    gap: 8px;
+    margin-bottom: 1.2rem;
 }
 
 .tabs button {
-    padding: 0.7rem 1.5rem;
-    border: none;
-    background: #ccc;
+    padding: 0.55rem 1.25rem;
+    border: 1px solid #d9dfe8;
+    background: #fff;
+    color: #3b4656;
     cursor: pointer;
-    font-weight: bold;
-    border-radius: 5px;
-    margin: 0 5px;
-    transition: background 0.3s;
+    font-weight: 600;
+    font-size: 0.95rem;
+    border-radius: 999px;
+    margin: 0;
+    transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
 }
 
 .tabs button:hover {
-    background: #bbb;
+    background: #f1f4f9;
+    border-color: #c3ccda;
 }
 
 .activeTab {
-    background: #007bff !important;
-    color: white !important;
+    background: #2563eb !important;
+    border-color: #2563eb !important;
+    color: #fff !important;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.28);
 }
 
 .facturarTabLink {
-    padding: 0.7rem 1.5rem;
-    background: #17a2b8;
-    color: #fff;
-    border-radius: 5px;
+    padding: 0.55rem 1.25rem;
+    background: #fff;
+    color: #0e7490;
+    border: 1px solid #a5d8e3;
+    border-radius: 999px;
     text-decoration: none;
-    font-weight: bold;
-    margin-left: 8px;
-    transition: background 0.3s;
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-left: 0;
+    transition: background 0.2s, border-color 0.2s;
 }
 
 .facturarTabLink:hover {
-    background: #11707f;
+    background: #e6f6fa;
+    border-color: #7cc5d6;
 }
 
 /* 🔹 Fila de estadísticas: compacta y moderna, reemplaza el contador viejo */
@@ -746,193 +756,337 @@
   margin-bottom: 1rem;
 }
 
-/* ===== Pegar pedido interno (Cargar Ventas) ===== */
+/* ===== Cargar Ventas: tarjeta, zona de pegado y formulario ===== */
 
-.pedidoInternoWrapper {
+.cargarCard {
   width: 100%;
-  max-width: 700px;
+  max-width: 760px;
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid #e3e8ef;
+  border-radius: 16px;
+  box-shadow: 0 6px 24px rgba(20, 30, 60, 0.06);
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  margin-bottom: 10px;
+  gap: 14px;
 }
 
-.pedidoInternoWrapper h3 {
-  margin-bottom: 4px;
-}
-
-.pedidoInternoAyuda {
-  color: #666;
-  font-size: 0.9rem;
-  margin-top: 0;
-  margin-bottom: 10px;
-}
-
-.textareaPedido {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 0.95rem;
-  font-family: inherit;
-  resize: vertical;
-  box-sizing: border-box;
-}
-
-.analizarPedidoBtn {
-  align-self: flex-start;
-  margin-top: 10px;
-  padding: 10px 18px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 1rem;
-}
-
-.analizarPedidoBtn:hover {
-  background-color: #0056b3;
-}
-
-.pedidoError {
-  color: #b00020;
-  background: #ffe5e5;
-  border: 1px solid #b00020;
-  border-radius: 4px;
-  padding: 8px 10px;
-  margin-top: 10px;
-  font-size: 0.9rem;
-}
-
-.previewPedido {
-  margin-top: 16px;
-  padding: 12px;
-  background: #f5f5f5;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-}
-
-.previewPedidoTitulo {
-  margin-top: 0;
-  font-size: 0.9rem;
-  color: #444;
-}
-
-.filaPedidoProducto {
+/* Zona de pegado: una sola fila */
+.zonaPegado {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
   align-items: center;
-  margin-bottom: 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.filaPedidoProducto input,
-.filaPedidoProducto select {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 0.9rem;
-}
-
-.filaPedidoProducto input[placeholder="SKU"] {
-  flex: 0 1 110px;
-}
-
-.filaPedidoProducto input[placeholder="Producto"] {
-  flex: 1 1 220px;
-}
-
-.filaPedidoProducto input[type="number"] {
-  flex: 0 1 70px;
-}
-
-.filaPedidoProducto input[placeholder="Cliente"] {
-  flex: 1 1 160px;
-}
-
-.filaPedidoProducto select {
-  flex: 1 1 150px;
-}
-
-.filaPedidoProducto input[placeholder="Nota (opcional)"] {
-  flex: 1 1 160px;
-}
-
-.quitarProductoPedidoBtn {
-  padding: 8px 10px;
-  background-color: #ffe5e5;
-  color: #b00020;
-  border: 1px solid #b00020;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.previewPedidoAcciones {
-  display: flex;
   gap: 10px;
-  margin-top: 10px;
+  padding: 8px 10px 8px 14px;
+  border: 1.5px dashed #b9c4d6;
+  border-radius: 12px;
+  background: #f7f9fc;
+  transition: border-color 0.2s, background 0.2s;
 }
 
-.confirmarPedidoBtn {
-  padding: 10px 18px;
-  background-color: #4caf50;
-  color: white;
+.zonaPegado:focus-within {
+  border-color: #2563eb;
+  background: #fff;
+}
+
+.zonaPegadoActiva {
+  border-color: #2563eb;
+  border-style: solid;
+  background: #eef4ff;
+}
+
+.zonaIcono {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.zonaTexto {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 8px 4px;
   border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 1rem;
+  background: transparent;
+  font: inherit;
+  font-size: 0.95rem;
+  color: #1f2937;
+  resize: none;
+  overflow: hidden;
+  box-sizing: border-box;
+  outline: none;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.confirmarPedidoBtn:hover {
-  background-color: #43a047;
+.zonaTexto::placeholder {
+  color: #7b8798;
 }
 
-.confirmarPedidoBtn:disabled,
-.cancelarPedidoBtn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.cancelarPedidoBtn {
-  padding: 10px 18px;
-  background-color: #eee;
-  color: #333;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 1rem;
-}
-
-.pdfArrastrando {
-  outline: 2px dashed #4a6cf7;
-  outline-offset: 4px;
-  background: #f5f8ff;
-}
-
-.subirPdfLabel {
-  display: inline-block;
-  margin-left: 0.6rem;
-  padding: 0.55rem 1rem;
-  border: 1px solid #4a6cf7;
-  border-radius: 8px;
-  color: #4a6cf7;
+.btnPdf,
+.btnPrimarioChico,
+.btnIcono {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  box-sizing: border-box;
+  border-radius: 9px;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  background: white;
+  transition: background 0.15s, border-color 0.15s, transform 0.05s;
 }
 
-.subirPdfLabel:hover {
-  background: #eef2ff;
+.btnPdf {
+  padding: 0 14px;
+  background: #fff;
+  color: #2563eb;
+  border: 1px solid #bcd0fb;
 }
 
-.separadorCargar {
-  width: 100%;
-  max-width: 700px;
+.btnPdf:hover {
+  background: #eef4ff;
+  border-color: #93b2f7;
+}
+
+.btnPdfOcupado {
+  opacity: 0.65;
+  cursor: progress;
+}
+
+.btnPrimarioChico {
+  padding: 0 14px;
+  background: #2563eb;
+  color: #fff;
+  border: 1px solid #2563eb;
+}
+
+.btnPrimarioChico:hover {
+  background: #1d4fd8;
+}
+
+.btnIcono {
+  width: 36px;
+  padding: 0;
+  background: transparent;
+  color: #7b8798;
+  border: 1px solid transparent;
+}
+
+.btnIcono:hover {
+  background: #eceff5;
+  color: #333;
+}
+
+/* Mensajes */
+.alertaError {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff1f1;
+  border: 1px solid #f5c2c2;
+  color: #9b1c1c;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.chipCarga {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: #eef4ff;
+  border: 1px solid #cddcfb;
+  color: #1e3a8a;
+  font-size: 0.9rem;
+}
+
+.chipCargaAyuda {
+  color: #4b5f94;
+}
+
+.chipCargaAcciones {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.btnLink {
+  background: transparent;
   border: none;
-  border-top: 1px solid #ddd;
-  margin: 24px 0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: #2563eb;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.btnLink:hover {
+  background: #dbe7ff;
+}
+
+/* Formulario en grilla */
+.formCarga {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px 12px;
+  margin: 0;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.campo > span {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #5b6472;
+}
+
+.campo input,
+.campo select {
+  width: 100%;
+  box-sizing: border-box;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid #d3dae5;
+  border-radius: 10px;
+  background: #fff;
+  color: #1f2937;
+  font: inherit;
+  font-size: 0.95rem;
+  margin: 0;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.campo input::placeholder {
+  color: #9aa5b5;
+}
+
+.campo input:focus,
+.campo select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
+}
+
+.colSku { grid-column: span 2; }
+.colProducto { grid-column: span 4; }
+.colCant { grid-column: span 1; }
+.colNro { grid-column: span 2; }
+.colCliente { grid-column: span 3; }
+.colDespacho { grid-column: span 3; }
+.colNota { grid-column: span 3; }
+
+.colAcciones {
+  grid-column: span 3;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  align-self: end;
+}
+
+.colAccionesAncha {
+  grid-column: 1 / -1;
+}
+
+.avisoOk {
+  color: #15803d;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.btnAgregar {
+  height: 42px;
+  padding: 0 24px;
+  border: none;
+  border-radius: 10px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 0.97rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.28);
+  transition: background 0.15s, box-shadow 0.15s, transform 0.05s;
+}
+
+.btnAgregar:hover:not(:disabled) {
+  background: #1d4fd8;
+}
+
+.btnAgregar:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btnAgregar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+@media (max-width: 640px) {
+  .cargarCard {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .formCarga {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .colSku,
+  .colProducto,
+  .colCliente,
+  .colDespacho,
+  .colNota,
+  .colAcciones {
+    grid-column: 1 / -1;
+  }
+
+  .colCant,
+  .colNro {
+    grid-column: span 1;
+  }
+
+  .colAcciones {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .avisoOk {
+    flex: 1 1 100%;
+  }
+
+  .btnAgregar {
+    flex: 1 1 100%;
+    white-space: nowrap;
+  }
+
+  .zonaPegado {
+    flex-wrap: wrap;
+  }
+
+  .zonaTexto {
+    flex: 1 1 100%;
+    order: 2;
+  }
+
+  .zonaIcono {
+    order: 1;
+  }
+
+  .btnPdf {
+    order: 1;
+    margin-left: auto;
+  }
 }
