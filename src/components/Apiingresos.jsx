@@ -5,6 +5,32 @@ import React, { useState, useRef } from "react";
 import * as XLSX from "xlsx";
 import styles from "./Apiingresos.module.css";
 
+// Convierte un valor de celda del Excel en número. Acepta números reales y textos
+// como "$ 1.234,56", "1.234,56", "1,234.56" o "1234.5".
+const aNumero = (valor) => {
+  if (typeof valor === "number") return Number.isFinite(valor) ? valor : 0;
+  let t = String(valor ?? "").replace(/[^\d.,-]/g, "");
+  if (!t) return 0;
+  const coma = t.lastIndexOf(",");
+  const punto = t.lastIndexOf(".");
+  if (coma > -1 && punto > -1) {
+    t = coma > punto ? t.replace(/\./g, "").replace(",", ".") : t.replace(/,/g, "");
+  } else if (coma > -1) {
+    t = t.replace(",", ".");
+  } else if (punto > -1 && /^-?\d{1,3}(\.\d{3})+$/.test(t)) {
+    t = t.replace(/\./g, "");
+  }
+  const n = Number(t);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const sinAcentos = (texto) =>
+  String(texto || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+
 const ApiIngresos = () => {
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
   console.log("BACKEND_URL =", BACKEND_URL);
@@ -20,6 +46,7 @@ const ApiIngresos = () => {
   const [sincronizarStockTN, setSincronizarStockTN] = useState(true);
   const [sincronizarPreciosTN, setSincronizarPreciosTN] = useState(true);
   const [progresoTN, setProgresoTN] = useState(null);
+  const [columnaCosto, setColumnaCosto] = useState(""); // nombre de la columna de costo del Excel
 
   // Comparación de precios con la competencia en Mercado Libre (opcional, independiente
   // de la sync de precios TN): agrega una columna a la tabla.
@@ -69,6 +96,24 @@ const ApiIngresos = () => {
       const colPrecio = headers.find(
         (h) => h.trim().toLowerCase() === "precio"
       );
+      // Columna opcional con el costo de cada producto: se aceptan los nombres más
+      // comunes y, si no, cualquier columna que contenga "costo" (salvo stock crítico).
+      const NOMBRES_COSTO = [
+        "costo",
+        "precio de costo",
+        "precio costo",
+        "costo unitario",
+        "costo neto",
+        "p. costo",
+        "p.costo",
+      ];
+      const colCosto =
+        headers.find((h) => NOMBRES_COSTO.includes(sinAcentos(h))) ||
+        headers.find((h) => {
+          const n = sinAcentos(h);
+          return n.includes("costo") && !n.includes("stock") && !n.includes("crit");
+        });
+
       if (!colSKU || !colStock || !colPrecio) {
         alert(
            "No se encontraron las columnas SKU, Stock y/o Precio en el archivo. Verificá el formato."
@@ -87,6 +132,7 @@ const ApiIngresos = () => {
             stock,
             stockAPublicar: Math.max(stock - 1, 0),
             precioBase,
+            costo: colCosto ? aNumero(row[colCosto]) : 0,
             nombre: colNombre ? row[colNombre] : "",
             estado: "pendiente",
             mensaje: "",
@@ -115,6 +161,7 @@ const ApiIngresos = () => {
         });
 
       setFilas(filasParsed);
+      setColumnaCosto(colCosto || "");
       cargarPreciosTN(filasParsed);
     };
     reader.readAsBinaryString(file);
@@ -207,6 +254,28 @@ const ApiIngresos = () => {
       currency: "ARS",
       maximumFractionDigits: 0,
     });
+
+  // Hay costo cargado para al menos un producto: se muestran las columnas de margen
+  const tieneCosto = filas.some((f) => f.costo > 0);
+
+  // Margen = (precio base − costo) / precio base. El precio base es lo que queda neto
+  // después de las comisiones de Tiendanube, por eso el margen es ganancia real
+  // (suponiendo que costo y precio base están en la misma base de IVA).
+  const calcularMargen = (precio, costo) => {
+    if (!(costo > 0) || !(precio > 0)) return null;
+    const monto = precio - costo;
+    return { monto, porcentaje: (monto / precio) * 100 };
+  };
+
+  const renderMargen = (m) =>
+    m ? (
+      <span className={m.monto < 0 ? styles.margenNegativo : styles.margenPositivo}>
+        {formatoARS(m.monto)} (
+        {m.porcentaje.toLocaleString("es-AR", { maximumFractionDigits: 1 })}%)
+      </span>
+    ) : (
+      "—"
+    );
 
   const actualizarFilaPorSku = (sku, cambios) => {
     setFilas((prev) => prev.map((f) => (f.sku === sku ? { ...f, ...cambios } : f)));
@@ -835,6 +904,16 @@ const handleDescargarResultados = () => {
     "Stock original": fila.stock ?? "",
     "Stock publicado": fila.stockAPublicar ?? "",
     "Precio base": fila.precioBase ?? "",
+    ...(tieneCosto
+      ? {
+          Costo: fila.costo > 0 ? fila.costo : "",
+          "Margen actual ($)": calcularMargen(fila.precioBase, fila.costo)?.monto ?? "",
+          "Margen actual (%)": (() => {
+            const m = calcularMargen(fila.precioBase, fila.costo);
+            return m ? Number(m.porcentaje.toFixed(1)) : "";
+          })(),
+        }
+      : {}),
     "Competencia ML (más barato)": fila.catMejor ? fila.catMejor.precio : "",
     "Competencia ML: envío gratis": fila.catMejor
       ? fila.catMejor.envioGratis === true
@@ -850,6 +929,15 @@ const handleDescargarResultados = () => {
       : "",
     "Competencia ML (con tus cuotas)": fila.catComparable ? fila.catComparable.precio : "",
     "Precio base sugerido": fila.sugBase ?? "",
+    ...(tieneCosto
+      ? {
+          "Margen con sugerido ($)": calcularMargen(fila.sugBase, fila.costo)?.monto ?? "",
+          "Margen con sugerido (%)": (() => {
+            const m = calcularMargen(fila.sugBase, fila.costo);
+            return m ? Number(m.porcentaje.toFixed(1)) : "";
+          })(),
+        }
+      : {}),
 
     "Estado Mercado Libre":
       fila.mlEstado === "ok"
@@ -889,11 +977,24 @@ const handleDescargarResultados = () => {
     { wch: 15 }, // Stock original
     { wch: 16 }, // Stock publicado
     { wch: 16 }, // Precio base
+    ...(tieneCosto
+      ? [
+          { wch: 14 }, // Costo
+          { wch: 18 }, // Margen actual ($)
+          { wch: 18 }, // Margen actual (%)
+        ]
+      : []),
     { wch: 22 }, // Competencia ML (más barato)
     { wch: 18 }, // Competencia ML: envío gratis
     { wch: 22 }, // Competencia ML: cuotas sin interés
     { wch: 22 }, // Competencia ML (con tus cuotas)
     { wch: 18 }, // Precio base sugerido
+    ...(tieneCosto
+      ? [
+          { wch: 22 }, // Margen con sugerido ($)
+          { wch: 22 }, // Margen con sugerido (%)
+        ]
+      : []),
     { wch: 22 }, // Estado ML
     { wch: 60 }, // Detalle ML
     { wch: 20 }, // Estado TN
@@ -937,6 +1038,7 @@ const handleDescargarResultados = () => {
     setFilas([]);
     setResumen(null);
     setArchivoNombre("");
+    setColumnaCosto("");
     setProgresoComparacion(null);
     if (inputRef.current) inputRef.current.value = "";
   };
@@ -995,6 +1097,18 @@ const handleDescargarResultados = () => {
     e.preventDefault();
     setDragActivo(false);
   };
+
+  // Anchos (%) de las columnas según las opcionales visibles (costo y competencia ML)
+  const anchosColumnas =
+    tieneCosto && compararPrecios
+      ? [4, 9, 11, 4, 8, 8, 9, 9, 20, 9, 9]
+      : compararPrecios
+      ? [4, 8, 15, 4, 8, 8, 9, 22, 11, 11]
+      : tieneCosto
+      ? [5, 8, 13, 5, 7, 9, 9, 12, 16, 16]
+      : [5, 8, 15, 5, 8, 9, 13, 18.5, 18.5];
+  const anchoMinimoTabla =
+    tieneCosto && compararPrecios ? 1600 : compararPrecios ? 1280 : tieneCosto ? 1050 : 0;
 
   return (
     <div className={styles.container}>
@@ -1075,6 +1189,18 @@ const handleDescargarResultados = () => {
       </div>
 
      
+
+      {filas.length > 0 && tieneCosto && (
+        <p className={styles.notaCosto}>
+          Costo tomado de la columna «{columnaCosto}» del Excel.
+        </p>
+      )}
+      {filas.length > 0 && !tieneCosto && compararPrecios && (
+        <p className={styles.notaCosto}>
+          No se encontró una columna de costo en el Excel: agregá una llamada «Costo» para
+          ver el margen de ganancia.
+        </p>
+      )}
 
       {/* Botones */}
       {filas.length > 0 && (
@@ -1173,7 +1299,15 @@ const handleDescargarResultados = () => {
       {/* Tabla de productos */}
       {filas.length > 0 && (
         <div className={styles.tablaWrapper}>
-          <table className={`${styles.tabla} ${compararPrecios ? styles.tablaComp : ""}`}>
+          <table
+            className={styles.tabla}
+            style={anchoMinimoTabla ? { minWidth: anchoMinimoTabla } : undefined}
+          >
+            <colgroup>
+              {anchosColumnas.map((ancho, idx) => (
+                <col key={idx} style={{ width: `${ancho}%` }} />
+              ))}
+            </colgroup>
             <thead>
               <tr>
                 <th>Estado</th>
@@ -1182,6 +1316,7 @@ const handleDescargarResultados = () => {
                 <th>Stock</th>
                 <th>Stock a publicar</th>
                 <th>Precio base</th>
+                {tieneCosto && <th>Costo / margen</th>}
                 <th>Precio TN</th>
                 {compararPrecios && <th>Competencia ML</th>}
                 <th>ML</th>
@@ -1243,6 +1378,19 @@ const handleDescargarResultados = () => {
                       }}
                     />
                   </td>
+                  {tieneCosto && (
+                    <td className={styles.tdCosto}>
+                      {fila.costo > 0 ? (
+                        <>
+                          Costo: <strong>{formatoARS(fila.costo)}</strong>
+                          <span className={styles.cmpEtiqueta}>Margen actual</span>
+                          {renderMargen(calcularMargen(fila.precioBase, fila.costo))}
+                        </>
+                      ) : (
+                        <span className={styles.cmpDetalle}>Sin costo</span>
+                      )}
+                    </td>
+                  )}
                   <td className={styles.tdPrecioTN}>
                     {fila.precioTNCalculando ? (
                       "Calculando..."
@@ -1326,6 +1474,21 @@ const handleDescargarResultados = () => {
                                   ? " (sin cuotas equivalentes)"
                                   : ""}
                               </div>
+                              {tieneCosto &&
+                                (() => {
+                                  const m = calcularMargen(fila.sugBase, fila.costo);
+                                  return m ? (
+                                    <div className={styles.cmpMargen}>
+                                      Margen con este precio: {renderMargen(m)}
+                                      {m.monto < 0 && (
+                                        <span className={styles.margenNegativo}>
+                                          {" "}
+                                          ⚠ por debajo del costo
+                                        </span>
+                                      )}
+                                    </div>
+                                  ) : null;
+                                })()}
                               <button
                                 type="button"
                                 className={styles.btnUsarSugerido}

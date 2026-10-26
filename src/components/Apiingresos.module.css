@@ -313,61 +313,15 @@
    Distribución de anchos de la tabla
    ========================================== */
 
-/* Estado */
+/* Los anchos de cada columna se definen en el <colgroup> de la tabla (cambian según
+   se vean o no las columnas de costo y de competencia ML). Acá solo la alineación. */
 .tabla th:nth-child(1),
-.tabla td:nth-child(1) {
-  width: 5%;
-  text-align: center;
-}
-
-/* SKU */
-.tabla th:nth-child(2),
-.tabla td:nth-child(2) {
-  width: 8%;
-}
-
-/* Nombre */
-.tabla th:nth-child(3),
-.tabla td:nth-child(3) {
-  width: 15%;
-}
-
-/* Stock */
+.tabla td:nth-child(1),
 .tabla th:nth-child(4),
-.tabla td:nth-child(4) {
-  width: 5%;
-  text-align: center;
-}
-
-/* Stock a publicar */
+.tabla td:nth-child(4),
 .tabla th:nth-child(5),
 .tabla td:nth-child(5) {
-  width: 8%;
   text-align: center;
-}
-
-/* Precio base */
-.tabla th:nth-child(6),
-.tabla td:nth-child(6) {
-  width: 9%;
-}
-
-/* Precio TN */
-.tabla th:nth-child(7),
-.tabla td:nth-child(7) {
-  width: 14%;
-}
-
-/* Mercado Libre */
-.tabla th:nth-child(8),
-.tabla td:nth-child(8) {
-  width: 18%;
-}
-
-/* Tiendanube */
-.tabla th:nth-child(9),
-.tabla td:nth-child(9) {
-  width: 18%;
 }
 
 .btnDescargar {
@@ -448,23 +402,6 @@
   color: #444;
 }
 
-/* Con la columna extra la tabla es más ancha: se desplaza hacia el costado
-   en pantallas chicas y los anchos se reparten de nuevo. */
-.tablaComp {
-  min-width: 1280px;
-}
-
-.tabla.tablaComp th:nth-child(1), .tabla.tablaComp td:nth-child(1) { width: 4%; }
-.tabla.tablaComp th:nth-child(2), .tabla.tablaComp td:nth-child(2) { width: 8%; }
-.tabla.tablaComp th:nth-child(3), .tabla.tablaComp td:nth-child(3) { width: 15%; }
-.tabla.tablaComp th:nth-child(4), .tabla.tablaComp td:nth-child(4) { width: 4%; }
-.tabla.tablaComp th:nth-child(5), .tabla.tablaComp td:nth-child(5) { width: 8%; }
-.tabla.tablaComp th:nth-child(6), .tabla.tablaComp td:nth-child(6) { width: 8%; }
-.tabla.tablaComp th:nth-child(7), .tabla.tablaComp td:nth-child(7) { width: 9%; }
-.tabla.tablaComp th:nth-child(8), .tabla.tablaComp td:nth-child(8) { width: 22%; }
-.tabla.tablaComp th:nth-child(9), .tabla.tablaComp td:nth-child(9) { width: 11%; }
-.tabla.tablaComp th:nth-child(10), .tabla.tablaComp td:nth-child(10) { width: 11%; }
-
 .tdCompetencia {
   font-size: 0.82rem;
   line-height: 1.4;
@@ -544,4 +481,33 @@
 .btnUsarSugerido:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Costo y margen */
+.tdCosto {
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: #333;
+  vertical-align: middle;
+}
+
+.margenPositivo {
+  color: #14753a;
+  font-weight: 600;
+}
+
+.margenNegativo {
+  color: #c62828;
+  font-weight: 700;
+}
+
+.cmpMargen {
+  margin-top: 0.3rem;
+  font-size: 0.8rem;
+}
+
+.notaCosto {
+  margin: -0.4rem 0 1rem;
+  font-size: 0.82rem;
+  color: #666;
 }
