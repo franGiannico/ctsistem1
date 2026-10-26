@@ -143,7 +143,6 @@ app.use('/apiventas', rateLimitMiddleware, authMiddleware);
 app.use('/apiingresos', rateLimitMiddleware, authMiddleware);
 app.use('/apitareas', rateLimitMiddleware, authMiddleware);
 app.use('/meli', rateLimitMiddleware, authMiddleware);
-app.use('/comparaya', rateLimitMiddleware, authMiddleware);
 
 // 🌐 Configurar conexión a MongoDB
 mongoose.set('strictQuery', true); // Recomendado en versiones recientes de Mongoose
@@ -165,7 +164,6 @@ app.use("/apiingresos", require("./routes/apiingresos"));
 app.use("/apitareas", require("./routes/apitareas"));
 app.use("/meli", meliRoutes); // ✅ Ruta para autenticación Mercado Libre
 app.use("/tiendanube", require("./routes/tiendanube")); // ✅ Ruta para Tiendanube
-app.use("/comparaya", require("./routes/comparaya")); // ✅ Comparación de precios (ComparaYa)
 
 
 

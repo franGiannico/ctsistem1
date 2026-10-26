@@ -1201,6 +1201,25 @@ async function tokenMeliVigente() {
   return { access_token: tokenDoc.access_token, user_id: tokenDoc.user_id };
 }
 
+// Cuotas sin interés de una publicación. La API de ML no tiene un campo directo para
+// las publicaciones ajenas, así que se deduce (según la documentación de campañas de
+// cuotas para Marketplace):
+//   - Si la respuesta trae "installments" con tasa 0, se usa tal cual.
+//   - Publicaciones Premium (gold_pro): 6 cuotas al precio publicado, salvo que tengan
+//     una campaña de 3, 9 o 12 cuotas (tags 3x_campaign / 9x_campaign / 12x_campaign).
+//   - Clásicas (gold_special) y el resto: sin cuotas sin interés.
+function cuotasSinInteresDe({ installments, tags, listingType }) {
+  if (installments && Number(installments.quantity) > 0) {
+    return Number(installments.rate) === 0 ? Number(installments.quantity) : 0;
+  }
+  const t = Array.isArray(tags) ? tags : [];
+  for (const n of [12, 9, 6, 3]) {
+    if (t.includes(`${n}x_campaign`)) return n;
+  }
+  if (listingType === 'gold_pro') return 6;
+  return 0;
+}
+
 router.post('/competencia-catalogo', async (req, res) => {
   const sku = String(req.body?.sku || '').trim();
   if (!sku) return res.status(400).json({ error: 'Falta "sku".' });
@@ -1256,22 +1275,72 @@ router.post('/competencia-catalogo', async (req, res) => {
       .map((r) => {
         const precio = Number(r.price ?? r.sale_price?.amount ?? r.sale_price);
         const vendedor = String(r.seller_id ?? r.seller?.id ?? '');
-        const cuotas = Number(r.installments?.quantity) || null;
+        const gratis = r.shipping && typeof r.shipping.free_shipping === 'boolean'
+          ? r.shipping.free_shipping
+          : null;
         return {
           itemId: r.item_id || r.id || null,
           vendedor,
           propio: vendedor === String(user_id),
           precio,
-          envioGratis: r.shipping?.free_shipping === true,
-          cuotas,
-          sinInteres: Boolean(r.installments) && Number(r.installments.rate) === 0,
+          envioGratis: gratis,
+          tipoPublicacion: r.listing_type_id || null,
           tiendaOficial: r.official_store_id || null,
+          _installments: r.installments || null,
+          _tags: Array.isArray(r.tags) ? r.tags : [],
         };
       })
       .filter((o) => Number.isFinite(o.precio) && o.precio > 0)
       .sort((a, b) => a.precio - b.precio);
 
     const ajenas = ofertas.filter((o) => !o.propio);
+
+    // Detalle de las más baratas: si el listado del catálogo no trae el envío o las
+    // etiquetas, se completan con el detalle de cada publicación (/items?ids=).
+    const mejores = ajenas.slice(0, 10);
+    const idsDetalle = mejores.map((o) => o.itemId).filter(Boolean);
+    if (idsDetalle.length > 0) {
+      try {
+        const det = await axios.get('https://api.mercadolibre.com/items', {
+          params: { ids: idsDetalle.join(',') },
+          headers,
+        });
+        const porId = new Map(
+          (Array.isArray(det.data) ? det.data : [])
+            .map((x) => x && x.body)
+            .filter(Boolean)
+            .map((b) => [b.id, b])
+        );
+        mejores.forEach((o) => {
+          const b = porId.get(o.itemId);
+          if (!b) return;
+          if (b.shipping && typeof b.shipping.free_shipping === 'boolean') {
+            o.envioGratis = b.shipping.free_shipping;
+          }
+          if (b.listing_type_id) o.tipoPublicacion = b.listing_type_id;
+          if (Array.isArray(b.tags) && b.tags.length > 0) {
+            o._tags = Array.from(new Set([...o._tags, ...b.tags]));
+          }
+          if (b.installments) o._installments = b.installments;
+          if (b.official_store_id) o.tiendaOficial = b.official_store_id;
+        });
+      } catch (e) {
+        console.warn('⚠️ No se pudo completar el detalle de la competencia:', e.response?.data || e.message);
+      }
+    }
+
+    // Cuotas sin interés de cada oferta (y se limpian los campos internos)
+    ofertas.forEach((o) => {
+      const n = cuotasSinInteresDe({
+        installments: o._installments,
+        tags: o._tags,
+        listingType: o.tipoPublicacion,
+      });
+      o.cuotas = n || null;
+      o.sinInteres = n > 0;
+      delete o._installments;
+      delete o._tags;
+    });
 
     // 3) Precio para ganar (solo si tenemos una publicación de catálogo)
     let precioParaGanar = null;
