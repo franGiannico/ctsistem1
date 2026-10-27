@@ -16,6 +16,7 @@ const ResultadoProductoSchema = new mongoose.Schema(
     precioBase: Number,
     precioPromocional: Number,
     precioLista: Number,
+    descuento: Number,
     cuotas: Number,
   },
   {
@@ -36,6 +37,8 @@ const SincronizacionTiendanubeSchema = new mongoose.Schema({
       sku: String,
       cantidad: Number,
       precioBase: Number,
+      // % de descuento (vacío = sin promoción: el precio promocional queda en blanco)
+      descuento: Number,
     },
   ],
 

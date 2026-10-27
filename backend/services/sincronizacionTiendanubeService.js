@@ -1,16 +1,18 @@
 const axios = require("axios");
 const mongoose = require("mongoose");
 
-const CONFIG_CUOTAS = require("../config/tiendanubeCuotas");
 const SincronizacionTiendanube = require(
   "../models/SincronizacionTiendanube"
 );
-
-const IVA = 1.21;
-const COSTO_COBRO_MP = 0.0079 * IVA;
-const CPT_TIENDANUBE = 0.01;
-const IMPUESTO_DEBITOS = 0.006;
-const AUMENTO_PRECIO_LISTA = 0.2;
+const {
+  calcularPreciosTiendanube,
+  normalizarDescuento,
+} = require("./preciosTiendanube");
+const {
+  conReintentos,
+  textoError,
+  actualizarPreciosVariantes,
+} = require("./tiendanubeApi");
 
 const CACHE_CATALOGO_TN_MS = 5 * 60 * 1000;
 
@@ -22,56 +24,6 @@ let cacheCatalogoTN = {
 
 const dormir = (milisegundos) =>
   new Promise((resolve) => setTimeout(resolve, milisegundos));
-
-const obtenerPlanPorPrecio = (precioBase) => {
-  const precio = Number(precioBase);
-
-  if (!Number.isFinite(precio) || precio <= 0) {
-    throw new Error('"precioBase" debe ser un número mayor que 0.');
-  }
-
-  const plan = CONFIG_CUOTAS.find(
-    (configuracion) => precio >= configuracion.minimo
-  );
-
-  if (!plan) {
-    throw new Error("No se encontró una configuración de cuotas válida.");
-  }
-
-  return plan;
-};
-
-const calcularPreciosTiendanube = (precioBase) => {
-  const precioNetoDeseado = Number(precioBase);
-  const plan = obtenerPlanPorPrecio(precioNetoDeseado);
-
-  const costoFinanciacionConIVA = plan.financiacion * IVA;
-
-  const costoTotal =
-    COSTO_COBRO_MP +
-    CPT_TIENDANUBE +
-    IMPUESTO_DEBITOS +
-    costoFinanciacionConIVA;
-
-  if (costoTotal >= 1) {
-    throw new Error("El costo total calculado es inválido.");
-  }
-
-  const precioPromocional = Math.ceil(
-    precioNetoDeseado / (1 - costoTotal)
-  );
-
-  const precioLista = Math.ceil(
-    precioPromocional * (1 + AUMENTO_PRECIO_LISTA)
-  );
-
-  return {
-    cuotas: plan.cuotas,
-    costoTotal,
-    precioPromocional,
-    precioLista,
-  };
-};
 
 const obtenerMapaVariantesTN = async ({
   accessToken,
@@ -99,9 +51,8 @@ const obtenerMapaVariantesTN = async ({
   let page = 1;
 
   while (page <= 100) {
-    const response = await axios.get(
-      `https://api.tiendanube.com/v1/${userId}/products`,
-      {
+    const response = await conReintentos(() =>
+      axios.get(`https://api.tiendanube.com/v1/${userId}/products`, {
         headers: {
           Authentication: `bearer ${accessToken}`,
           "User-Agent": userAgent,
@@ -110,7 +61,7 @@ const obtenerMapaVariantesTN = async ({
           page,
           per_page: perPage,
         },
-      }
+      })
     );
 
     const catalogo = response.data || [];
@@ -181,9 +132,8 @@ const procesarSincronizacionTiendanube = async ({
   for (let inicio = 0; inicio < productos.length; inicio += TAMANIO_LOTE) {
     const loteEntrada = productos.slice(inicio, inicio + TAMANIO_LOTE);
 
-    const resultadosLote = [];
-    const actualizacionesPorProducto = new Map();
-    const preciosPorProducto = new Map();
+    // Cada entrada: el resultado que se va a guardar + lo que hay que mandar a TN.
+    const entradas = [];
 
     for (const productoEntrada of loteEntrada) {
       const sku = String(productoEntrada.sku || "").trim();
@@ -197,12 +147,14 @@ const procesarSincronizacionTiendanube = async ({
         (!necesitaPrecios || (Number.isFinite(precioBase) && precioBase > 0));
 
       if (!productoValido) {
-        resultadosLote.push({
-          sku: sku || "Sin SKU",
-          success: false,
-          error: "SKU, cantidad o precio base inválido.",
-          cantidad,
-          precioBase,
+        entradas.push({
+          resultado: {
+            sku: sku || "Sin SKU",
+            success: false,
+            error: "SKU, cantidad o precio base inválido.",
+            cantidad,
+            precioBase,
+          },
         });
 
         continue;
@@ -211,74 +163,184 @@ const procesarSincronizacionTiendanube = async ({
       const encontrada = mapaVariantes.get(sku.toLowerCase());
 
       if (!encontrada) {
-        resultadosLote.push({
-          sku,
-          success: false,
-          error: `No se encontró el SKU "${sku}" en Tiendanube.`,
-          cantidad,
-          precioBase,
+        entradas.push({
+          resultado: {
+            sku,
+            success: false,
+            error: `No se encontró el SKU "${sku}" en Tiendanube.`,
+            cantidad,
+            precioBase,
+          },
         });
 
         continue;
       }
 
       // Solo calculamos precios si realmente los vamos a tocar.
-      const precios = necesitaPrecios
-        ? calcularPreciosTiendanube(precioBase)
-        : null;
+      // El precio base va al precio de LISTA. El promocional solo se completa si el producto
+      // tiene % de descuento; si no, se deja en blanco (y se limpia si tenía uno).
+      let precios = null;
+      let descuento = null;
 
-      // Payload para el endpoint combinado /products/stock-price.
-      // Solo incluye "inventory_levels" y/o "price" según lo que se pidió sincronizar;
-      // el campo que se omite queda sin tocar del lado de Tiendanube.
-      const variantePayload = { id: encontrada.variantId };
+      if (necesitaPrecios) {
+        try {
+          descuento = normalizarDescuento(productoEntrada.descuento);
+          precios = calcularPreciosTiendanube(precioBase, descuento);
+        } catch (error) {
+          entradas.push({
+            resultado: {
+              sku,
+              success: false,
+              error: error.message,
+              cantidad,
+              precioBase,
+            },
+          });
 
-      if (necesitaStock) {
-        const nivelActual = encontrada.inventoryLevels?.[0] || {};
-
-        const inventoryLevel = {
-          stock: cantidad,
-        };
-
-        if (nivelActual.id !== undefined) {
-          inventoryLevel.id = nivelActual.id;
+          continue;
         }
+      }
 
+      entradas.push({
+        encontrada,
+        precios,
+        cantidad,
+        precioBase,
+        sku,
+        descuento,
+        stockOk: true,
+        precioOk: true,
+        errores: [],
+        resultado: null,
+      });
+    }
+
+    const validas = entradas.filter((e) => e.encontrada);
+
+    // ---- 1) Stock (endpoint masivo /products/stock-price; solo stock, no precios) ----
+    if (necesitaStock && validas.length > 0) {
+      const actualizacionesPorProducto = new Map();
+
+      for (const e of validas) {
+        const nivelActual = e.encontrada.inventoryLevels?.[0] || {};
+        const inventoryLevel = { stock: e.cantidad };
+
+        if (nivelActual.id !== undefined) inventoryLevel.id = nivelActual.id;
         if (nivelActual.location_id !== undefined) {
           inventoryLevel.location_id = nivelActual.location_id;
         }
 
-        variantePayload.inventory_levels = [inventoryLevel];
-      }
-
-      if (necesitaPrecios) {
-        variantePayload.price = precios.precioLista;
-      }
-
-      if (necesitaStock || necesitaPrecios) {
-        if (!actualizacionesPorProducto.has(encontrada.productId)) {
-          actualizacionesPorProducto.set(encontrada.productId, {
-            id: encontrada.productId,
+        if (!actualizacionesPorProducto.has(e.encontrada.productId)) {
+          actualizacionesPorProducto.set(e.encontrada.productId, {
+            id: e.encontrada.productId,
             variants: [],
           });
         }
 
-        actualizacionesPorProducto
-          .get(encontrada.productId)
-          .variants.push(variantePayload);
+        actualizacionesPorProducto.get(e.encontrada.productId).variants.push({
+          id: e.encontrada.variantId,
+          inventory_levels: [inventoryLevel],
+        });
       }
 
-      // El precio promocional es un concepto puramente de precio: solo se toca
-      // si se pidió sincronizar precios.
-      if (necesitaPrecios) {
-        if (!preciosPorProducto.has(encontrada.productId)) {
-          preciosPorProducto.set(encontrada.productId, []);
+      try {
+        await conReintentos(() =>
+          axios.patch(
+            `https://api.tiendanube.com/v1/${userId}/products/stock-price`,
+            Array.from(actualizacionesPorProducto.values()),
+            {
+              headers: {
+                Authentication: `bearer ${accessToken}`,
+                "User-Agent": userAgent,
+                "Content-Type": "application/json",
+              },
+            }
+          )
+        );
+      } catch (error) {
+        const detalle = textoError(error);
+        console.error("❌ [TN WORKER] Error actualizando stock del lote:", detalle);
+
+        for (const e of validas) {
+          e.stockOk = false;
+          e.errores.push(`No se pudo actualizar el stock: ${detalle}`);
+        }
+      }
+    }
+
+    // ---- 2) Precios (lista + promocional juntos, un pedido por producto) ----
+    if (necesitaPrecios && validas.length > 0) {
+      const preciosPorProducto = new Map();
+
+      for (const e of validas) {
+        if (!preciosPorProducto.has(e.encontrada.productId)) {
+          preciosPorProducto.set(e.encontrada.productId, []);
         }
 
-        preciosPorProducto.get(encontrada.productId).push({
-          id: encontrada.variantId,
-          price: precios.precioLista,
-          promotional_price: precios.precioPromocional,
+        preciosPorProducto.get(e.encontrada.productId).push({
+          id: e.encontrada.variantId,
+          price: e.precios.precioLista,
+          promo: e.precios.precioPromocional,
+          entrada: e,
         });
+      }
+
+      for (const [productId, variantes] of preciosPorProducto.entries()) {
+        try {
+          const resultadosApi = await actualizarPreciosVariantes({
+            userId,
+            accessToken,
+            userAgent,
+            productId,
+            variantes: variantes.map(({ id, price, promo }) => ({ id, price, promo })),
+          });
+
+          for (const v of variantes) {
+            const r = resultadosApi.find((x) => String(x.id) === String(v.id));
+
+            if (r && !r.ok) {
+              v.entrada.precioOk = false;
+              v.entrada.errores.push(r.error);
+            }
+          }
+        } catch (error) {
+          const detalle = textoError(error);
+          console.error(
+            `❌ [TN WORKER] Error actualizando precios del producto ${productId}:`,
+            detalle
+          );
+
+          for (const v of variantes) {
+            v.entrada.precioOk = false;
+            v.entrada.errores.push(`No se pudieron actualizar los precios: ${detalle}`);
+          }
+        }
+
+        // Pausa pequeña para no golpear demasiado la API (límite de TN: ~2 pedidos por segundo).
+        await dormir(350);
+      }
+    }
+
+    // ---- 3) Resultados del lote ----
+    const resultadosLote = entradas.map((e) => {
+      if (e.resultado) return e.resultado;
+
+      const base = {
+        sku: e.sku,
+        cantidad: e.cantidad,
+        precioBase: e.precioBase,
+        ...(necesitaPrecios
+          ? {
+              precioLista: e.precios.precioLista,
+              precioPromocional: e.precios.precioPromocional ?? undefined,
+              descuento: e.descuento ?? undefined,
+              cuotas: e.precios.cuotas,
+            }
+          : {}),
+      };
+
+      if (e.errores.length > 0) {
+        return { ...base, success: false, error: e.errores.join(" | ") };
       }
 
       let mensaje;
@@ -292,58 +354,8 @@ const procesarSincronizacionTiendanube = async ({
         mensaje = "Sin cambios (no se seleccionó stock ni precios).";
       }
 
-      resultadosLote.push({
-        sku,
-        success: true,
-        mensaje,
-        cantidad,
-        precioBase,
-        ...(necesitaPrecios
-          ? {
-              precioPromocional: precios.precioPromocional,
-              precioLista: precios.precioLista,
-              cuotas: precios.cuotas,
-            }
-          : {}),
-      });
-    }
-
-    const actualizaciones = Array.from(
-      actualizacionesPorProducto.values()
-    );
-
-    if (actualizaciones.length > 0) {
-      await axios.patch(
-        `https://api.tiendanube.com/v1/${userId}/products/stock-price`,
-        actualizaciones,
-        {
-          headers: {
-            Authentication: `bearer ${accessToken}`,
-            "User-Agent": userAgent,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-    }
-
-    const gruposPrecios = Array.from(preciosPorProducto.entries());
-
-    for (const [productId, variantes] of gruposPrecios) {
-      await axios.patch(
-        `https://api.tiendanube.com/v1/${userId}/products/${productId}/variants`,
-        variantes,
-        {
-          headers: {
-            Authentication: `bearer ${accessToken}`,
-            "User-Agent": userAgent,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      // Pausa pequeña para no golpear demasiado la API.
-      await dormir(100);
-    }
+      return { ...base, success: true, mensaje };
+    });
 
     const exitososLote = resultadosLote.filter(
       (resultado) => resultado.success

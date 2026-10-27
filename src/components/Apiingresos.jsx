@@ -4,6 +4,7 @@
 import React, { useState, useRef } from "react";
 import * as XLSX from "xlsx";
 import styles from "./Apiingresos.module.css";
+import MigracionPromocionales from "./MigracionPromocionales";
 
 // Convierte un valor de celda del Excel en número. Acepta números reales y textos
 // como "$ 1.234,56", "1.234,56", "1,234.56" o "1234.5".
@@ -31,6 +32,43 @@ const sinAcentos = (texto) =>
     .trim()
     .toLowerCase();
 
+// Interpreta el % de descuento escrito en la tabla.
+//   vacío o 0  -> sin descuento (el precio promocional queda en blanco)
+//   0 < d < 100 -> descuento válido
+//   cualquier otra cosa -> inválido
+const leerDescuento = (valor) => {
+  const texto = String(valor ?? "").replace("%", "").replace(",", ".").trim();
+  if (texto === "") return { valor: null, invalido: false };
+  const d = Number(texto);
+  if (!Number.isFinite(d) || d < 0 || d >= 100) return { valor: null, invalido: true };
+  if (d === 0) return { valor: null, invalido: false };
+  return { valor: d, invalido: false };
+};
+
+// Precio promocional = lista menos el % de descuento, redondeado hacia arriba
+// (misma fórmula que usa el servidor al sincronizar).
+const promoDesdeLista = (precioLista, descuento) =>
+  Math.ceil(Number(((precioLista * (100 - descuento)) / 100).toFixed(6)));
+
+// Precio promocional de una fila: null si no tiene descuento (o si no sirve).
+const promoDeFila = (fila) => {
+  const d = leerDescuento(fila.descuento);
+  if (d.invalido || d.valor === null || !(fila.precioListaTN > 0)) return null;
+  const promo = promoDesdeLista(fila.precioListaTN, d.valor);
+  return promo < fila.precioListaTN ? promo : null;
+};
+
+// Una fila con descuento que no puede aplicarse (número inválido o descuento tan chico
+// que el promocional quedaría igual a la lista).
+const descuentoInvalido = (fila) => {
+  const d = leerDescuento(fila.descuento);
+  if (d.invalido) return "El % de descuento debe estar entre 0 y 100.";
+  if (d.valor !== null && fila.precioListaTN > 0 && promoDeFila(fila) === null) {
+    return "Descuento demasiado chico: el promocional quedaría igual a la lista.";
+  }
+  return "";
+};
+
 const ApiIngresos = () => {
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
   console.log("BACKEND_URL =", BACKEND_URL);
@@ -47,6 +85,7 @@ const ApiIngresos = () => {
   const [sincronizarPreciosTN, setSincronizarPreciosTN] = useState(true);
   const [progresoTN, setProgresoTN] = useState(null);
   const [columnaCosto, setColumnaCosto] = useState(""); // nombre de la columna de costo del Excel
+  const [descuentoGeneral, setDescuentoGeneral] = useState(""); // % para "Aplicar a todos"
 
   // Comparación de precios con la competencia en Mercado Libre (opcional, independiente
   // de la sync de precios TN): agrega una columna a la tabla.
@@ -114,6 +153,13 @@ const ApiIngresos = () => {
           return n.includes("costo") && !n.includes("stock") && !n.includes("crit");
         });
 
+      // Columna opcional con el % de descuento de cada producto (para promociones).
+      const colDescuento = headers.find((h) =>
+        ["descuento", "% descuento", "descuento %", "desc", "desc.", "% desc", "% desc."].includes(
+          sinAcentos(h)
+        )
+      );
+
       if (!colSKU || !colStock || !colPrecio) {
         alert(
            "No se encontraron las columnas SKU, Stock y/o Precio en el archivo. Verificá el formato."
@@ -140,17 +186,24 @@ const ApiIngresos = () => {
             mlMensaje: "",
             tnEstado: "pendiente",
             tnMensaje: "",
+            // Precio de lista que se publica (precio base + comisiones y financiación).
+            // El promocional no se guarda: se deriva de la lista y del % de descuento.
             precioListaTN: null,
-            precioPromocionalTN: null,
+            costoTotalTN: null,
             cuotasTN: null,
+            // % de descuento ("" = sin promoción: el promocional queda en blanco en TN)
+            descuento: colDescuento && leerDescuento(row[colDescuento]).valor !== null
+              ? String(leerDescuento(row[colDescuento]).valor)
+              : "",
             precioTNError: "",
             precioTNCalculando: true,
             sugBase: null,
-            sugPromo: null,
             sugLista: null,
+            sugCostoTotal: null,
             sugCuotas: null,
             sugTipo: "",
             sugError: "",
+            catRef: null,
             catEstado: "pendiente",
             catMensaje: "",
             catMejor: null,
@@ -225,7 +278,7 @@ const ApiIngresos = () => {
             ...fila,
             precioTNCalculando: false,
             precioListaTN: resultado.precioLista,
-            precioPromocionalTN: resultado.precioPromocional,
+            costoTotalTN: resultado.costoTotal,
             cuotasTN: resultado.cuotas,
             precioTNError: "",
           };
@@ -255,12 +308,35 @@ const ApiIngresos = () => {
       maximumFractionDigits: 0,
     });
 
+  // Productos con descuento y descuentos que no se pueden aplicar
+  const conDescuento = filas.filter((f) => promoDeFila(f) !== null).length;
+  const hayDescuentosInvalidos = filas.some((f) => descuentoInvalido(f));
+
   // Hay costo cargado para al menos un producto: se muestran las columnas de margen
   const tieneCosto = filas.some((f) => f.costo > 0);
 
-  // Margen = (precio base − costo) / precio base. El precio base es lo que queda neto
-  // después de las comisiones de Tiendanube, por eso el margen es ganancia real
-  // (suponiendo que costo y precio base están en la misma base de IVA).
+  // Margen = (precio neto − costo) / precio neto. Sin descuento, el neto es el precio base
+  // (lo que queda después de las comisiones de Tiendanube). Con descuento, el neto es lo
+  // que queda de vender al precio promocional: promocional × (1 − costos de TN).
+  // Supone que costo y precio base están en la misma base de IVA.
+  const netoDeFila = (fila) => {
+    const promo = promoDeFila(fila);
+    if (promo !== null && fila.costoTotalTN > 0) {
+      return promo * (1 - fila.costoTotalTN);
+    }
+    return fila.precioBase;
+  };
+
+  // Neto del precio base sugerido (con descuento: lo que queda de vender al promocional)
+  const netoSugerido = (fila) => {
+    const d = leerDescuento(fila.descuento);
+    if (d.valor !== null && fila.sugLista > 0 && fila.sugCostoTotal > 0) {
+      const promo = promoDesdeLista(fila.sugLista, d.valor);
+      if (promo < fila.sugLista) return promo * (1 - fila.sugCostoTotal);
+    }
+    return fila.sugBase;
+  };
+
   const calcularMargen = (precio, costo) => {
     if (!(costo > 0) || !(precio > 0)) return null;
     const monto = precio - costo;
@@ -308,7 +384,7 @@ const ApiIngresos = () => {
             ...f,
             precioTNCalculando: false,
             precioListaTN: r.precioLista,
-            precioPromocionalTN: r.precioPromocional,
+            costoTotalTN: r.costoTotal,
             cuotasTN: r.cuotas,
             precioTNError: "",
           };
@@ -359,8 +435,8 @@ const ApiIngresos = () => {
           ? {
               ...f,
               precioBase: f.sugBase,
-              precioPromocionalTN: f.sugPromo,
               precioListaTN: f.sugLista,
+              costoTotalTN: f.sugCostoTotal,
               cuotasTN: f.sugCuotas,
               precioTNError: "",
               precioTNCalculando: false,
@@ -372,6 +448,136 @@ const ApiIngresos = () => {
           : f
       )
     );
+  };
+
+  // Cambia el % de descuento de una fila. Si ya se comparó con ML, se recalcula el precio
+  // base sugerido (porque lo que paga el cliente pasa a ser el promocional).
+  const cambiarDescuento = (i, valor) => {
+    const fila = filas[i];
+    if (!fila) return;
+    const texto = String(valor ?? "").trim();
+    if (texto === String(fila.descuento ?? "").trim()) return;
+
+    const sku = fila.sku;
+    setFilas((prev) =>
+      prev.map((f, idx) =>
+        idx === i
+          ? {
+              ...f,
+              descuento: texto,
+              estado: "pendiente",
+              mensaje: "",
+              tnEstado: "pendiente",
+              tnMensaje: "",
+              sugBase: null,
+              sugError: "",
+            }
+          : f
+      )
+    );
+
+    if (fila.catRef) {
+      recalcularSugerencias([{ sku, precioObjetivo: fila.catRef.precio - 1, tipo: fila.catRef.tipo, descuento: texto }]);
+    }
+  };
+
+  // Aplica el mismo % de descuento a todos los productos del Excel (promoción)
+  const aplicarDescuentoATodos = () => {
+    const d = leerDescuento(descuentoGeneral);
+    if (d.invalido || d.valor === null) {
+      alert("Ingresá un % de descuento mayor que 0 y menor que 100.");
+      return;
+    }
+    const texto = String(d.valor);
+    const objetivos = [];
+
+    setFilas((prev) =>
+      prev.map((f) => ({
+        ...f,
+        descuento: texto,
+        estado: "pendiente",
+        mensaje: "",
+        tnEstado: "pendiente",
+        tnMensaje: "",
+        sugBase: null,
+        sugError: "",
+      }))
+    );
+
+    filas.forEach((f) => {
+      if (f.catRef) {
+        objetivos.push({ sku: f.sku, precioObjetivo: f.catRef.precio - 1, tipo: f.catRef.tipo, descuento: texto });
+      }
+    });
+    if (objetivos.length > 0) recalcularSugerencias(objetivos);
+  };
+
+  // Saca todos los descuentos: los productos se publican solo con precio de lista
+  const quitarDescuentos = () => {
+    const objetivos = [];
+
+    setFilas((prev) =>
+      prev.map((f) => ({
+        ...f,
+        descuento: "",
+        estado: "pendiente",
+        mensaje: "",
+        tnEstado: "pendiente",
+        tnMensaje: "",
+        sugBase: null,
+        sugError: "",
+      }))
+    );
+    setDescuentoGeneral("");
+
+    filas.forEach((f) => {
+      if (f.catRef) {
+        objetivos.push({ sku: f.sku, precioObjetivo: f.catRef.precio - 1, tipo: f.catRef.tipo, descuento: "" });
+      }
+    });
+    if (objetivos.length > 0) recalcularSugerencias(objetivos);
+  };
+
+  // Calcula el precio base que lleva el precio FINAL de TN (el promocional si el producto
+  // tiene descuento, el de lista si no) a $1 por debajo de la competencia. Solo sugiere.
+  const recalcularSugerencias = async (objetivos) => {
+    if (!objetivos || objetivos.length === 0) return;
+    try {
+      const res = await fetch(`${BACKEND_URL}/tiendanube/calcular-precio-base-objetivo`, {
+        method: "POST",
+        headers: encabezadosJSON(),
+        body: JSON.stringify({
+          productos: objetivos.map((o) => ({
+            sku: o.sku,
+            precioObjetivo: o.precioObjetivo,
+            descuento: leerDescuento(o.descuento).valor,
+          })),
+        }),
+      });
+      const data = await res.json();
+      const porSku = new Map((data.resultados || []).map((r) => [r.sku, r]));
+
+      objetivos.forEach((o) => {
+        const r = porSku.get(o.sku);
+        if (!r || r.error) {
+          actualizarFilaPorSku(o.sku, {
+            sugBase: null,
+            sugError: (r && r.error) || "No se pudo calcular el precio sugerido",
+          });
+          return;
+        }
+        actualizarFilaPorSku(o.sku, {
+          sugBase: r.precioBase,
+          sugLista: r.precioLista,
+          sugCostoTotal: r.costoTotal,
+          sugCuotas: r.cuotas,
+          sugTipo: o.tipo,
+          sugError: "",
+        });
+      });
+    } catch (error) {
+      console.error("Error calculando precios sugeridos:", error);
+    }
   };
 
   // Texto de una oferta de la competencia en ML: envío gratis y cuotas sin interés
@@ -413,6 +619,7 @@ const ApiIngresos = () => {
         catMejor: null,
         catComparable: null,
         catParaGanar: null,
+        catRef: null,
         sugBase: null,
         sugError: "",
       });
@@ -470,11 +677,14 @@ const ApiIngresos = () => {
         });
       }
 
-      if (referencia && referencia.precio > 1 && f.precioPromocionalTN) {
+      if (referencia && referencia.precio > 1 && f.precioListaTN) {
+        // Se guarda la referencia para poder recalcular si después cambia el descuento
+        actualizarFilaPorSku(f.sku, { catRef: referencia });
         objetivos.push({
           sku: f.sku,
-          precioPromocionalObjetivo: referencia.precio - 1,
+          precioObjetivo: referencia.precio - 1,
           tipo: referencia.tipo,
+          descuento: f.descuento,
         });
       }
 
@@ -489,44 +699,7 @@ const ApiIngresos = () => {
         total: lista.length,
         mensaje: "Calculando precios sugeridos...",
       });
-      try {
-        const res = await fetch(
-          `${BACKEND_URL}/tiendanube/calcular-precio-base-objetivo`,
-          {
-            method: "POST",
-            headers: encabezadosJSON(),
-            body: JSON.stringify({
-              productos: objetivos.map((o) => ({
-                sku: o.sku,
-                precioPromocionalObjetivo: o.precioPromocionalObjetivo,
-              })),
-            }),
-          }
-        );
-        const data = await res.json();
-        const porSku = new Map((data.resultados || []).map((r) => [r.sku, r]));
-
-        objetivos.forEach((o) => {
-          const r = porSku.get(o.sku);
-          if (!r || r.error) {
-            actualizarFilaPorSku(o.sku, {
-              sugBase: null,
-              sugError: (r && r.error) || "No se pudo calcular el precio sugerido",
-            });
-            return;
-          }
-          actualizarFilaPorSku(o.sku, {
-            sugBase: r.precioBase,
-            sugPromo: r.precioPromocional,
-            sugLista: r.precioLista,
-            sugCuotas: r.cuotas,
-            sugTipo: o.tipo,
-            sugError: "",
-          });
-        });
-      } catch (error) {
-        console.error("Error calculando precios sugeridos:", error);
-      }
+      await recalcularSugerencias(objetivos);
     }
   };
 
@@ -564,6 +737,11 @@ const handleSincronizar = async () => {
 
   if (!sincronizarML && !activarTN) {
     alert("Seleccioná al menos una plataforma para sincronizar.");
+    return;
+  }
+
+  if (sincronizarPreciosTN && hayDescuentosInvalidos) {
+    alert("Hay productos con un % de descuento inválido. Corregilos (marcados en rojo) antes de sincronizar.");
     return;
   }
 
@@ -683,6 +861,8 @@ const handleSincronizar = async () => {
             sku: fila.sku,
             cantidad: fila.stockAPublicar,
             precioBase: fila.precioBase,
+            // Sin descuento = sin promoción: el servidor deja el promocional en blanco
+            descuento: leerDescuento(fila.descuento).valor,
           })),
           sincronizarStock: sincronizarStockTN,
           sincronizarPrecios: sincronizarPreciosTN,
@@ -789,14 +969,13 @@ const handleSincronizar = async () => {
       }
 
       if (resultadoTN.success) {
-        const mensajePrecio =
-          resultadoTN.precioPromocional && resultadoTN.precioLista
-            ? `Promo: $${Number(
-                resultadoTN.precioPromocional
-              ).toLocaleString("es-AR")} | Lista: $${Number(
-                resultadoTN.precioLista
-              ).toLocaleString("es-AR")}`
-            : resultadoTN.mensaje || "Actualizado correctamente";
+        const mensajePrecio = resultadoTN.precioLista
+          ? `Lista: $${Number(resultadoTN.precioLista).toLocaleString("es-AR")} | ` +
+            (resultadoTN.precioPromocional
+              ? `Promo: $${Number(resultadoTN.precioPromocional).toLocaleString("es-AR")}` +
+                (resultadoTN.descuento ? ` (-${resultadoTN.descuento}%)` : "")
+              : "Sin promoción")
+          : resultadoTN.mensaje || "Actualizado correctamente";
 
         return {
           ...fila,
@@ -904,12 +1083,15 @@ const handleDescargarResultados = () => {
     "Stock original": fila.stock ?? "",
     "Stock publicado": fila.stockAPublicar ?? "",
     "Precio base": fila.precioBase ?? "",
+    "Precio de lista TN": fila.precioListaTN ?? "",
+    "% Descuento": leerDescuento(fila.descuento).valor ?? "",
+    "Precio promocional TN": promoDeFila(fila) ?? "",
     ...(tieneCosto
       ? {
           Costo: fila.costo > 0 ? fila.costo : "",
-          "Margen actual ($)": calcularMargen(fila.precioBase, fila.costo)?.monto ?? "",
+          "Margen actual ($)": calcularMargen(netoDeFila(fila), fila.costo)?.monto ?? "",
           "Margen actual (%)": (() => {
-            const m = calcularMargen(fila.precioBase, fila.costo);
+            const m = calcularMargen(netoDeFila(fila), fila.costo);
             return m ? Number(m.porcentaje.toFixed(1)) : "";
           })(),
         }
@@ -931,9 +1113,9 @@ const handleDescargarResultados = () => {
     "Precio base sugerido": fila.sugBase ?? "",
     ...(tieneCosto
       ? {
-          "Margen con sugerido ($)": calcularMargen(fila.sugBase, fila.costo)?.monto ?? "",
+          "Margen con sugerido ($)": calcularMargen(netoSugerido(fila), fila.costo)?.monto ?? "",
           "Margen con sugerido (%)": (() => {
-            const m = calcularMargen(fila.sugBase, fila.costo);
+            const m = calcularMargen(netoSugerido(fila), fila.costo);
             return m ? Number(m.porcentaje.toFixed(1)) : "";
           })(),
         }
@@ -977,6 +1159,9 @@ const handleDescargarResultados = () => {
     { wch: 15 }, // Stock original
     { wch: 16 }, // Stock publicado
     { wch: 16 }, // Precio base
+    { wch: 18 }, // Precio de lista TN
+    { wch: 13 }, // % Descuento
+    { wch: 20 }, // Precio promocional TN
     ...(tieneCosto
       ? [
           { wch: 14 }, // Costo
@@ -1039,6 +1224,7 @@ const handleDescargarResultados = () => {
     setResumen(null);
     setArchivoNombre("");
     setColumnaCosto("");
+    setDescuentoGeneral("");
     setProgresoComparacion(null);
     if (inputRef.current) inputRef.current.value = "";
   };
@@ -1101,14 +1287,14 @@ const handleDescargarResultados = () => {
   // Anchos (%) de las columnas según las opcionales visibles (costo y competencia ML)
   const anchosColumnas =
     tieneCosto && compararPrecios
-      ? [4, 9, 11, 4, 8, 8, 9, 9, 20, 9, 9]
+      ? [4, 8, 10, 4, 7, 8, 9, 10, 6, 18, 8, 8]
       : compararPrecios
-      ? [4, 8, 15, 4, 8, 8, 9, 22, 11, 11]
+      ? [4, 8, 13, 4, 7, 8, 10, 6, 22, 9, 9]
       : tieneCosto
-      ? [5, 8, 13, 5, 7, 9, 9, 12, 16, 16]
-      : [5, 8, 15, 5, 8, 9, 13, 18.5, 18.5];
+      ? [5, 8, 12, 5, 7, 9, 10, 10, 6, 14, 14]
+      : [5, 8, 14, 5, 8, 9, 12, 6, 16.5, 16.5];
   const anchoMinimoTabla =
-    tieneCosto && compararPrecios ? 1600 : compararPrecios ? 1280 : tieneCosto ? 1050 : 0;
+    tieneCosto && compararPrecios ? 1660 : compararPrecios ? 1340 : tieneCosto ? 1110 : 0;
 
   return (
     <div className={styles.container}>
@@ -1117,6 +1303,9 @@ const handleDescargarResultados = () => {
         Cargá el reporte de stock en Excel y actualizá todas las publicaciones
         de ML automáticamente.
       </p>
+      {/* Herramienta de una sola vez: pasar promocionales actuales a precio de lista */}
+      <MigracionPromocionales backendUrl={BACKEND_URL} apiToken={API_TOKEN} />
+
       {/* Opciones de sincronización */}
       <div className={styles.opcionesSync}>
         <label className={styles.switchLabel}>
@@ -1208,7 +1397,11 @@ const handleDescargarResultados = () => {
           <button
             onClick={handleSincronizar}
             className={styles.btnSincronizar}
-            disabled={procesando || comparando}
+            disabled={
+              procesando ||
+              comparando ||
+              (sincronizarPreciosTN && hayDescuentosInvalidos)
+            }
           >
             {procesando ? "⏳ Sincronizando..." : "🚀 Sincronizar Stock"}
           </button>
@@ -1243,6 +1436,60 @@ const handleDescargarResultados = () => {
             📥 Descargar resultados
           </button>
         )}
+        </div>
+      )}
+
+      {/* Promoción: descuento general. Sin % de descuento, el producto se publica solo con
+          precio de lista y el precio promocional queda en blanco en Tiendanube. */}
+      {filas.length > 0 && (
+        <div className={styles.panelDescuento}>
+          <span className={styles.panelDescuentoTitulo}>🏷 Promoción</span>
+          <label className={styles.panelDescuentoCampo}>
+            Descuento general
+            <input
+              type="number"
+              min="0"
+              max="99.99"
+              step="any"
+              placeholder="%"
+              value={descuentoGeneral}
+              disabled={procesando}
+              className={styles.inputDescuentoGeneral}
+              onChange={(e) => setDescuentoGeneral(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") aplicarDescuentoATodos();
+              }}
+            />
+            %
+          </label>
+          <button
+            type="button"
+            className={styles.btnAplicarDescuento}
+            onClick={aplicarDescuentoATodos}
+            disabled={procesando || comparando || descuentoGeneral === ""}
+          >
+            Aplicar a todos
+          </button>
+          <button
+            type="button"
+            className={styles.btnLimpiar}
+            onClick={quitarDescuentos}
+            disabled={procesando || comparando || conDescuento === 0}
+          >
+            Quitar descuentos
+          </button>
+          <span className={styles.panelDescuentoNota}>
+            {conDescuento > 0
+              ? `${conDescuento} de ${filas.length} productos con descuento: se publican con precio promocional.`
+              : "Sin descuentos: se publica solo el precio de lista y el promocional queda en blanco. Podés poner un % por producto en la columna «% Desc.»."}
+          </span>
+        </div>
+      )}
+
+      {hayDescuentosInvalidos && filas.length > 0 && (
+        <div className={styles.avisoDescuento}>
+          ⚠ Hay productos con un % de descuento que no se puede aplicar (marcados en rojo). Hay que
+          corregirlos antes de sincronizar precios.
         </div>
       )}
 
@@ -1318,6 +1565,7 @@ const handleDescargarResultados = () => {
                 <th>Precio base</th>
                 {tieneCosto && <th>Costo / margen</th>}
                 <th>Precio TN</th>
+                <th>% Desc.</th>
                 {compararPrecios && <th>Competencia ML</th>}
                 <th>ML</th>
                 <th>TN</th>
@@ -1383,8 +1631,10 @@ const handleDescargarResultados = () => {
                       {fila.costo > 0 ? (
                         <>
                           Costo: <strong>{formatoARS(fila.costo)}</strong>
-                          <span className={styles.cmpEtiqueta}>Margen actual</span>
-                          {renderMargen(calcularMargen(fila.precioBase, fila.costo))}
+                          <span className={styles.cmpEtiqueta}>
+                            {promoDeFila(fila) !== null ? "Margen con promo" : "Margen actual"}
+                          </span>
+                          {renderMargen(calcularMargen(netoDeFila(fila), fila.costo))}
                         </>
                       ) : (
                         <span className={styles.cmpDetalle}>Sin costo</span>
@@ -1400,19 +1650,35 @@ const handleDescargarResultados = () => {
                       </span>
                     ) : (
                       <>
-                        Promo:{" "}
-                        {Number(fila.precioPromocionalTN || 0).toLocaleString(
-                          "es-AR",
-                          { style: "currency", currency: "ARS", maximumFractionDigits: 0 }
-                        )}
+                        Lista: <strong>{formatoARS(fila.precioListaTN)}</strong>
                         <br />
-                        Lista:{" "}
-                        {Number(fila.precioListaTN || 0).toLocaleString(
-                          "es-AR",
-                          { style: "currency", currency: "ARS", maximumFractionDigits: 0 }
+                        {promoDeFila(fila) !== null ? (
+                          <span className={styles.precioPromo}>
+                            Promo: <strong>{formatoARS(promoDeFila(fila))}</strong>
+                          </span>
+                        ) : (
+                          <span className={styles.sinPromo}>Sin promoción</span>
                         )}
                       </>
                     )}
+                  </td>
+                  <td className={styles.tdDescuento}>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="—"
+                      key={`${fila.sku}-desc-${fila.descuento}`}
+                      defaultValue={fila.descuento}
+                      disabled={procesando || comparando}
+                      className={`${styles.inputDescuento} ${
+                        descuentoInvalido(fila) ? styles.inputDescuentoError : ""
+                      }`}
+                      title={descuentoInvalido(fila) || "% de descuento (vacío = sin promoción)"}
+                      onBlur={(e) => cambiarDescuento(i, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") e.target.blur();
+                      }}
+                    />
                   </td>
                   {compararPrecios && (
                     <td className={styles.tdCompetencia}>
@@ -1468,7 +1734,9 @@ const handleDescargarResultados = () => {
                                 {fila.sugBase === fila.precioBase
                                   ? "✅ Ya aplicado"
                                   : fila.sugBase < fila.precioBase
-                                  ? "Para quedar $1 abajo de la competencia"
+                                  ? promoDeFila(fila) !== null
+                                    ? "Para que el precio promocional quede $1 abajo de la competencia"
+                                    : "Para quedar $1 abajo de la competencia"
                                   : "Estás más barato: podrías subir y seguir ganando"}
                                 {fila.sugTipo === "general"
                                   ? " (sin cuotas equivalentes)"
@@ -1476,7 +1744,7 @@ const handleDescargarResultados = () => {
                               </div>
                               {tieneCosto &&
                                 (() => {
-                                  const m = calcularMargen(fila.sugBase, fila.costo);
+                                  const m = calcularMargen(netoSugerido(fila), fila.costo);
                                   return m ? (
                                     <div className={styles.cmpMargen}>
                                       Margen con este precio: {renderMargen(m)}

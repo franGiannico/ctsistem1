@@ -3,7 +3,13 @@ const mongoose = require('mongoose');
 const axios = require('axios');
 const router = express.Router();
 require('dotenv').config();
-const CONFIG_CUOTAS = require("../config/tiendanubeCuotas");
+const {
+  calcularPreciosTiendanube,
+  calcularBasePorPrecioObjetivo,
+} = require("../services/preciosTiendanube");
+const {
+  actualizarPreciosVariantes,
+} = require("../services/tiendanubeApi");
 const SincronizacionTiendanube = require(
   "../models/SincronizacionTiendanube"
 );
@@ -31,70 +37,12 @@ const TiendanubeToken = mongoose.models.TiendanubeToken || mongoose.model('Tiend
 // Modelo Venta (Referencia unificada)
 const VentaModel = require("../models/Venta");
 
-const IVA = 1.21;
+// Modelo de precios (ver services/preciosTiendanube.js):
+//   precio de LISTA = precio base + comisiones + financiación;
+//   precio PROMOCIONAL = solo si el producto tiene % de descuento (si no, queda en blanco).
 
-// Costos fijos validados con una venta real.
-const COSTO_COBRO_MP = 0.0079 * IVA; // 0,79% + IVA = 0,9559%
-const CPT_TIENDANUBE = 0.01;         // 1%
-const IMPUESTO_DEBITOS = 0.006;      // 0,60%
-const AUMENTO_PRECIO_LISTA = 0.20;   // Lista 20% mayor al promocional
-
-const obtenerPlanPorPrecio = (precioBase) => {
-  const precio = Number(precioBase);
-
-  if (!Number.isFinite(precio) || precio <= 0) {
-    throw new Error('"precioBase" debe ser un número mayor que 0.');
-  }
-
-  const plan = CONFIG_CUOTAS.find(
-    (configuracion) => precio >= configuracion.minimo
-  );
-
-  if (!plan) {
-    throw new Error("No se encontró una configuración de cuotas válida.");
-  }
-
-  return plan;
-};
-
-const calcularPreciosTiendanube = (precioBase) => {
-  const precioNetoDeseado = Number(precioBase);
-  const plan = obtenerPlanPorPrecio(precioNetoDeseado);
-
-  const costoFinanciacionConIVA = plan.financiacion * IVA;
-
-  const costoTotal =
-    COSTO_COBRO_MP +
-    CPT_TIENDANUBE +
-    IMPUESTO_DEBITOS +
-    costoFinanciacionConIVA;
-
-  if (costoTotal >= 1) {
-    throw new Error("El costo total calculado es inválido.");
-  }
-
-  // Precio de venta para que, después de todos los descuentos,
-  // quede neto el precioBase.
-  const precioPromocional = Math.ceil(
-    precioNetoDeseado / (1 - costoTotal)
-  );
-
-  // Regla comercial: precio de lista 20% por encima del promocional.
-  const precioLista = Math.ceil(
-    precioPromocional * (1 + AUMENTO_PRECIO_LISTA)
-  );
-
-  return {
-    cuotas: plan.cuotas,
-    financiacion: plan.financiacion,
-    costoTotal,
-    precioPromocional,
-    precioLista,
-  };
-};
-
-// 💲 Previsualización de precios TN: calcula el precio de lista y promocional
-// que se va a publicar, sin llamar a la API de Tiendanube (no requiere token).
+// 💲 Previsualización de precios TN: calcula el precio de lista (y el promocional, si el
+// producto tiene % de descuento) que se va a publicar, sin llamar a la API de Tiendanube.
 // Se usa para mostrarle al usuario el precio calculado apenas carga el Excel.
 router.post('/calcular-precios', (req, res) => {
   const { productos } = req.body;
@@ -110,14 +58,16 @@ router.post('/calcular-precios', (req, res) => {
     const precioBase = Number(producto?.precioBase);
 
     try {
-      const precios = calcularPreciosTiendanube(precioBase);
+      const precios = calcularPreciosTiendanube(precioBase, producto?.descuento);
 
       return {
         sku,
         precioBase,
-        precioPromocional: precios.precioPromocional,
         precioLista: precios.precioLista,
+        precioPromocional: precios.precioPromocional,
+        descuento: precios.descuento,
         cuotas: precios.cuotas,
+        costoTotal: precios.costoTotal,
       };
     } catch (error) {
       return {
@@ -131,40 +81,10 @@ router.post('/calcular-precios', (req, res) => {
   res.json({ resultados });
 });
 
-// 🎯 Cálculo inverso: dado el precio promocional al que queremos llegar en TN,
-// devuelve el precio base más alto cuyo promocional no lo supere. Se usa para
-// sugerir un precio base que le gane a la competencia (solo sugiere, no publica).
-const calcularBasePorPromocional = (objetivo) => {
-  const meta = Math.floor(Number(objetivo));
-  if (!Number.isFinite(meta) || meta <= 0) {
-    throw new Error('"precioPromocionalObjetivo" debe ser un número mayor que 0.');
-  }
-
-  let base = Math.max(1, Math.floor(meta * (1 - calcularPreciosTiendanube(meta).costoTotal)));
-  let precios = calcularPreciosTiendanube(base);
-
-  // Bajar hasta que el promocional no supere el objetivo.
-  for (let i = 0; i < 300 && precios.precioPromocional > meta && base > 1; i++) {
-    const exceso = precios.precioPromocional - meta;
-    base = Math.max(1, base - Math.max(1, Math.ceil(exceso * (1 - precios.costoTotal))));
-    precios = calcularPreciosTiendanube(base);
-  }
-
-  if (precios.precioPromocional > meta) {
-    throw new Error('No se pudo encontrar un precio base para ese objetivo.');
-  }
-
-  // Subir mientras siga sin superarlo (para no regalar margen).
-  for (let i = 0; i < 300; i++) {
-    const siguiente = calcularPreciosTiendanube(base + 1);
-    if (siguiente.precioPromocional > meta) break;
-    base += 1;
-    precios = siguiente;
-  }
-
-  return { precioBase: base, ...precios };
-};
-
+// 🎯 Cálculo inverso: dado el precio final al que queremos llegar en TN (el promocional si el
+// producto tiene descuento, el de lista si no), devuelve el precio base más alto cuyo precio
+// final no lo supere. Se usa para sugerir un precio base que le gane a la competencia
+// (solo sugiere, no publica).
 router.post('/calcular-precio-base-objetivo', (req, res) => {
   const { productos } = req.body;
 
@@ -177,13 +97,21 @@ router.post('/calcular-precio-base-objetivo', (req, res) => {
   const resultados = productos.map((producto) => {
     const sku = String(producto?.sku || '').trim();
     try {
-      const r = calcularBasePorPromocional(producto?.precioPromocionalObjetivo);
+      // "precioListaObjetivo" y "precioPromocionalObjetivo" se aceptan como nombres viejos.
+      const objetivo =
+        producto?.precioObjetivo ??
+        producto?.precioListaObjetivo ??
+        producto?.precioPromocionalObjetivo;
+
+      const r = calcularBasePorPrecioObjetivo(objetivo, producto?.descuento);
       return {
         sku,
         precioBase: r.precioBase,
-        precioPromocional: r.precioPromocional,
         precioLista: r.precioLista,
+        precioPromocional: r.precioPromocional,
+        descuento: r.descuento,
         cuotas: r.cuotas,
+        costoTotal: r.costoTotal,
       };
     } catch (error) {
       return { sku, error: error.message || 'No se pudo calcular el precio base.' };
@@ -476,7 +404,7 @@ router.get('/estado-sincronizacion', (req, res) => {
 
 
 router.post('/actualizar-stock', async (req, res) => {
-  const { sku, cantidad, precioBase } = req.body;
+  const { sku, cantidad, precioBase, descuento } = req.body;
 
   if (!sku || cantidad === undefined || cantidad === null) {
     return res.status(400).json({
@@ -571,7 +499,11 @@ while (!varianteEncontrada && page <= 20) {
     let preciosCalculados = null;
 
 if (precioBase !== undefined && precioBase !== null) {
-  preciosCalculados = calcularPreciosTiendanube(precioBase);
+  try {
+    preciosCalculados = calcularPreciosTiendanube(precioBase, descuento);
+  } catch (errorPrecio) {
+    return res.status(400).json({ error: errorPrecio.message });
+  }
 
   console.log(`💰 [TN] Precios calculados para ${sku}:`, {
     precioBase,
@@ -579,8 +511,8 @@ if (precioBase !== undefined && precioBase !== null) {
     costoTotalPorcentaje: Number(
       (preciosCalculados.costoTotal * 100).toFixed(4)
     ),
-    precioPromocional: preciosCalculados.precioPromocional,
     precioLista: preciosCalculados.precioLista,
+    precioPromocional: preciosCalculados.precioPromocional,
   });
 }
 
@@ -593,10 +525,9 @@ if (precioBase !== undefined && precioBase !== null) {
   ]
 };
 
+// /products/stock-price solo admite precio y stock; el promocional va aparte.
 if (preciosCalculados) {
   datosVariante.price = preciosCalculados.precioLista;
-  datosVariante.promotional_price =
-    preciosCalculados.precioPromocional;
 }
 
     await axios.patch(
@@ -616,7 +547,27 @@ if (preciosCalculados) {
       }
     );
 
+    if (preciosCalculados) {
+      const [resultadoPrecio] = await actualizarPreciosVariantes({
+        userId: user_id,
+        accessToken: access_token,
+        userAgent: TIENDANUBE_USER_AGENT,
+        productId: productoEncontrado.id,
+        variantes: [
+          {
+            id: varianteEncontrada.id,
+            price: preciosCalculados.precioLista,
+            promo: preciosCalculados.precioPromocional,
+          },
+        ],
+      });
 
+      if (resultadoPrecio && !resultadoPrecio.ok) {
+        return res.status(500).json({
+          error: resultadoPrecio.error,
+        });
+      }
+    }
 
     return res.json({
     success: true,
@@ -632,15 +583,19 @@ if (preciosCalculados) {
           costoTotalPorcentaje: Number(
             (preciosCalculados.costoTotal * 100).toFixed(4)
           ),
-          precioPromocional: preciosCalculados.precioPromocional,
           precioLista: preciosCalculados.precioLista,
+          precioPromocional: preciosCalculados.precioPromocional,
         }
       : null,
 
     mensaje: preciosCalculados
-      ? `Stock y precios actualizados. Promocional: $${preciosCalculados.precioPromocional.toLocaleString(
+      ? `Stock y precios actualizados. Lista: $${preciosCalculados.precioLista.toLocaleString(
           "es-AR"
-        )} | Lista: $${preciosCalculados.precioLista.toLocaleString("es-AR")}`
+        )}${
+          preciosCalculados.precioPromocional === null
+            ? " | Sin promoción"
+            : ` | Promocional: $${preciosCalculados.precioPromocional.toLocaleString("es-AR")}`
+        }`
       : `Stock Tiendanube actualizado correctamente a ${cantidad} unidades.`
   });
   } catch (error) {
@@ -745,9 +700,21 @@ router.post("/actualizar-stock-masivo", async (req, res) => {
         continue;
       }
 
-      const precios = calcularPreciosTiendanube(
-        productoEntrada.precioBase
-      );
+      let precios;
+      try {
+        precios = calcularPreciosTiendanube(
+          productoEntrada.precioBase,
+          productoEntrada.descuento
+        );
+      } catch (errorPrecio) {
+        resultados.push({
+          sku,
+          success: false,
+          error: errorPrecio.message,
+        });
+
+        continue;
+      }
 
       /*
        * Conservamos el identificador de ubicación si Tiendanube lo devuelve.
@@ -778,11 +745,11 @@ router.post("/actualizar-stock-masivo", async (req, res) => {
     };
 
     // Este objeto va al endpoint de variantes,
-    // que sí admite promotional_price.
+    // que sí admite promotional_price (null = en blanco).
     const variantePrecios = {
       id: encontrada.variantId,
       price: precios.precioLista,
-      promotional_price: precios.precioPromocional,
+      promo: precios.precioPromocional,
     };
 
       if (!actualizacionesPorProducto.has(encontrada.productId)) {
@@ -808,6 +775,7 @@ router.post("/actualizar-stock-masivo", async (req, res) => {
         sku,
         success: true,
         pendienteDeEnvio: true,
+        variantId: encontrada.variantId,
         cantidad: productoEntrada.cantidad,
         precios: {
           precioBase: productoEntrada.precioBase,
@@ -815,8 +783,8 @@ router.post("/actualizar-stock-masivo", async (req, res) => {
           costoTotalPorcentaje: Number(
             (precios.costoTotal * 100).toFixed(4)
           ),
-          precioPromocional: precios.precioPromocional,
           precioLista: precios.precioLista,
+          precioPromocional: precios.precioPromocional,
         },
       });
     }
@@ -888,17 +856,24 @@ router.post("/actualizar-stock-masivo", async (req, res) => {
         `${i + 1}/${gruposPrecios.length} | Producto ${productId}`
       );
 
-      await axios.patch(
-        `https://api.tiendanube.com/v1/${user_id}/products/${productId}/variants`,
+      const resultadosApi = await actualizarPreciosVariantes({
+        userId: user_id,
+        accessToken: access_token,
+        userAgent: TIENDANUBE_USER_AGENT,
+        productId,
         variantes,
-        {
-          headers: {
-            Authentication: `bearer ${access_token}`,
-            "User-Agent": TIENDANUBE_USER_AGENT,
-            "Content-Type": "application/json",
-          },
+      });
+
+      for (const r of resultadosApi.filter((x) => !x.ok)) {
+        const fallida = variantes.find((v) => String(v.id) === String(r.id));
+        const resultado = resultados.find(
+          (x) => x.success && x.variantId === fallida?.id
+        );
+        if (resultado) {
+          resultado.success = false;
+          resultado.error = r.error;
         }
-      );
+      }
     }
 
     const exitosos = resultados.filter(
@@ -913,14 +888,18 @@ router.post("/actualizar-stock-masivo", async (req, res) => {
       exitosos,
       errores,
       lotesEnviados: lotes.length,
-      resultados: resultados.map(({ pendienteDeEnvio, ...resultado }) => ({
+      resultados: resultados.map(({ pendienteDeEnvio, variantId, ...resultado }) => ({
         ...resultado,
         mensaje: resultado.success
-          ? `Stock y precios actualizados. Promocional: $${resultado.precios.precioPromocional.toLocaleString(
+          ? `Stock y precios actualizados. Lista: $${resultado.precios.precioLista.toLocaleString(
               "es-AR"
-            )} | Lista: $${resultado.precios.precioLista.toLocaleString(
-              "es-AR"
-            )}`
+            )}${
+              resultado.precios.precioPromocional === null
+                ? " | Sin promoción"
+                : ` | Promocional: $${resultado.precios.precioPromocional.toLocaleString(
+                    "es-AR"
+                  )}`
+            }`
           : undefined,
       })),
     });
@@ -960,9 +939,24 @@ router.post("/iniciar-sincronizacion", async (req, res) => {
   }
 
   try {
+    // Solo se guardan los campos que usa el worker. El % de descuento vacío = sin promoción.
+    const productosLimpios = productos.map((p) => {
+      const descuento =
+        p?.descuento === undefined || p?.descuento === null || p?.descuento === ""
+          ? undefined
+          : Number(p.descuento);
+
+      return {
+        sku: p?.sku,
+        cantidad: p?.cantidad,
+        precioBase: p?.precioBase,
+        descuento: Number.isFinite(descuento) ? descuento : undefined,
+      };
+    });
+
     const job = await SincronizacionTiendanube.create({
       estado: "pendiente",
-      productos,
+      productos: productosLimpios,
       sincronizarStock: debeSincronizarStock,
       sincronizarPrecios: debeSincronizarPrecios,
       total: productos.length,

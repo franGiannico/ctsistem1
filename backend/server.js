@@ -143,6 +143,9 @@ app.use('/apiventas', rateLimitMiddleware, authMiddleware);
 app.use('/apiingresos', rateLimitMiddleware, authMiddleware);
 app.use('/apitareas', rateLimitMiddleware, authMiddleware);
 app.use('/meli', rateLimitMiddleware, authMiddleware);
+// Migración de precios de Tiendanube: exige autenticación (no lleva rate limit porque la
+// pantalla consulta el avance cada pocos segundos). Todas sus rutas tienen subruta.
+app.use('/tiendanube/migracion-precios', authMiddleware);
 
 // 🌐 Configurar conexión a MongoDB
 mongoose.set('strictQuery', true); // Recomendado en versiones recientes de Mongoose
@@ -163,6 +166,7 @@ app.use("/apiventas", require("./routes/apiventas"));
 app.use("/apiingresos", require("./routes/apiingresos"));
 app.use("/apitareas", require("./routes/apitareas"));
 app.use("/meli", meliRoutes); // ✅ Ruta para autenticación Mercado Libre
+app.use("/tiendanube/migracion-precios", require("./routes/tiendanubeMigracion"));
 app.use("/tiendanube", require("./routes/tiendanube")); // ✅ Ruta para Tiendanube
 
 

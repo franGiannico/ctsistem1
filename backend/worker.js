@@ -10,6 +10,11 @@ const {
   procesarSincronizacionTiendanube,
 } = require("./services/sincronizacionTiendanubeService");
 
+const {
+  recuperarTrabajosInterrumpidos,
+  procesarSiguienteMigracion,
+} = require("./services/migracionPreciosTiendanubeService");
+
 const TiendanubeTokenSchema = new mongoose.Schema({
   access_token: String,
   token_type: String,
@@ -58,6 +63,8 @@ const ejecutarWorker = async () => {
   await mongoose.connect(mongoURI);
 
   console.log("✅ [TN WORKER] Conectado a MongoDB");
+  await recuperarTrabajosInterrumpidos();
+
   console.log("👷 [TN WORKER] Esperando trabajos...");
 
   while (true) {
@@ -65,7 +72,16 @@ const ejecutarWorker = async () => {
       const job = await tomarTrabajoPendiente();
 
       if (!job) {
-        await esperar(3000);
+        // Sin sincronizaciones de stock/precios: ver si hay una migración de precios.
+        const hizoMigracion = await procesarSiguienteMigracion({
+          obtenerToken: () => TiendanubeToken.findOne(),
+          userAgent: process.env.TIENDANUBE_USER_AGENT,
+        });
+
+        if (!hizoMigracion) {
+          await esperar(3000);
+        }
+
         continue;
       }
 

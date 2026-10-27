@@ -511,3 +511,117 @@
   font-size: 0.82rem;
   color: #666;
 }
+
+/* ==========================================
+   Promoción: % de descuento
+   (sin descuento el promocional queda en blanco en Tiendanube)
+   ========================================== */
+.panelDescuento {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.7rem;
+  margin: 0 0 1rem;
+  padding: 0.65rem 1rem;
+  border: 1px solid #f1d9a0;
+  border-radius: 10px;
+  background: #fffaf0;
+}
+
+.panelDescuentoTitulo {
+  font-weight: 700;
+  color: #7a4b00;
+}
+
+.panelDescuentoCampo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  color: #444;
+}
+
+.inputDescuentoGeneral {
+  width: 80px;
+  padding: 0.4rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.inputDescuentoGeneral:focus {
+  outline: none;
+  border-color: #e08a00;
+  box-shadow: 0 0 0 2px rgba(224, 138, 0, 0.18);
+}
+
+.btnAplicarDescuento {
+  padding: 0.5rem 1.1rem;
+  background: #e08a00;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btnAplicarDescuento:hover:not(:disabled) {
+  background: #c27800;
+}
+
+.btnAplicarDescuento:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.panelDescuentoNota {
+  flex-basis: 100%;
+  font-size: 0.82rem;
+  color: #6b5a3a;
+}
+
+.avisoDescuento {
+  margin: -0.4rem 0 1rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  background: #fff1f1;
+  color: #b3261e;
+  font-size: 0.88rem;
+}
+
+.tdDescuento {
+  text-align: center;
+}
+
+.inputDescuento {
+  width: 100%;
+  max-width: 64px;
+  box-sizing: border-box;
+  padding: 0.35rem 0.3rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.inputDescuento:focus {
+  outline: none;
+  border-color: #e08a00;
+  box-shadow: 0 0 0 2px rgba(224, 138, 0, 0.18);
+}
+
+.inputDescuentoError {
+  border-color: #c62828;
+  background: #fff1f1;
+}
+
+.precioPromo {
+  color: #b35a00;
+}
+
+.sinPromo {
+  color: #888;
+  font-size: 0.78rem;
+}
