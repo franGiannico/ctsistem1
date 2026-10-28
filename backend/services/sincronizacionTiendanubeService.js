@@ -11,6 +11,8 @@ const {
 const {
   conReintentos,
   textoError,
+  promoVacia,
+  mismoPrecio,
   actualizarPreciosVariantes,
 } = require("./tiendanubeApi");
 
@@ -29,10 +31,12 @@ const obtenerMapaVariantesTN = async ({
   accessToken,
   userId,
   userAgent,
+  forzarRecarga = false,
 }) => {
   const ahora = Date.now();
 
   const cacheValido =
+    !forzarRecarga &&
     cacheCatalogoTN.mapaVariantes &&
     cacheCatalogoTN.userId === String(userId) &&
     ahora - cacheCatalogoTN.creadoEn < CACHE_CATALOGO_TN_MS;
@@ -82,6 +86,9 @@ const obtenerMapaVariantesTN = async ({
           productId: producto.id,
           variantId: variante.id,
           inventoryLevels: variante.inventory_levels || [],
+          // Precios actuales en TN: sirven para no mandar cambios que ya están hechos.
+          price: variante.price === null || variante.price === undefined ? null : Number(variante.price),
+          promo: promoVacia(variante.promotional_price) ? null : Number(variante.promotional_price),
         });
       }
     }
@@ -115,19 +122,22 @@ const procesarSincronizacionTiendanube = async ({
   job.fechaInicio = new Date();
   await job.save();
 
-  const mapaVariantes = await obtenerMapaVariantesTN({
-    accessToken,
-    userId,
-    userAgent,
-  });
-
-  const TAMANIO_LOTE = 20;
-  const productos = job.productos || [];
-
   // Si el trabajo es viejo (de antes de este cambio) no va a tener estos campos:
   // en ese caso se mantiene el comportamiento anterior (sincronizar todo).
   const necesitaStock = job.sincronizarStock !== false;
   const necesitaPrecios = job.sincronizarPrecios !== false;
+
+  // Si se tocan precios se lee el catálogo actual de TN (no el de la memoria): así se
+  // sabe con certeza qué precios ya están bien y no hace falta volver a mandarlos.
+  const mapaVariantes = await obtenerMapaVariantesTN({
+    accessToken,
+    userId,
+    userAgent,
+    forzarRecarga: necesitaPrecios,
+  });
+
+  const TAMANIO_LOTE = 20;
+  const productos = job.productos || [];
 
   for (let inicio = 0; inicio < productos.length; inicio += TAMANIO_LOTE) {
     const loteEntrada = productos.slice(inicio, inicio + TAMANIO_LOTE);
@@ -273,6 +283,22 @@ const procesarSincronizacionTiendanube = async ({
       const preciosPorProducto = new Map();
 
       for (const e of validas) {
+        // Si en TN ya está exactamente ese precio de lista y ese promocional (o ambos en
+        // blanco), no se manda nada: ahorra pedidos y evita el límite de Tiendanube.
+        const yaAlDia =
+          e.encontrada.price !== null &&
+          e.encontrada.price !== undefined &&
+          mismoPrecio(e.encontrada.price, e.precios.precioLista) &&
+          (e.precios.precioPromocional === null
+            ? e.encontrada.promo === null
+            : e.encontrada.promo !== null &&
+              mismoPrecio(e.encontrada.promo, e.precios.precioPromocional));
+
+        if (yaAlDia) {
+          e.preciosYaAlDia = true;
+          continue;
+        }
+
         if (!preciosPorProducto.has(e.encontrada.productId)) {
           preciosPorProducto.set(e.encontrada.productId, []);
         }
@@ -316,8 +342,8 @@ const procesarSincronizacionTiendanube = async ({
           }
         }
 
-        // Pausa pequeña para no golpear demasiado la API (límite de TN: ~2 pedidos por segundo).
-        await dormir(350);
+        // Pausa para no golpear la API (límite de TN: ~2 pedidos por segundo).
+        await dormir(450);
       }
     }
 
@@ -345,11 +371,13 @@ const procesarSincronizacionTiendanube = async ({
 
       let mensaje;
       if (necesitaStock && necesitaPrecios) {
-        mensaje = "Stock y precios actualizados.";
+        mensaje = e.preciosYaAlDia
+          ? "Stock actualizado (los precios ya estaban al día)."
+          : "Stock y precios actualizados.";
       } else if (necesitaStock) {
         mensaje = "Stock actualizado.";
       } else if (necesitaPrecios) {
-        mensaje = "Precios actualizados.";
+        mensaje = e.preciosYaAlDia ? "Precios ya estaban al día." : "Precios actualizados.";
       } else {
         mensaje = "Sin cambios (no se seleccionó stock ni precios).";
       }

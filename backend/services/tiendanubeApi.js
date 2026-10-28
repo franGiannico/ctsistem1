@@ -13,18 +13,33 @@ const cabeceras = ({ accessToken, userAgent }) => ({
   "Content-Type": "application/json",
 });
 
+// Tiendanube limita los pedidos (cubo que se vacía ~2 por segundo). En cada respuesta avisa
+// cuánto lugar queda en el cubo (cabecera x-rate-limit-remaining): si queda poco, se frena
+// un momento ANTES de recibir el error 429.
+const POCO_CUPO = 8;
+const PAUSA_POCO_CUPO_MS = 1500;
+
+const frenarSiQuedaPocoCupo = async (respuesta) => {
+  const restante = Number(respuesta?.headers?.["x-rate-limit-remaining"]);
+  if (Number.isFinite(restante) && restante <= POCO_CUPO) {
+    await dormir(PAUSA_POCO_CUPO_MS);
+  }
+};
+
 // Hace una request y, si Tiendanube responde 429 (demasiadas solicitudes), espera y reintenta.
-const conReintentos = async (fn, { maxReintentos = 5 } = {}) => {
+const conReintentos = async (fn, { maxReintentos = 8 } = {}) => {
   for (let intento = 0; ; intento++) {
     try {
-      return await fn();
+      const respuesta = await fn();
+      await frenarSiQuedaPocoCupo(respuesta);
+      return respuesta;
     } catch (error) {
       const status = error.response?.status;
 
       if (status === 429 && intento < maxReintentos) {
         const reset = Number(error.response?.headers?.["x-rate-limit-reset"]);
         const espera = Number.isFinite(reset) && reset > 0 ? reset : 1000 * (intento + 1);
-        await dormir(Math.min(Math.max(espera, 500), 8000));
+        await dormir(Math.min(Math.max(espera, 1000), 10000));
         continue;
       }
 
@@ -198,6 +213,8 @@ const obtenerVariantesConPrecios = async ({ userId, accessToken, userAgent }) =>
 
 module.exports = {
   dormir,
+  promoVacia,
+  mismoPrecio,
   conReintentos,
   textoError,
   actualizarPreciosVariantes,

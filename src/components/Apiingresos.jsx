@@ -881,6 +881,9 @@ const handleSincronizar = async () => {
     const jobId = dataInicio.jobId;
     let trabajoFinalizado = false;
     let datosFinales = null;
+    // Si el trabajo se corta a mitad de camino, igual se muestran los resultados de lo que
+    // sí se alcanzó a procesar (no se marca todo como error).
+    let errorDelTrabajo = "";
 
     /*
      * 2. Consultar el progreso cada 3 segundos.
@@ -936,10 +939,11 @@ const handleSincronizar = async () => {
       }
 
       if (dataEstado.estado === "error") {
-        throw new Error(
+        trabajoFinalizado = true;
+        datosFinales = dataEstado;
+        errorDelTrabajo =
           dataEstado.mensajeError ||
-            "La sincronización de Tiendanube terminó con error"
-        );
+          "La sincronización de Tiendanube terminó con error";
       }
     }
 
@@ -964,7 +968,9 @@ const handleSincronizar = async () => {
         return {
           ...fila,
           tnEstado: "error",
-          tnMensaje: "Tiendanube no devolvió resultado para este SKU",
+          tnMensaje: errorDelTrabajo
+            ? `No se procesó (la sincronización se cortó: ${errorDelTrabajo})`
+            : "Tiendanube no devolvió resultado para este SKU",
         };
       }
 
@@ -992,14 +998,24 @@ const handleSincronizar = async () => {
       };
     });
 
-    setProgresoTN({
-      estado: "finalizado",
-      procesados: datosFinales.procesados,
-      total: datosFinales.total,
-      porcentaje: 100,
-      exitosos: datosFinales.exitosos,
-      errores: datosFinales.errores,
-    });
+    setProgresoTN(
+      errorDelTrabajo
+        ? {
+            estado: "error",
+            mensajeError:
+              `${errorDelTrabajo} — se alcanzaron a procesar ${datosFinales.procesados} de ` +
+              `${datosFinales.total} (${datosFinales.exitosos} bien). Volvé a sincronizar: ` +
+              `lo que ya quedó actualizado se saltea.`,
+          }
+        : {
+            estado: "finalizado",
+            procesados: datosFinales.procesados,
+            total: datosFinales.total,
+            porcentaje: 100,
+            exitosos: datosFinales.exitosos,
+            errores: datosFinales.errores,
+          }
+    );
 
     setFilas([...filasActualizadas]);
   } catch (error) {
